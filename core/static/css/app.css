@@ -572,3 +572,22 @@
     max-height: 60vh;
     overflow-y: auto;
 }
+
+/* ========================================
+   Component Hours Remaining Styles
+   ======================================== */
+
+.hours-overdue {
+    color: var(--pf-v5-global--danger-color--100);
+    font-weight: 700;
+}
+
+.hours-critical {
+    color: var(--pf-v5-global--danger-color--200);
+    font-weight: 600;
+}
+
+.hours-warning {
+    color: var(--pf-v5-global--warning-color--200);
+    font-weight: 500;
+}

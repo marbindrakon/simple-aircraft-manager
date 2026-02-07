@@ -231,29 +231,46 @@
                         <th>Manufacturer/Model</th>
                         <th>Location</th>
                         <th>Hours</th>
-                        <th>TBO Hours</th>
-                        <th>Hours to TBO</th>
+                        <th>Interval</th>
+                        <th>Remaining</th>
                         <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <template x-if="components.length === 0">
                         <tr>
-                            <td colspan="7" style="text-align: center;">No components found</td>
+                            <td colspan="8" style="text-align: center;">No components found</td>
                         </tr>
                     </template>
                     <template x-for="component in components" :key="component.id">
                         <tr>
-                            <td x-text="getComponentTypeName(component)"></td>
+                            <td>
+                                <span x-text="getComponentTypeName(component)"></span>
+                                <template x-if="component.replacement_critical">
+                                    <span class="pf-v5-c-label pf-m-compact pf-m-purple" style="margin-left: 0.25rem;" title="Replacement item">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </span>
+                                </template>
+                            </td>
                             <td x-text="`${component.manufacturer} ${component.model}`"></td>
                             <td x-text="component.install_location"></td>
                             <td x-text="formatHours(component.hours_since_overhaul)"></td>
-                            <td x-text="component.tbo_hours || 'N/A'"></td>
-                            <td x-text="calculateHoursToTBO(component)"></td>
+                            <td x-text="getComponentInterval(component)"></td>
+                            <td :class="getHoursRemainingClass(component)" x-text="calculateHoursRemaining(component)"></td>
                             <td>
                                 <span class="pf-v5-c-label"
                                       :class="getStatusClass(component)"
                                       x-text="component.status"></span>
+                            </td>
+                            <td>
+                                <template x-if="component.replacement_critical && component.status === 'IN-USE'">
+                                    <button class="pf-v5-c-button pf-m-plain"
+                                            @click="resetComponentService(component)"
+                                            :title="'Reset ' + getComponentTypeName(component) + ' service time'">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                </template>
                             </td>
                         </tr>
                     </template>

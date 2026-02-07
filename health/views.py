@@ -1,7 +1,10 @@
 from health.models import *
 from health.serializers import *
 
-from rest_framework import viewsets, filters
+from django.utils import timezone
+from rest_framework import viewsets, filters, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
 class ComponentTypeViewSet(viewsets.ModelViewSet):
@@ -13,6 +16,34 @@ class ComponentViewSet(viewsets.ModelViewSet):
     serializer_class = ComponentSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['aircraft', 'component_type', 'status']
+
+    @action(detail=True, methods=['post'])
+    def reset_service(self, request, pk=None):
+        """
+        Reset the service time for a component (e.g., after oil change)
+        POST /api/component/{id}/reset_service/
+
+        This resets hours_since_overhaul to 0 and updates overhaul_date to today.
+        Typically used for replacement_critical components like oil.
+        """
+        component = self.get_object()
+
+        # Store old values for response
+        old_hours = float(component.hours_since_overhaul)
+
+        # Reset the service counters
+        component.hours_since_overhaul = 0
+        component.date_in_service = timezone.now().date()
+        component.save()
+
+        return Response({
+            'success': True,
+            'component_id': str(component.id),
+            'component_type': component.component_type.name,
+            'old_hours': old_hours,
+            'new_hours': 0,
+            'date_in_service': str(component.date_in_service),
+        })
 
 class DocumentCollectionViewSet(viewsets.ModelViewSet):
     queryset = DocumentCollection.objects.all()

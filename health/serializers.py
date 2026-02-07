@@ -13,6 +13,7 @@ class ComponentSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Component
         fields = [
+                'id',
                 'aircraft',
                 'parent_component',
                 'component_type',

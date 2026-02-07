@@ -144,6 +144,77 @@ function aircraftDetail(aircraftId) {
             return remaining > 0 ? remaining.toFixed(1) : '0.0';
         },
 
+        getComponentInterval(component) {
+            // Show replacement interval for replacement_critical, otherwise TBO
+            if (component.replacement_critical && component.replacement_hours) {
+                return component.replacement_hours + ' hrs';
+            }
+            if (component.tbo_hours) {
+                return component.tbo_hours + ' hrs';
+            }
+            return 'N/A';
+        },
+
+        calculateHoursRemaining(component) {
+            // Calculate remaining hours based on component type
+            let interval = null;
+            if (component.replacement_critical && component.replacement_hours) {
+                interval = component.replacement_hours;
+            } else if (component.tbo_hours) {
+                interval = component.tbo_hours;
+            }
+
+            if (!interval) {
+                return 'N/A';
+            }
+
+            const remaining = interval - (component.hours_since_overhaul || 0);
+            return remaining > 0 ? remaining.toFixed(1) : '0.0';
+        },
+
+        getHoursRemainingClass(component) {
+            const remaining = this.calculateHoursRemaining(component);
+            if (remaining === 'N/A') return '';
+
+            const hours = parseFloat(remaining);
+            if (hours <= 0) {
+                return 'hours-overdue';
+            } else if (hours < 10) {
+                return 'hours-critical';
+            } else if (hours < 25) {
+                return 'hours-warning';
+            }
+            return '';
+        },
+
+        async resetComponentService(component) {
+            const typeName = this.getComponentTypeName(component);
+            if (!confirm(`Reset service time for ${typeName}?\n\nThis will set hours since service to 0 and update the service date to today.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/component/${component.id}/reset_service/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showNotification(`${typeName} service reset - was ${data.old_hours} hrs`, 'success');
+                    await this.loadData(); // Reload to get updated component data
+                } else {
+                    showNotification('Failed to reset service time', 'danger');
+                }
+            } catch (error) {
+                console.error('Error resetting service:', error);
+                showNotification('Error resetting service time', 'danger');
+            }
+        },
+
         getStatusClass(component) {
             if (component.status === 'IN-USE') {
                 // Check if due for service
