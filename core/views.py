@@ -1,5 +1,8 @@
 from core.models import Aircraft, AircraftNote, AircraftEvent
-from core.serializers import AircraftSerializer, AircraftNoteSerializer, AircraftEventSerializer, UserSerializer
+from core.serializers import (
+    AircraftSerializer, AircraftListSerializer, AircraftNoteSerializer,
+    AircraftEventSerializer, UserSerializer
+)
 from health.models import Component, LogbookEntry, Squawk, Document, DocumentCollection
 from health.serializers import (
     ComponentSerializer, LogbookEntrySerializer, SquawkSerializer,
@@ -19,6 +22,12 @@ from decimal import Decimal
 class AircraftViewSet(viewsets.ModelViewSet):
     queryset = Aircraft.objects.all()
     serializer_class = AircraftSerializer
+
+    def get_serializer_class(self):
+        """Use lightweight serializer for list, full serializer for detail."""
+        if self.action == 'list':
+            return AircraftListSerializer
+        return AircraftSerializer
 
     @action(detail=True, methods=['post'])
     def update_hours(self, request, pk=None):

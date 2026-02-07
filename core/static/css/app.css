@@ -307,3 +307,131 @@
         height: 66px;
     }
 }
+
+/* ========================================
+   Airworthiness Status Styles
+   ======================================== */
+
+/* Card border colors for status */
+.card-border-red {
+    border-left: 4px solid var(--pf-v5-global--danger-color--100) !important;
+}
+
+.card-border-orange {
+    border-left: 4px solid var(--pf-v5-global--warning-color--100) !important;
+}
+
+/* Airworthiness Badge */
+.airworthiness-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--pf-v5-global--BorderRadius--sm);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.airworthiness-green {
+    background-color: var(--pf-v5-global--success-color--100);
+    color: white;
+}
+
+.airworthiness-orange {
+    background-color: var(--pf-v5-global--warning-color--100);
+    color: var(--pf-v5-global--Color--dark-100);
+}
+
+.airworthiness-red {
+    background-color: var(--pf-v5-global--danger-color--100);
+    color: white;
+}
+
+.airworthiness-badge .status-icon {
+    display: flex;
+    align-items: center;
+}
+
+/* Issue Summary */
+.issue-summary {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.issue-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.issue-count.issue-red {
+    color: var(--pf-v5-global--danger-color--100);
+}
+
+.issue-count.issue-orange {
+    color: var(--pf-v5-global--warning-color--200);
+}
+
+/* Airworthiness Issues List */
+.airworthiness-issues {
+    margin-top: 1rem;
+}
+
+.issue-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--pf-v5-global--BorderRadius--sm);
+    background-color: var(--pf-v5-global--BackgroundColor--200);
+}
+
+.issue-item.issue-severity-red {
+    border-left: 3px solid var(--pf-v5-global--danger-color--100);
+}
+
+.issue-item.issue-severity-orange {
+    border-left: 3px solid var(--pf-v5-global--warning-color--100);
+}
+
+.issue-icon {
+    flex-shrink: 0;
+    width: 1.5rem;
+    text-align: center;
+}
+
+.issue-icon.icon-red {
+    color: var(--pf-v5-global--danger-color--100);
+}
+
+.issue-icon.icon-orange {
+    color: var(--pf-v5-global--warning-color--200);
+}
+
+.issue-content {
+    flex: 1;
+}
+
+.issue-title {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.issue-description {
+    font-size: 0.875rem;
+    color: var(--pf-v5-global--Color--200);
+}
+
+.issue-category {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--pf-v5-global--Color--200);
+    margin-bottom: 0.25rem;
+}

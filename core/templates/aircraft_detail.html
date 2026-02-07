@@ -6,16 +6,38 @@
     <!-- Page Header -->
     <div class="pf-v5-c-page__main-section pf-m-light">
         <div class="pf-v5-c-content">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <h1 x-text="aircraft?.tail_number || 'Loading...'"></h1>
-                    <p x-show="aircraft">
-                        <span x-text="aircraft?.make"></span>
-                        <span x-text="aircraft?.model"></span>
-                    </p>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div>
+                        <h1 x-text="aircraft?.tail_number || 'Loading...'"></h1>
+                        <p x-show="aircraft">
+                            <span x-text="aircraft?.make"></span>
+                            <span x-text="aircraft?.model"></span>
+                        </p>
+                    </div>
+                    <!-- Airworthiness Status Badge -->
+                    <div x-show="aircraft" x-cloak
+                         class="airworthiness-badge"
+                         :class="getAirworthinessClass()"
+                         :title="getAirworthinessTooltip()">
+                        <span class="status-icon">
+                            <template x-if="aircraft?.airworthiness?.status === 'GREEN'">
+                                <i class="fas fa-check-circle"></i>
+                            </template>
+                            <template x-if="aircraft?.airworthiness?.status === 'ORANGE'">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </template>
+                            <template x-if="aircraft?.airworthiness?.status === 'RED'">
+                                <i class="fas fa-times-circle"></i>
+                            </template>
+                        </span>
+                        <span class="status-text" x-text="getAirworthinessText()"></span>
+                    </div>
                 </div>
                 <div x-show="aircraft" x-cloak>
-                    <button class="pf-v5-c-button pf-m-primary" @click="openHoursModal()">
+                    <button class="pf-v5-c-button pf-m-primary"
+                            @click="openHoursModal()"
+                            :disabled="aircraft?.airworthiness?.status === 'RED'">
                         Update Hours
                     </button>
                 </div>
@@ -116,6 +138,53 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Airworthiness Issues Section -->
+            <template x-if="aircraft?.airworthiness?.issue_count > 0">
+                <div class="pf-v5-c-card" style="margin-top: 1.5rem;"
+                     :class="{ 'card-border-red': aircraft?.airworthiness?.status === 'RED', 'card-border-orange': aircraft?.airworthiness?.status === 'ORANGE' }">
+                    <div class="pf-v5-c-card__header">
+                        <div class="pf-v5-c-card__header-main">
+                            <div class="pf-v5-c-card__title">
+                                <h2>Airworthiness Issues</h2>
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-card__actions">
+                            <template x-if="aircraft?.airworthiness?.red_count > 0">
+                                <span class="pf-v5-c-label pf-m-red">
+                                    <span x-text="aircraft.airworthiness.red_count"></span> Grounding
+                                </span>
+                            </template>
+                            <template x-if="aircraft?.airworthiness?.orange_count > 0">
+                                <span class="pf-v5-c-label pf-m-orange" style="margin-left: 0.5rem;">
+                                    <span x-text="aircraft.airworthiness.orange_count"></span> Upcoming
+                                </span>
+                            </template>
+                        </div>
+                    </div>
+                    <div class="pf-v5-c-card__body">
+                        <div class="airworthiness-issues">
+                            <template x-for="issue in aircraft?.airworthiness?.issues || []" :key="issue.item_id">
+                                <div class="issue-item" :class="'issue-severity-' + issue.severity.toLowerCase()">
+                                    <div class="issue-icon" :class="'icon-' + issue.severity.toLowerCase()">
+                                        <template x-if="issue.severity === 'RED'">
+                                            <i class="fas fa-times-circle"></i>
+                                        </template>
+                                        <template x-if="issue.severity === 'ORANGE'">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                        </template>
+                                    </div>
+                                    <div class="issue-content">
+                                        <div class="issue-category" x-text="issue.category"></div>
+                                        <div class="issue-title" x-text="issue.title"></div>
+                                        <div class="issue-description" x-text="issue.description"></div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </template>
         </div>
 
         <!-- Components Tab -->

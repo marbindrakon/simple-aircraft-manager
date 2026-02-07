@@ -25,9 +25,32 @@
     <div class="pf-v5-c-page__main-section" x-show="!loading && aircraftList.length > 0" x-cloak>
         <div class="pf-l-gallery pf-m-gutter">
             <template x-for="aircraft in aircraftList" :key="aircraft.id">
-                <div class="pf-v5-c-card">
-                    <div class="pf-v5-c-card__title">
-                        <h2 x-text="aircraft.tail_number"></h2>
+                <div class="pf-v5-c-card" :class="getCardBorderClass(aircraft)">
+                    <div class="pf-v5-c-card__header">
+                        <div class="pf-v5-c-card__header-main">
+                            <div class="pf-v5-c-card__title">
+                                <h2 x-text="aircraft.tail_number"></h2>
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-card__actions">
+                            <!-- Airworthiness Status Indicator -->
+                            <div class="airworthiness-badge"
+                                 :class="getAirworthinessClass(aircraft)"
+                                 :title="getAirworthinessTooltip(aircraft)">
+                                <span class="status-icon">
+                                    <template x-if="aircraft.airworthiness?.status === 'GREEN'">
+                                        <i class="fas fa-check-circle"></i>
+                                    </template>
+                                    <template x-if="aircraft.airworthiness?.status === 'ORANGE'">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                    </template>
+                                    <template x-if="aircraft.airworthiness?.status === 'RED'">
+                                        <i class="fas fa-times-circle"></i>
+                                    </template>
+                                </span>
+                                <span class="status-text" x-text="getAirworthinessText(aircraft)"></span>
+                            </div>
+                        </div>
                     </div>
                     <div class="pf-v5-c-card__body">
                         <dl>
@@ -40,10 +63,29 @@
                                 <span class="pf-v5-c-label pf-m-blue" x-text="aircraft.status"></span>
                             </dd>
                         </dl>
+
+                        <!-- Issue Summary (if any) -->
+                        <template x-if="aircraft.airworthiness?.issue_count > 0">
+                            <div class="issue-summary">
+                                <template x-if="aircraft.airworthiness.red_count > 0">
+                                    <span class="issue-count issue-red">
+                                        <i class="fas fa-times-circle"></i>
+                                        <span x-text="aircraft.airworthiness.red_count"></span> grounding
+                                    </span>
+                                </template>
+                                <template x-if="aircraft.airworthiness.orange_count > 0">
+                                    <span class="issue-count issue-orange">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        <span x-text="aircraft.airworthiness.orange_count"></span> upcoming
+                                    </span>
+                                </template>
+                            </div>
+                        </template>
                     </div>
                     <div class="pf-v5-c-card__footer">
                         <button class="pf-v5-c-button pf-m-primary"
-                                @click="openHoursModal(aircraft)">
+                                @click="openHoursModal(aircraft)"
+                                :disabled="aircraft.airworthiness?.status === 'RED'">
                             Update Hours
                         </button>
                         <a :href="`/aircraft/${aircraft.id}/`"

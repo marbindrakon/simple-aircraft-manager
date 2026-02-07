@@ -141,6 +141,45 @@ function aircraftDetail(aircraftId) {
                 return 'pf-m-red';
             }
             return 'pf-m-grey';
+        },
+
+        // Airworthiness status helpers
+        getAirworthinessClass() {
+            const status = this.aircraft?.airworthiness?.status || 'GREEN';
+            switch (status) {
+                case 'RED':
+                    return 'airworthiness-red';
+                case 'ORANGE':
+                    return 'airworthiness-orange';
+                default:
+                    return 'airworthiness-green';
+            }
+        },
+
+        getAirworthinessText() {
+            const status = this.aircraft?.airworthiness?.status || 'GREEN';
+            switch (status) {
+                case 'RED':
+                    return 'Grounded';
+                case 'ORANGE':
+                    return 'Caution';
+                default:
+                    return 'Airworthy';
+            }
+        },
+
+        getAirworthinessTooltip() {
+            const aw = this.aircraft?.airworthiness;
+            if (!aw || aw.status === 'GREEN') {
+                return 'Aircraft is airworthy';
+            }
+
+            const issues = aw.issues || [];
+            if (issues.length === 0) {
+                return aw.status === 'RED' ? 'Aircraft is grounded' : 'Maintenance due soon';
+            }
+
+            return issues.map(i => `${i.category}: ${i.title}`).join('\n');
         }
     }
 }
