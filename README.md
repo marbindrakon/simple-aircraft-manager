@@ -1,5 +1,7 @@
 # Simple Aircraft Manager
 
+> **Note**: This codebase was generated with [Claude](https://claude.ai), Anthropic's AI assistant, using [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
+
 A Django-based web application for managing aircraft fleet operations, maintenance records, and regulatory compliance tracking.
 
 ## Overview
