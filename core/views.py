@@ -1,7 +1,10 @@
 from core.models import Aircraft, AircraftNote, AircraftEvent
 from core.serializers import AircraftSerializer, AircraftNoteSerializer, AircraftEventSerializer, UserSerializer
-from health.models import Component, LogbookEntry, Squawk
-from health.serializers import ComponentSerializer, LogbookEntrySerializer, SquawkSerializer
+from health.models import Component, LogbookEntry, Squawk, Document, DocumentCollection
+from health.serializers import (
+    ComponentSerializer, LogbookEntrySerializer, SquawkSerializer,
+    DocumentCollectionNestedSerializer, DocumentNestedSerializer
+)
 
 from django.contrib.auth.models import User
 from django.views.generic import TemplateView
@@ -90,6 +93,39 @@ class AircraftViewSet(viewsets.ModelViewSet):
             ).data,
             'active_squawks': SquawkSerializer(
                 aircraft.squawks.filter(resolved=False),
+                many=True,
+                context={'request': request}
+            ).data,
+        })
+
+    @action(detail=True, methods=['get'])
+    def documents(self, request, pk=None):
+        """
+        Get aircraft documents organized by collection
+        GET /api/aircraft/{id}/documents/
+
+        Returns:
+        - collections: List of document collections with their documents
+        - uncollected_documents: Documents not in any collection
+        """
+        aircraft = self.get_object()
+
+        # Get all collections for this aircraft with their documents
+        collections = aircraft.doc_collections.prefetch_related('documents__images').all()
+
+        # Get documents not in any collection
+        uncollected_documents = aircraft.documents.filter(
+            collection__isnull=True
+        ).prefetch_related('images')
+
+        return Response({
+            'collections': DocumentCollectionNestedSerializer(
+                collections,
+                many=True,
+                context={'request': request}
+            ).data,
+            'uncollected_documents': DocumentNestedSerializer(
+                uncollected_documents,
                 many=True,
                 context={'request': request}
             ).data,

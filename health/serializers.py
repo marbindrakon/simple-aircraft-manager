@@ -47,6 +47,55 @@ class ComponentSerializer(serializers.HyperlinkedModelSerializer):
                 'ad_compliance',
                 ]
 
+class DocumentImageSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = DocumentImage
+        fields = '__all__'
+
+
+class DocumentImageNestedSerializer(serializers.ModelSerializer):
+    """Nested serializer for document images without hyperlinks"""
+    class Meta:
+        model = DocumentImage
+        fields = ['id', 'notes', 'image']
+
+
+class DocumentNestedSerializer(serializers.ModelSerializer):
+    """Nested serializer for documents with images included"""
+    images = DocumentImageNestedSerializer(many=True, read_only=True)
+    doc_type_display = serializers.CharField(source='get_doc_type_display', read_only=True)
+
+    class Meta:
+        model = Document
+        fields = [
+            'id',
+            'name',
+            'description',
+            'doc_type',
+            'doc_type_display',
+            'images',
+        ]
+
+
+class DocumentCollectionNestedSerializer(serializers.ModelSerializer):
+    """Nested serializer for collections with documents included"""
+    documents = DocumentNestedSerializer(many=True, read_only=True)
+    document_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DocumentCollection
+        fields = [
+            'id',
+            'name',
+            'description',
+            'documents',
+            'document_count',
+        ]
+
+    def get_document_count(self, obj):
+        return obj.documents.count()
+
+
 class DocumentCollectionSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = DocumentCollection
@@ -75,11 +124,6 @@ class DocumentSerializer(serializers.HyperlinkedModelSerializer):
                 'log_entry',
                 'images',
                 ]
-
-class DocumentImageSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = DocumentImage
-        fields = '__all__'
 
 class LogbookEntrySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:

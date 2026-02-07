@@ -199,7 +199,191 @@
 
         <!-- Documents Tab -->
         <div x-show="activeTab === 'documents'" class="pf-v5-c-page__main-section">
-            <p>Documents functionality coming soon...</p>
+            <!-- Loading State for Documents -->
+            <div x-show="documentsLoading" class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
+                    <h2 class="pf-v5-c-title pf-m-lg">Loading documents...</h2>
+                </div>
+            </div>
+
+            <!-- Documents Content -->
+            <div x-show="!documentsLoading" x-cloak>
+                <!-- Empty State -->
+                <template x-if="documentCollections.length === 0 && uncollectedDocuments.length === 0">
+                    <div class="pf-v5-c-empty-state">
+                        <div class="pf-v5-c-empty-state__content">
+                            <i class="fas fa-folder-open" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                            <h2 class="pf-v5-c-title pf-m-lg">No documents</h2>
+                            <div class="pf-v5-c-empty-state__body">
+                                No documents have been uploaded for this aircraft yet.
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Document Collections -->
+                <div class="pf-v5-l-stack pf-m-gutter" x-show="documentCollections.length > 0 || uncollectedDocuments.length > 0">
+                    <!-- Collections -->
+                    <template x-for="collection in documentCollections" :key="collection.id">
+                        <div class="pf-v5-c-card">
+                            <div class="pf-v5-c-card__header">
+                                <div class="pf-v5-c-card__header-main">
+                                    <div class="pf-v5-c-card__title">
+                                        <h2 x-text="collection.name"></h2>
+                                    </div>
+                                </div>
+                                <div class="pf-v5-c-card__actions">
+                                    <span class="pf-v5-c-label pf-m-blue">
+                                        <span x-text="collection.document_count"></span> pages
+                                    </span>
+                                </div>
+                            </div>
+                            <template x-if="collection.description">
+                                <div class="pf-v5-c-card__body">
+                                    <p x-text="collection.description" style="color: var(--pf-v5-global--Color--200);"></p>
+                                </div>
+                            </template>
+                            <div class="pf-v5-c-card__body">
+                                <div class="document-grid">
+                                    <template x-for="doc in collection.documents" :key="doc.id">
+                                        <div class="document-item" @click="openDocumentViewer(doc, collection.name)">
+                                            <div class="document-thumbnail">
+                                                <template x-if="doc.images && doc.images.length > 0">
+                                                    <img :src="doc.images[0].image" :alt="doc.name">
+                                                </template>
+                                                <template x-if="!doc.images || doc.images.length === 0">
+                                                    <div class="document-placeholder">
+                                                        <i class="fas fa-file-alt"></i>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <div class="document-info">
+                                                <span class="document-name" x-text="doc.name"></span>
+                                                <span class="document-type" x-text="doc.doc_type_display"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Uncollected Documents -->
+                    <template x-if="uncollectedDocuments.length > 0">
+                        <div class="pf-v5-c-card">
+                            <div class="pf-v5-c-card__header">
+                                <div class="pf-v5-c-card__header-main">
+                                    <div class="pf-v5-c-card__title">
+                                        <h2>Other Documents</h2>
+                                    </div>
+                                </div>
+                                <div class="pf-v5-c-card__actions">
+                                    <span class="pf-v5-c-label pf-m-grey">
+                                        <span x-text="uncollectedDocuments.length"></span> documents
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="pf-v5-c-card__body">
+                                <div class="document-grid">
+                                    <template x-for="doc in uncollectedDocuments" :key="doc.id">
+                                        <div class="document-item" @click="openDocumentViewer(doc, 'Other Documents')">
+                                            <div class="document-thumbnail">
+                                                <template x-if="doc.images && doc.images.length > 0">
+                                                    <img :src="doc.images[0].image" :alt="doc.name">
+                                                </template>
+                                                <template x-if="!doc.images || doc.images.length === 0">
+                                                    <div class="document-placeholder">
+                                                        <i class="fas fa-file-alt"></i>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <div class="document-info">
+                                                <span class="document-name" x-text="doc.name"></span>
+                                                <span class="document-type" x-text="doc.doc_type_display"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Viewer Modal -->
+    <div class="pf-v5-c-backdrop" x-show="viewerOpen" x-cloak @click.self="closeDocumentViewer()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-lg document-viewer-modal" @click.stop>
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeDocumentViewer()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title" x-text="viewerDocument?.name"></h1>
+                    <div class="pf-v5-c-modal-box__description">
+                        <span x-text="viewerCollectionName"></span>
+                        <span class="pf-v5-c-label pf-m-blue pf-m-compact" style="margin-left: 0.5rem;" x-text="viewerDocument?.doc_type_display"></span>
+                    </div>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body document-viewer-body">
+                    <template x-if="viewerDocument?.description">
+                        <p style="margin-bottom: 1rem; color: var(--pf-v5-global--Color--200);" x-text="viewerDocument.description"></p>
+                    </template>
+
+                    <!-- Image Navigation -->
+                    <template x-if="viewerDocument?.images && viewerDocument.images.length > 0">
+                        <div class="document-viewer-images">
+                            <!-- Image Counter -->
+                            <div class="image-counter" x-show="viewerDocument.images.length > 1">
+                                <span x-text="viewerImageIndex + 1"></span> / <span x-text="viewerDocument.images.length"></span>
+                            </div>
+
+                            <!-- Main Image -->
+                            <div class="viewer-image-container">
+                                <button class="nav-button nav-prev" @click="prevImage()" x-show="viewerDocument.images.length > 1 && viewerImageIndex > 0">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <img :src="viewerDocument.images[viewerImageIndex]?.image" :alt="viewerDocument.name" class="viewer-image">
+                                <button class="nav-button nav-next" @click="nextImage()" x-show="viewerDocument.images.length > 1 && viewerImageIndex < viewerDocument.images.length - 1">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+
+                            <!-- Image Notes -->
+                            <template x-if="viewerDocument.images[viewerImageIndex]?.notes">
+                                <p class="image-notes" x-text="viewerDocument.images[viewerImageIndex].notes"></p>
+                            </template>
+
+                            <!-- Thumbnail Strip -->
+                            <div class="thumbnail-strip" x-show="viewerDocument.images.length > 1">
+                                <template x-for="(img, idx) in viewerDocument.images" :key="img.id">
+                                    <div class="thumbnail"
+                                         :class="{ 'active': idx === viewerImageIndex }"
+                                         @click="viewerImageIndex = idx">
+                                        <img :src="img.image" :alt="`Page ${idx + 1}`">
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template x-if="!viewerDocument?.images || viewerDocument.images.length === 0">
+                        <div class="pf-v5-c-empty-state">
+                            <div class="pf-v5-c-empty-state__content">
+                                <i class="fas fa-image" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                                <h2 class="pf-v5-c-title pf-m-lg">No images</h2>
+                                <div class="pf-v5-c-empty-state__body">
+                                    This document has no attached images.
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
         </div>
     </div>
 </div>

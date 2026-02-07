@@ -8,8 +8,27 @@ function aircraftDetail(aircraftId) {
         loading: true,
         activeTab: 'overview',
 
+        // Documents state
+        documentCollections: [],
+        uncollectedDocuments: [],
+        documentsLoading: false,
+        documentsLoaded: false,
+
+        // Document viewer state
+        viewerOpen: false,
+        viewerDocument: null,
+        viewerCollectionName: '',
+        viewerImageIndex: 0,
+
         async init() {
             await this.loadData();
+
+            // Watch for tab changes to load documents lazily
+            this.$watch('activeTab', (tab) => {
+                if (tab === 'documents' && !this.documentsLoaded) {
+                    this.loadDocuments();
+                }
+            });
         },
 
         async loadData() {
@@ -31,10 +50,56 @@ function aircraftDetail(aircraftId) {
             }
         },
 
+        async loadDocuments() {
+            if (this.documentsLoading) return;
+
+            this.documentsLoading = true;
+            try {
+                const response = await fetch(`/api/aircraft/${this.aircraftId}/documents/`);
+                const data = await response.json();
+
+                this.documentCollections = data.collections || [];
+                this.uncollectedDocuments = data.uncollected_documents || [];
+                this.documentsLoaded = true;
+            } catch (error) {
+                console.error('Error loading documents:', error);
+                showNotification('Failed to load documents', 'danger');
+            } finally {
+                this.documentsLoading = false;
+            }
+        },
+
         openHoursModal() {
             window.dispatchEvent(new CustomEvent('open-hours-modal', {
                 detail: { aircraft: this.aircraft }
             }));
+        },
+
+        // Document viewer methods
+        openDocumentViewer(doc, collectionName) {
+            this.viewerDocument = doc;
+            this.viewerCollectionName = collectionName;
+            this.viewerImageIndex = 0;
+            this.viewerOpen = true;
+        },
+
+        closeDocumentViewer() {
+            this.viewerOpen = false;
+            this.viewerDocument = null;
+            this.viewerCollectionName = '';
+            this.viewerImageIndex = 0;
+        },
+
+        nextImage() {
+            if (this.viewerDocument?.images && this.viewerImageIndex < this.viewerDocument.images.length - 1) {
+                this.viewerImageIndex++;
+            }
+        },
+
+        prevImage() {
+            if (this.viewerImageIndex > 0) {
+                this.viewerImageIndex--;
+            }
         },
 
         formatHours(hours) {

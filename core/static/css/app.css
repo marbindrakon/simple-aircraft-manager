@@ -97,3 +97,213 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ========================================
+   Document Grid and Viewer Styles
+   ======================================== */
+
+/* Document Grid */
+.document-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.document-item {
+    cursor: pointer;
+    border: 1px solid var(--pf-v5-global--BorderColor--100);
+    border-radius: var(--pf-v5-global--BorderRadius--sm);
+    overflow: hidden;
+    transition: box-shadow 0.2s, transform 0.2s;
+    background: var(--pf-v5-global--BackgroundColor--100);
+}
+
+.document-item:hover {
+    box-shadow: var(--pf-v5-global--BoxShadow--md);
+    transform: translateY(-2px);
+}
+
+.document-thumbnail {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    background: var(--pf-v5-global--BackgroundColor--200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.document-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.document-placeholder {
+    color: var(--pf-v5-global--disabled-color--100);
+    font-size: 3rem;
+}
+
+.document-info {
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.document-name {
+    font-weight: 600;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.document-type {
+    font-size: 0.75rem;
+    color: var(--pf-v5-global--Color--200);
+}
+
+/* Document Viewer Modal */
+.document-viewer-modal {
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.document-viewer-body {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.document-viewer-images {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.image-counter {
+    font-size: 0.875rem;
+    color: var(--pf-v5-global--Color--200);
+}
+
+.viewer-image-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-height: 60vh;
+}
+
+.viewer-image {
+    max-width: 100%;
+    max-height: 60vh;
+    object-fit: contain;
+    border-radius: var(--pf-v5-global--BorderRadius--sm);
+    box-shadow: var(--pf-v5-global--BoxShadow--sm);
+}
+
+.nav-button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.nav-button:hover {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.nav-prev {
+    left: 1rem;
+}
+
+.nav-next {
+    right: 1rem;
+}
+
+.image-notes {
+    font-size: 0.875rem;
+    color: var(--pf-v5-global--Color--200);
+    font-style: italic;
+    text-align: center;
+    max-width: 600px;
+}
+
+/* Thumbnail Strip */
+.thumbnail-strip {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.5rem;
+    max-width: 100%;
+}
+
+.thumbnail {
+    flex-shrink: 0;
+    width: 60px;
+    height: 80px;
+    border: 2px solid transparent;
+    border-radius: var(--pf-v5-global--BorderRadius--sm);
+    overflow: hidden;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s, border-color 0.2s;
+}
+
+.thumbnail:hover {
+    opacity: 0.8;
+}
+
+.thumbnail.active {
+    border-color: var(--pf-v5-global--primary-color--100);
+    opacity: 1;
+}
+
+.thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Stack layout for logbook */
+.pf-v5-l-stack {
+    display: flex;
+    flex-direction: column;
+}
+
+.pf-v5-l-stack.pf-m-gutter {
+    gap: 1rem;
+}
+
+/* Responsive document grid */
+@media (max-width: 576px) {
+    .document-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .nav-button {
+        width: 32px;
+        height: 32px;
+    }
+
+    .thumbnail {
+        width: 50px;
+        height: 66px;
+    }
+}
