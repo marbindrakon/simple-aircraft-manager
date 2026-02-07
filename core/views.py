@@ -1,8 +1,10 @@
 from core.models import Aircraft, AircraftNote, AircraftEvent
 from core.serializers import (
     AircraftSerializer, AircraftListSerializer, AircraftNoteSerializer,
+    AircraftNoteNestedSerializer, AircraftNoteCreateUpdateSerializer,
     AircraftEventSerializer, UserSerializer
 )
+from django.utils import timezone
 from health.models import Component, LogbookEntry, Squawk, Document, DocumentCollection
 from health.serializers import (
     ComponentSerializer, LogbookEntrySerializer, SquawkSerializer,
@@ -84,7 +86,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def summary(self, request, pk=None):
         """
-        Get aircraft summary with components, recent logs, active squawks
+        Get aircraft summary with components, recent logs, active squawks, notes
         GET /api/aircraft/{id}/summary/
         """
         aircraft = self.get_object()
@@ -101,8 +103,13 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 many=True,
                 context={'request': request}
             ).data,
-            'active_squawks': SquawkSerializer(
+            'active_squawks': SquawkNestedSerializer(
                 aircraft.squawks.filter(resolved=False),
+                many=True,
+                context={'request': request}
+            ).data,
+            'notes': AircraftNoteNestedSerializer(
+                aircraft.notes.order_by('-added_timestamp'),
                 many=True,
                 context={'request': request}
             ).data,
@@ -188,10 +195,56 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=True, methods=['get', 'post'])
+    def notes(self, request, pk=None):
+        """
+        Get or create notes for an aircraft
+        GET /api/aircraft/{id}/notes/ - Get all notes
+        POST /api/aircraft/{id}/notes/ - Create a new note
+        """
+        aircraft = self.get_object()
+
+        if request.method == 'GET':
+            notes = aircraft.notes.all().order_by('-added_timestamp')
+
+            return Response({
+                'notes': AircraftNoteNestedSerializer(
+                    notes,
+                    many=True,
+                    context={'request': request}
+                ).data,
+            })
+
+        elif request.method == 'POST':
+            # Create a new note for this aircraft
+            data = request.data.copy()
+            data['aircraft'] = aircraft.id
+
+            serializer = AircraftNoteCreateUpdateSerializer(data=data)
+            if serializer.is_valid():
+                # Set added_by to current user if authenticated
+                note = serializer.save(
+                    added_by=request.user if request.user.is_authenticated else None
+                )
+                return Response(
+                    AircraftNoteNestedSerializer(note, context={'request': request}).data,
+                    status=status.HTTP_201_CREATED
+                )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class AircraftNoteViewSet(viewsets.ModelViewSet):
-    queryset = AircraftNote.objects.all()
+    queryset = AircraftNote.objects.all().order_by('-added_timestamp')
     serializer_class = AircraftNoteSerializer
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return AircraftNoteCreateUpdateSerializer
+        return AircraftNoteNestedSerializer
+
+    def perform_update(self, serializer):
+        """Set edited_timestamp when note is updated"""
+        serializer.save(edited_timestamp=timezone.now())
 
 
 class AircraftEventViewSet(viewsets.ReadOnlyModelViewSet):

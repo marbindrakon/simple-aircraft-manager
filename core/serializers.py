@@ -88,6 +88,31 @@ class AircraftNoteSerializer(serializers.HyperlinkedModelSerializer):
                 ]
 
 
+class AircraftNoteNestedSerializer(serializers.ModelSerializer):
+    """Nested serializer for notes with display fields"""
+    added_by_username = serializers.CharField(source='added_by.username', read_only=True, default=None)
+
+    class Meta:
+        model = AircraftNote
+        fields = [
+            'id',
+            'aircraft',
+            'added_timestamp',
+            'edited_timestamp',
+            'added_by',
+            'added_by_username',
+            'text',
+        ]
+
+
+class AircraftNoteCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating/updating notes"""
+    class Meta:
+        model = AircraftNote
+        fields = ['id', 'aircraft', 'text']
+        read_only_fields = ['id']
+
+
 class AircraftEventSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = AircraftEvent
