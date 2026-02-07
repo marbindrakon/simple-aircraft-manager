@@ -6,6 +6,7 @@ from core.serializers import (
 from health.models import Component, LogbookEntry, Squawk, Document, DocumentCollection
 from health.serializers import (
     ComponentSerializer, LogbookEntrySerializer, SquawkSerializer,
+    SquawkNestedSerializer, SquawkCreateUpdateSerializer,
     DocumentCollectionNestedSerializer, DocumentNestedSerializer
 )
 
@@ -140,6 +141,53 @@ class AircraftViewSet(viewsets.ModelViewSet):
             ).data,
         })
 
+    @action(detail=True, methods=['get', 'post'])
+    def squawks(self, request, pk=None):
+        """
+        Get or create squawks for an aircraft
+        GET /api/aircraft/{id}/squawks/ - Get all squawks (active and resolved)
+        POST /api/aircraft/{id}/squawks/ - Create a new squawk
+
+        Query params for GET:
+        - resolved: true/false (filter by resolved status)
+        """
+        aircraft = self.get_object()
+
+        if request.method == 'GET':
+            squawks = aircraft.squawks.all().order_by('-created_at')
+
+            # Filter by resolved status if specified
+            resolved_param = request.query_params.get('resolved')
+            if resolved_param is not None:
+                resolved = resolved_param.lower() == 'true'
+                squawks = squawks.filter(resolved=resolved)
+
+            return Response({
+                'squawks': SquawkNestedSerializer(
+                    squawks,
+                    many=True,
+                    context={'request': request}
+                ).data,
+            })
+
+        elif request.method == 'POST':
+            # Create a new squawk for this aircraft
+            data = request.data.copy()
+            data['aircraft'] = aircraft.id
+
+            # Set reported_by to current user if authenticated
+            if request.user.is_authenticated:
+                data['reported_by'] = request.user.id
+
+            serializer = SquawkCreateUpdateSerializer(data=data)
+            if serializer.is_valid():
+                squawk = serializer.save()
+                return Response(
+                    SquawkNestedSerializer(squawk, context={'request': request}).data,
+                    status=status.HTTP_201_CREATED
+                )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class AircraftNoteViewSet(viewsets.ModelViewSet):
     queryset = AircraftNote.objects.all()
@@ -157,6 +205,15 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
 
 class AircraftDetailView(LoginRequiredMixin, TemplateView):
     template_name = 'aircraft_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['aircraft_id'] = self.kwargs['pk']
+        return context
+
+
+class SquawkHistoryView(LoginRequiredMixin, TemplateView):
+    template_name = 'squawk_history.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

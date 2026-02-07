@@ -20,6 +20,17 @@ function aircraftDetail(aircraftId) {
         viewerCollectionName: '',
         viewerImageIndex: 0,
 
+        // Squawk modal state
+        squawkModalOpen: false,
+        editingSquawk: null,
+        squawkSubmitting: false,
+        squawkForm: {
+            priority: 1,
+            component: '',
+            issue_reported: '',
+            notes: '',
+        },
+
         async init() {
             await this.loadData();
 
@@ -180,6 +191,151 @@ function aircraftDetail(aircraftId) {
             }
 
             return issues.map(i => `${i.category}: ${i.title}`).join('\n');
+        },
+
+        // Squawk management methods
+        openSquawkModal() {
+            this.editingSquawk = null;
+            this.squawkForm = {
+                priority: 1,
+                component: '',
+                issue_reported: '',
+                notes: '',
+            };
+            this.squawkModalOpen = true;
+        },
+
+        editSquawk(squawk) {
+            this.editingSquawk = squawk;
+            this.squawkForm = {
+                priority: squawk.priority,
+                component: squawk.component || '',
+                issue_reported: squawk.issue_reported,
+                notes: squawk.notes || '',
+            };
+            this.squawkModalOpen = true;
+        },
+
+        closeSquawkModal() {
+            this.squawkModalOpen = false;
+            this.editingSquawk = null;
+            this.squawkForm = {
+                priority: 1,
+                component: '',
+                issue_reported: '',
+                notes: '',
+            };
+        },
+
+        async submitSquawk() {
+            if (this.squawkSubmitting) return;
+
+            this.squawkSubmitting = true;
+            try {
+                const data = {
+                    priority: parseInt(this.squawkForm.priority),
+                    issue_reported: this.squawkForm.issue_reported,
+                    notes: this.squawkForm.notes,
+                };
+
+                // Only include component if selected
+                if (this.squawkForm.component) {
+                    data.component = this.squawkForm.component;
+                }
+
+                let response;
+                if (this.editingSquawk) {
+                    // Update existing squawk
+                    response = await fetch(`/api/squawks/${this.editingSquawk.id}/`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken'),
+                        },
+                        body: JSON.stringify(data),
+                    });
+                } else {
+                    // Create new squawk
+                    response = await fetch(`/api/aircraft/${this.aircraftId}/squawks/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken'),
+                        },
+                        body: JSON.stringify(data),
+                    });
+                }
+
+                if (response.ok) {
+                    showNotification(
+                        this.editingSquawk ? 'Squawk updated' : 'Squawk created',
+                        'success'
+                    );
+                    this.closeSquawkModal();
+                    await this.loadData(); // Reload to get updated squawks
+                } else {
+                    const errorData = await response.json();
+                    showNotification(errorData.detail || 'Failed to save squawk', 'danger');
+                }
+            } catch (error) {
+                console.error('Error saving squawk:', error);
+                showNotification('Error saving squawk', 'danger');
+            } finally {
+                this.squawkSubmitting = false;
+            }
+        },
+
+        async resolveSquawk(squawk) {
+            if (!confirm('Mark this squawk as resolved?')) return;
+
+            try {
+                const response = await fetch(`/api/squawks/${squawk.id}/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({ resolved: true }),
+                });
+
+                if (response.ok) {
+                    showNotification('Squawk resolved', 'success');
+                    await this.loadData(); // Reload to update squawk list
+                } else {
+                    showNotification('Failed to resolve squawk', 'danger');
+                }
+            } catch (error) {
+                console.error('Error resolving squawk:', error);
+                showNotification('Error resolving squawk', 'danger');
+            }
+        },
+
+        getSquawkPriorityClass(squawk) {
+            switch (squawk.priority) {
+                case 0:
+                    return 'pf-m-red';
+                case 1:
+                    return 'pf-m-orange';
+                case 2:
+                    return 'pf-m-blue';
+                default:
+                    return 'pf-m-grey';
+            }
+        },
+
+        getSquawkCardClass(squawk) {
+            switch (squawk.priority) {
+                case 0:
+                    return 'card-border-red';
+                case 1:
+                    return 'card-border-orange';
+                default:
+                    return '';
+            }
+        },
+
+        formatDateTime(dateString) {
+            return new Date(dateString).toLocaleString();
         }
     }
 }

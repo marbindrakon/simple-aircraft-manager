@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div x-data="squawkHistory('{{ aircraft_id }}')">
+    <!-- Page Header -->
+    <div class="pf-v5-c-page__main-section pf-m-light">
+        <div class="pf-v5-c-content">
+            <nav class="pf-v5-c-breadcrumb" aria-label="Breadcrumb">
+                <ol class="pf-v5-c-breadcrumb__list">
+                    <li class="pf-v5-c-breadcrumb__item">
+                        <a href="/dashboard/" class="pf-v5-c-breadcrumb__link">Dashboard</a>
+                    </li>
+                    <li class="pf-v5-c-breadcrumb__item">
+                        <span class="pf-v5-c-breadcrumb__item-divider">
+                            <i class="fas fa-angle-right"></i>
+                        </span>
+                        <a :href="`/aircraft/${aircraftId}/`" class="pf-v5-c-breadcrumb__link" x-text="aircraft?.tail_number || 'Aircraft'"></a>
+                    </li>
+                    <li class="pf-v5-c-breadcrumb__item">
+                        <span class="pf-v5-c-breadcrumb__item-divider">
+                            <i class="fas fa-angle-right"></i>
+                        </span>
+                        <span class="pf-v5-c-breadcrumb__link pf-m-current">Squawk History</span>
+                    </li>
+                </ol>
+            </nav>
+            <h1 style="margin-top: 1rem;">Squawk History</h1>
+            <p x-show="aircraft" x-text="`Resolved squawks for ${aircraft?.tail_number}`"></p>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div class="pf-v5-c-page__main-section" x-show="loading" x-cloak>
+        <div class="pf-v5-c-empty-state">
+            <div class="pf-v5-c-empty-state__content">
+                <div class="loading-spinner" style="width: 3rem; height: 3rem;"></div>
+                <h2 class="pf-v5-c-title pf-m-lg">Loading squawk history...</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Squawk History Content -->
+    <div class="pf-v5-c-page__main-section" x-show="!loading" x-cloak>
+        <!-- Back Link -->
+        <div style="margin-bottom: 1rem;">
+            <a :href="`/aircraft/${aircraftId}/`" class="pf-v5-c-button pf-m-link pf-m-inline">
+                <i class="fas fa-arrow-left"></i> Back to Aircraft
+            </a>
+        </div>
+
+        <!-- Empty State -->
+        <template x-if="resolvedSquawks.length === 0">
+            <div class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <i class="fas fa-clipboard-list" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                    <h2 class="pf-v5-c-title pf-m-lg">No Resolved Squawks</h2>
+                    <div class="pf-v5-c-empty-state__body">
+                        This aircraft has no resolved squawks in its history.
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Squawk History Table -->
+        <template x-if="resolvedSquawks.length > 0">
+            <table class="pf-v5-c-table pf-m-grid-md">
+                <thead>
+                    <tr>
+                        <th>Date Reported</th>
+                        <th>Priority</th>
+                        <th>Component</th>
+                        <th>Issue</th>
+                        <th>Reported By</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="squawk in resolvedSquawks" :key="squawk.id">
+                        <tr>
+                            <td x-text="formatDate(squawk.created_at)"></td>
+                            <td>
+                                <span class="pf-v5-c-label" :class="getPriorityClass(squawk)" x-text="squawk.priority_display"></span>
+                            </td>
+                            <td x-text="squawk.component_name || '-'"></td>
+                            <td>
+                                <span x-text="squawk.issue_reported"></span>
+                                <template x-if="squawk.notes">
+                                    <div style="font-size: 0.875rem; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;">
+                                        <strong>Notes:</strong> <span x-text="squawk.notes"></span>
+                                    </div>
+                                </template>
+                            </td>
+                            <td x-text="squawk.reported_by_username || '-'"></td>
+                            <td>
+                                <button class="pf-v5-c-button pf-m-plain" @click="reopenSquawk(squawk)" title="Reopen Squawk">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </template>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function squawkHistory(aircraftId) {
+    return {
+        aircraftId: aircraftId,
+        aircraft: null,
+        resolvedSquawks: [],
+        loading: true,
+
+        async init() {
+            await this.loadData();
+        },
+
+        async loadData() {
+            this.loading = true;
+            try {
+                // Load aircraft info and resolved squawks in parallel
+                const [aircraftRes, squawksRes] = await Promise.all([
+                    fetch(`/api/aircraft/${this.aircraftId}/`),
+                    fetch(`/api/aircraft/${this.aircraftId}/squawks/?resolved=true`)
+                ]);
+
+                if (aircraftRes.ok) {
+                    this.aircraft = await aircraftRes.json();
+                }
+
+                if (squawksRes.ok) {
+                    const data = await squawksRes.json();
+                    this.resolvedSquawks = data.squawks || [];
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showNotification('Failed to load squawk history', 'danger');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async reopenSquawk(squawk) {
+            if (!confirm('Reopen this squawk?')) return;
+
+            try {
+                const response = await fetch(`/api/squawks/${squawk.id}/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({ resolved: false }),
+                });
+
+                if (response.ok) {
+                    showNotification('Squawk reopened', 'success');
+                    await this.loadData();
+                } else {
+                    showNotification('Failed to reopen squawk', 'danger');
+                }
+            } catch (error) {
+                console.error('Error reopening squawk:', error);
+                showNotification('Error reopening squawk', 'danger');
+            }
+        },
+
+        formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString();
+        },
+
+        getPriorityClass(squawk) {
+            switch (squawk.priority) {
+                case 0:
+                    return 'pf-m-red';
+                case 1:
+                    return 'pf-m-orange';
+                case 2:
+                    return 'pf-m-blue';
+                default:
+                    return 'pf-m-grey';
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

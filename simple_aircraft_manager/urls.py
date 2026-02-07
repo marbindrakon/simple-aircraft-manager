@@ -37,7 +37,7 @@ router.register(r'document-collection', health_views.DocumentCollectionViewSet)
 router.register(r'document', health_views.DocumentViewSet)
 router.register(r'document-image', health_views.DocumentImageViewSet)
 router.register(r'logbook', health_views.LogbookEntryViewSet)
-router.register(r'squawk', health_views.SquawkViewSet)
+router.register(r'squawks', health_views.SquawkViewSet)
 router.register(r'inspection-type', health_views.InspectionTypeViewSet)
 router.register(r'ad', health_views.ADViewSet)
 router.register(r'stc', health_views.STCApplicationViewSet)
@@ -53,6 +53,7 @@ urlpatterns = [
     path('', RedirectView.as_view(url='/dashboard/', permanent=False), name='home'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('aircraft/<uuid:pk>/', core_views.AircraftDetailView.as_view(), name='aircraft-detail'),
+    path('aircraft/<uuid:pk>/squawks/history/', core_views.SquawkHistoryView.as_view(), name='squawk-history'),
     path('api/', include(router.urls)),
     path('admin/', admin.site.urls),
     path("accounts/", include("django.contrib.auth.urls")),

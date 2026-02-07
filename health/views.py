@@ -37,8 +37,16 @@ class LogbookEntryViewSet(viewsets.ModelViewSet):
     search_fields = ['text', 'signoff_person']
 
 class SquawkViewSet(viewsets.ModelViewSet):
-    queryset = Squawk.objects.all()
+    queryset = Squawk.objects.all().order_by('-created_at')
     serializer_class = SquawkSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['aircraft', 'component', 'priority', 'resolved']
+    search_fields = ['issue_reported', 'notes']
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return SquawkCreateUpdateSerializer
+        return SquawkSerializer
 
 class InspectionTypeViewSet(viewsets.ModelViewSet):
     queryset = InspectionType.objects.all()

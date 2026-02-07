@@ -135,6 +135,53 @@ class SquawkSerializer(serializers.HyperlinkedModelSerializer):
         model = Squawk
         fields = '__all__'
 
+
+class SquawkNestedSerializer(serializers.ModelSerializer):
+    """Nested serializer for squawks with display fields"""
+    priority_display = serializers.CharField(source='get_priority_display', read_only=True)
+    component_name = serializers.SerializerMethodField()
+    reported_by_username = serializers.CharField(source='reported_by.username', read_only=True, default=None)
+
+    class Meta:
+        model = Squawk
+        fields = [
+            'id',
+            'aircraft',
+            'component',
+            'component_name',
+            'priority',
+            'priority_display',
+            'issue_reported',
+            'attachment',
+            'created_at',
+            'reported_by',
+            'reported_by_username',
+            'resolved',
+            'notes',
+        ]
+
+    def get_component_name(self, obj):
+        if obj.component:
+            return str(obj.component.component_type.name)
+        return None
+
+
+class SquawkCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating/updating squawks"""
+    class Meta:
+        model = Squawk
+        fields = [
+            'id',
+            'aircraft',
+            'component',
+            'priority',
+            'issue_reported',
+            'attachment',
+            'resolved',
+            'notes',
+        ]
+        read_only_fields = ['id']
+
 class InspectionTypeSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = InspectionType
