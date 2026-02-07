@@ -255,7 +255,7 @@
                             </td>
                             <td x-text="`${component.manufacturer} ${component.model}`"></td>
                             <td x-text="component.install_location"></td>
-                            <td x-text="formatHours(component.hours_since_overhaul)"></td>
+                            <td x-text="formatHours(getComponentCurrentHours(component))"></td>
                             <td x-text="getComponentInterval(component)"></td>
                             <td :class="getHoursRemainingClass(component)" x-text="calculateHoursRemaining(component)"></td>
                             <td>

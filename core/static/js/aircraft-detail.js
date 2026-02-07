@@ -144,6 +144,14 @@ function aircraftDetail(aircraftId) {
             return remaining > 0 ? remaining.toFixed(1) : '0.0';
         },
 
+        getComponentCurrentHours(component) {
+            // Show hours_in_service for replacement_critical, otherwise hours_since_overhaul
+            if (component.replacement_critical) {
+                return component.hours_in_service || 0;
+            }
+            return component.hours_since_overhaul || 0;
+        },
+
         getComponentInterval(component) {
             // Show replacement interval for replacement_critical, otherwise TBO
             if (component.replacement_critical && component.replacement_hours) {
@@ -158,17 +166,21 @@ function aircraftDetail(aircraftId) {
         calculateHoursRemaining(component) {
             // Calculate remaining hours based on component type
             let interval = null;
+            let currentHours = 0;
+
             if (component.replacement_critical && component.replacement_hours) {
                 interval = component.replacement_hours;
+                currentHours = component.hours_in_service || 0;
             } else if (component.tbo_hours) {
                 interval = component.tbo_hours;
+                currentHours = component.hours_since_overhaul || 0;
             }
 
             if (!interval) {
                 return 'N/A';
             }
 
-            const remaining = interval - (component.hours_since_overhaul || 0);
+            const remaining = interval - currentHours;
             return remaining > 0 ? remaining.toFixed(1) : '0.0';
         },
 

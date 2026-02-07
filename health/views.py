@@ -29,10 +29,10 @@ class ComponentViewSet(viewsets.ModelViewSet):
         component = self.get_object()
 
         # Store old values for response
-        old_hours = float(component.hours_since_overhaul)
+        old_hours = float(component.hours_in_service)
 
         # Reset the service counters
-        component.hours_since_overhaul = 0
+        component.hours_in_service = 0
         component.date_in_service = timezone.now().date()
         component.save()
 
