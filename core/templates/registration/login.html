@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Login: Simple Aircraft Manager{% endblock %}
+
+{% block content %}
+<div class="pf-v5-c-page__main-section pf-m-light" style="text-align: center; padding: 3rem 0;">
+	<h1>Simple Aircraft Manager</h1>
+	<p>Please log in to continue</p>
+</div>
+
+<div class="pf-v5-c-page__main-section" style="display: flex; justify-content: center;">
+	<div class="pf-v5-c-card" style="max-width: 500px; width: 100%;">
+		<div class="pf-v5-c-card__title">
+			<h2>Login</h2>
+		</div>
+		<div class="pf-v5-c-card__body">
+			<form action="{% url 'login' %}" method="post" class="pf-v5-c-form">
+				{% csrf_token %}
+
+				{% if form.non_field_errors %}
+				<div class="pf-v5-c-alert pf-m-danger pf-m-inline" role="alert">
+					<div class="pf-v5-c-alert__icon">
+						<i class="fas fa-exclamation-circle"></i>
+					</div>
+					<div class="pf-v5-c-alert__description">
+						{{ form.non_field_errors }}
+					</div>
+				</div>
+				{% endif %}
+
+				<div class="pf-v5-c-form__group">
+					<label class="pf-v5-c-form__label" for="{{ form.username.id_for_label }}">
+						<span class="pf-v5-c-form__label-text">{{ form.username.label }}</span>
+						<span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+					</label>
+					<input type="text"
+					       id="{{ form.username.id_for_label }}"
+					       name="{{ form.username.name }}"
+					       class="pf-v5-c-form-control"
+					       required
+					       autofocus>
+					{% if form.username.errors %}
+					<div class="pf-v5-c-form__helper-text pf-m-error">
+						{{ form.username.errors }}
+					</div>
+					{% endif %}
+				</div>
+
+				<div class="pf-v5-c-form__group">
+					<label class="pf-v5-c-form__label" for="{{ form.password.id_for_label }}">
+						<span class="pf-v5-c-form__label-text">{{ form.password.label }}</span>
+						<span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+					</label>
+					<input type="password"
+					       id="{{ form.password.id_for_label }}"
+					       name="{{ form.password.name }}"
+					       class="pf-v5-c-form-control"
+					       required>
+					{% if form.password.errors %}
+					<div class="pf-v5-c-form__helper-text pf-m-error">
+						{{ form.password.errors }}
+					</div>
+					{% endif %}
+				</div>
+
+				<div class="pf-v5-c-form__group pf-m-action">
+					<button type="submit" class="pf-v5-c-button pf-m-primary pf-m-block">
+						Log In
+					</button>
+				</div>
+
+				<input type="hidden" name="next" value="{{ next }}">
+			</form>
+		</div>
+	</div>
+</div>
+{% endblock %}

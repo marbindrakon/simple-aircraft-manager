@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div x-data="aircraftDetail('{{ aircraft_id }}')" @aircraft-updated.window="loadData()">
+    <!-- Page Header -->
+    <div class="pf-v5-c-page__main-section pf-m-light">
+        <div class="pf-v5-c-content">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1 x-text="aircraft?.tail_number || 'Loading...'"></h1>
+                    <p x-show="aircraft">
+                        <span x-text="aircraft?.make"></span>
+                        <span x-text="aircraft?.model"></span>
+                    </p>
+                </div>
+                <div x-show="aircraft" x-cloak>
+                    <button class="pf-v5-c-button pf-m-primary" @click="openHoursModal()">
+                        Update Hours
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div class="pf-v5-c-page__main-section" x-show="loading" x-cloak>
+        <div class="pf-v5-c-empty-state">
+            <div class="pf-v5-c-empty-state__content">
+                <div class="loading-spinner" style="width: 3rem; height: 3rem;"></div>
+                <h2 class="pf-v5-c-title pf-m-lg">Loading aircraft data...</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="pf-v5-c-page__main-section" x-show="!loading && aircraft" x-cloak>
+        <div class="pf-v5-c-tabs" role="region">
+            <ul class="pf-v5-c-tabs__list">
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'overview' }">
+                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'overview'">
+                        <span class="pf-v5-c-tabs__item-text">Overview</span>
+                    </button>
+                </li>
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'components' }">
+                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'components'">
+                        <span class="pf-v5-c-tabs__item-text">Components</span>
+                    </button>
+                </li>
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'logbook' }">
+                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'logbook'">
+                        <span class="pf-v5-c-tabs__item-text">Logbook</span>
+                    </button>
+                </li>
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'documents' }">
+                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'documents'">
+                        <span class="pf-v5-c-tabs__item-text">Documents</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Overview Tab -->
+        <div x-show="activeTab === 'overview'" class="pf-v5-c-page__main-section">
+            <div class="pf-l-gallery pf-m-gutter">
+                <!-- Aircraft Info Card -->
+                <div class="pf-v5-c-card">
+                    <div class="pf-v5-c-card__title">
+                        <h2>Aircraft Information</h2>
+                    </div>
+                    <div class="pf-v5-c-card__body">
+                        <dl>
+                            <dt>Tail Number:</dt>
+                            <dd x-text="aircraft?.tail_number"></dd>
+                            <dt>Make:</dt>
+                            <dd x-text="aircraft?.make"></dd>
+                            <dt>Model:</dt>
+                            <dd x-text="aircraft?.model"></dd>
+                            <dt>Status:</dt>
+                            <dd>
+                                <span class="pf-v5-c-label pf-m-blue" x-text="aircraft?.status"></span>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <!-- Hours Card -->
+                <div class="pf-v5-c-card">
+                    <div class="pf-v5-c-card__title">
+                        <h2>Flight Hours</h2>
+                    </div>
+                    <div class="pf-v5-c-card__body">
+                        <div style="text-align: center;">
+                            <div class="hours-display" x-text="formatHours(aircraft?.flight_time)"></div>
+                            <p>Total Hours</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Squawks Card -->
+                <div class="pf-v5-c-card">
+                    <div class="pf-v5-c-card__title">
+                        <h2>Active Squawks</h2>
+                    </div>
+                    <div class="pf-v5-c-card__body">
+                        <template x-if="activeSquawks.length === 0">
+                            <p>No active squawks</p>
+                        </template>
+                        <template x-if="activeSquawks.length > 0">
+                            <ul>
+                                <template x-for="squawk in activeSquawks" :key="squawk.id">
+                                    <li x-text="squawk.issue_reported"></li>
+                                </template>
+                            </ul>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Components Tab -->
+        <div x-show="activeTab === 'components'" class="pf-v5-c-page__main-section">
+            <table class="pf-v5-c-table pf-m-grid-md">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Manufacturer/Model</th>
+                        <th>Location</th>
+                        <th>Hours</th>
+                        <th>TBO Hours</th>
+                        <th>Hours to TBO</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-if="components.length === 0">
+                        <tr>
+                            <td colspan="7" style="text-align: center;">No components found</td>
+                        </tr>
+                    </template>
+                    <template x-for="component in components" :key="component.id">
+                        <tr>
+                            <td x-text="getComponentTypeName(component)"></td>
+                            <td x-text="`${component.manufacturer} ${component.model}`"></td>
+                            <td x-text="component.install_location"></td>
+                            <td x-text="formatHours(component.hours_since_overhaul)"></td>
+                            <td x-text="component.tbo_hours || 'N/A'"></td>
+                            <td x-text="calculateHoursToTBO(component)"></td>
+                            <td>
+                                <span class="pf-v5-c-label"
+                                      :class="getStatusClass(component)"
+                                      x-text="component.status"></span>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Logbook Tab -->
+        <div x-show="activeTab === 'logbook'" class="pf-v5-c-page__main-section">
+            <template x-if="recentLogs.length === 0">
+                <div class="pf-v5-c-empty-state">
+                    <div class="pf-v5-c-empty-state__content">
+                        <h2 class="pf-v5-c-title pf-m-lg">No logbook entries</h2>
+                    </div>
+                </div>
+            </template>
+            <template x-if="recentLogs.length > 0">
+                <div class="pf-v5-l-stack pf-m-gutter">
+                    <template x-for="log in recentLogs" :key="log.id">
+                        <div class="pf-v5-c-card">
+                            <div class="pf-v5-c-card__title">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <h3 x-text="formatDate(log.date)"></h3>
+                                    <span class="pf-v5-c-label pf-m-blue" x-text="log.entry_type || log.log_type"></span>
+                                </div>
+                            </div>
+                            <div class="pf-v5-c-card__body">
+                                <p x-text="log.text"></p>
+                                <template x-if="log.aircraft_hours_at_entry">
+                                    <p style="margin-top: 0.5rem;">
+                                        <strong>Aircraft Hours:</strong>
+                                        <span x-text="formatHours(log.aircraft_hours_at_entry)"></span>
+                                    </p>
+                                </template>
+                                <template x-if="log.signoff_person">
+                                    <p style="margin-top: 0.5rem;">
+                                        <strong>Signed by:</strong>
+                                        <span x-text="log.signoff_person"></span>
+                                    </p>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+
+        <!-- Documents Tab -->
+        <div x-show="activeTab === 'documents'" class="pf-v5-c-page__main-section">
+            <p>Documents functionality coming soon...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/aircraft-detail.js' %}"></script>
+{% endblock %}

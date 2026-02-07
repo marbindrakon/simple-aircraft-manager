@@ -1,0 +1,51 @@
+{% load static %}
+<header class="pf-v5-c-page__header">
+    <div class="pf-v5-c-page__header-brand">
+        <div class="pf-v5-c-page__header-brand-toggle">
+            <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Navigation toggle" aria-expanded="false">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        <a href="/" class="pf-v5-c-page__header-brand-link">
+            <div class="pf-v5-c-brand">
+                <span style="font-size: 1.5rem; font-weight: 700; color: white;">Simple Aircraft Manager</span>
+            </div>
+        </a>
+    </div>
+    <div class="pf-v5-c-page__header-nav">
+        <nav class="pf-v5-c-nav pf-m-horizontal" aria-label="Global">
+            <ul class="pf-v5-c-nav__list">
+                <li class="pf-v5-c-nav__item">
+                    <a href="/dashboard" class="pf-v5-c-nav__link">Dashboard</a>
+                </li>
+                <li class="pf-v5-c-nav__item">
+                    <a href="/api/" class="pf-v5-c-nav__link">API</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    <div class="pf-v5-c-page__header-tools">
+        <div class="pf-v5-c-page__header-tools-group">
+            {% if user.is_authenticated %}
+            <div class="pf-v5-c-dropdown">
+                <button class="pf-v5-c-dropdown__toggle pf-m-plain" type="button" aria-label="User menu">
+                    <span class="pf-v5-c-dropdown__toggle-text">{{ user.username }}</span>
+                    <span class="pf-v5-c-dropdown__toggle-icon">
+                        <i class="fas fa-caret-down"></i>
+                    </span>
+                </button>
+                <ul class="pf-v5-c-dropdown__menu" hidden>
+                    <li>
+                        <a class="pf-v5-c-dropdown__menu-item" href="/admin/">Admin</a>
+                    </li>
+                    <li>
+                        <a class="pf-v5-c-dropdown__menu-item" href="/accounts/logout/">Logout</a>
+                    </li>
+                </ul>
+            </div>
+            {% else %}
+            <a href="/accounts/login/" class="pf-v5-c-button pf-m-primary">Login</a>
+            {% endif %}
+        </div>
+    </div>
+</header>

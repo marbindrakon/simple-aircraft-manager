@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div x-data="aircraftDashboard()" @aircraft-updated.window="loadAircraft()">
+    <!-- Page Header -->
+    <div class="pf-v5-c-page__main-section pf-m-light">
+        <div class="pf-v5-c-content">
+            <h1>Aircraft Fleet</h1>
+            <p>Manage your aircraft hours and maintenance</p>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div class="pf-v5-c-page__main-section" x-show="loading" x-cloak>
+        <div class="pf-v5-c-empty-state">
+            <div class="pf-v5-c-empty-state__content">
+                <div class="loading-spinner" style="width: 3rem; height: 3rem;"></div>
+                <h2 class="pf-v5-c-title pf-m-lg">Loading aircraft...</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aircraft Grid -->
+    <div class="pf-v5-c-page__main-section" x-show="!loading && aircraftList.length > 0" x-cloak>
+        <div class="pf-l-gallery pf-m-gutter">
+            <template x-for="aircraft in aircraftList" :key="aircraft.id">
+                <div class="pf-v5-c-card">
+                    <div class="pf-v5-c-card__title">
+                        <h2 x-text="aircraft.tail_number"></h2>
+                    </div>
+                    <div class="pf-v5-c-card__body">
+                        <dl>
+                            <dt>Make/Model:</dt>
+                            <dd x-text="`${aircraft.make} ${aircraft.model}`"></dd>
+                            <dt>Hours:</dt>
+                            <dd class="hours-display" x-text="formatHours(aircraft.flight_time)"></dd>
+                            <dt>Status:</dt>
+                            <dd>
+                                <span class="pf-v5-c-label pf-m-blue" x-text="aircraft.status"></span>
+                            </dd>
+                        </dl>
+                    </div>
+                    <div class="pf-v5-c-card__footer">
+                        <button class="pf-v5-c-button pf-m-primary"
+                                @click="openHoursModal(aircraft)">
+                            Update Hours
+                        </button>
+                        <a :href="`/aircraft/${aircraft.id}/`"
+                           class="pf-v5-c-button pf-m-secondary">
+                            Details
+                        </a>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="pf-v5-c-page__main-section" x-show="!loading && aircraftList.length === 0" x-cloak>
+        <div class="pf-v5-c-empty-state">
+            <div class="pf-v5-c-empty-state__content">
+                <i class="fas fa-plane" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                <h2 class="pf-v5-c-title pf-m-lg">No aircraft found</h2>
+                <div class="pf-v5-c-empty-state__body">
+                    Add your first aircraft using the admin panel.
+                </div>
+                <a href="/admin/core/aircraft/add/" class="pf-v5-c-button pf-m-primary">
+                    Add Aircraft
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}

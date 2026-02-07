@@ -1,0 +1,301 @@
+from django.conf import settings
+from django.db import models
+
+from core import models as core_models
+
+import uuid
+
+# Create your models here.
+
+LOG_TYPES = (
+        ('ENG', 'Engine'),
+        ('AC', 'Aircraft'),
+        ('PROP', 'Propeller'),
+        ('OTHER', 'Other'),
+)
+
+SQUAWK_PRIORITIES = (
+        (0, "Ground Aircraft"),
+        (1, "Fix Soon"),
+        (2, "Fix at Next Inspection"),
+        (3, "Fix Eventually"),
+)
+
+DOCUMENT_TYPES = (
+        ('LOG', 'Logbook'),
+        ('ALTER', 'Alteration Record'),
+        ('REPORT', 'Report'),
+        ('ESTIMATE', 'Estimate'),
+        ('DISC', 'Discrepancy List'),
+        ('INVOICE', 'Receipt / Invoice'),
+        ('AIRCRAFT', 'Aircraft Record'),
+        ('OTHER', 'Other'),
+)
+
+COMPONENT_STATUSES = (
+        ('SPARE', 'Spare Part'),
+        ('IN-USE', 'In Service'),
+        ('DISPOSED', 'Disposed'),
+)
+
+def random_document_filename(instance, filename):
+    randname = uuid.uuid4().hex
+    ext = filename.split('.')[-1]
+    return f"health/documents/{randname}.{ext}"
+
+def random_squawk_filename(instance, filename):
+    randname = uuid.uuid4().hex
+    ext = filename.split('.')[-1]
+    return f"health/squawks/{randname}.{ext}"
+
+class ComponentType(models.Model):
+    id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=254, unique=True)
+    consumable = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.name
+
+class Component(models.Model):
+    id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
+    aircraft = models.ForeignKey(core_models.Aircraft, related_name='components', on_delete=models.CASCADE, blank=True, null=True)
+    parent_component = models.ForeignKey('self', related_name='components', blank=True, null=True, on_delete=models.CASCADE)
+    component_type = models.ForeignKey(ComponentType, on_delete=models.CASCADE)
+    manufacturer = models.CharField(max_length=254)
+    model = models.CharField(max_length=254)
+    serial_number = models.CharField(max_length=254, blank=True)
+    install_location = models.CharField(max_length=254, blank=True)
+    notes = models.TextField(blank=True)
+    status = models.CharField(max_length=254, choices=COMPONENT_STATUSES, default='SPARE')
+    date_in_service = models.DateField()
+    hours_in_service = models.DecimalField(max_digits=8, decimal_places=1, default=0.0)
+    hours_since_overhaul = models.DecimalField(max_digits=8, decimal_places=1, default=0.0)
+    overhaul_date = models.DateField(blank=True, null=True)
+    tbo_hours = models.IntegerField(blank=True, null=True)
+    tbo_days = models.IntegerField(blank=True, null=True)
+    inspection_hours = models.IntegerField(blank=True, null=True)
+    inspection_days = models.IntegerField(blank=True, null=True)
+    replacement_hours = models.IntegerField(blank=True, null=True)
+    replacement_days = models.IntegerField(blank=True, null=True)
+    tbo_critical = models.BooleanField(default=True)
+    inspection_critical = models.BooleanField(default=True)
+    replacement_critical = models.BooleanField(default=False)
+
+    def __str__(self):
+        ret_string = f"{self.component_type.name}"
+        if self.aircraft:
+            ret_string += f" - {self.aircraft.tail_number}"
+        if self.install_location:
+            ret_string += f" - {self.install_location}"
+        ret_string += f" - {self.status}"
+        return ret_string
+
+    def hours_to_tbo(self):
+        """Hours remaining until TBO"""
+        if self.tbo_hours:
+            return self.tbo_hours - self.hours_since_overhaul
+        return None
+
+    def is_due_for_service(self):
+        """Check if component needs service"""
+        return any([
+            self.tbo_critical,
+            self.inspection_critical,
+            self.replacement_critical
+        ])
+
+class DocumentCollection(models.Model):
+    id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
+    aircraft = models.ForeignKey(core_models.Aircraft, related_name='doc_collections', on_delete=models.CASCADE, blank=True, null=True)
+    components = models.ManyToManyField(Component, related_name='doc_collections', blank=True)
+    name = models.CharField(max_length=254)
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        ret_string = ""
+        if self.aircraft:
+            ret_string += f"{self.aircraft.tail_number}"
+        ret_string += f" - {self.name}"
+        return ret_string
+
+
+class Document(models.Model):
+    id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
+    aircraft = models.ForeignKey(core_models.Aircraft, related_name='documents', on_delete=models.CASCADE, blank=True, null=True)
+    components = models.ManyToManyField(Component, related_name='documents', blank=True)
+    doc_type = models.CharField(max_length=254, choices=DOCUMENT_TYPES, default='OTHER')
+    collection = models.ForeignKey(DocumentCollection, related_name='documents', on_delete=models.CASCADE, blank=True, null=True)
+    name = models.CharField(max_length=254)
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        ret_string = ""
+        if self.aircraft:
+            ret_string += f"{self.aircraft.tail_number}"
+        ret_string += f" - {self.doc_type}"
+        if self.collection:
+            ret_string += f" - {self.collection.name}"
+        return ret_string
+
+class DocumentImage(models.Model):
+    id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
+    document = models.ForeignKey(Document, related_name='images', on_delete=models.CASCADE)
+    notes = models.TextField(blank=True)
+    image = models.ImageField(upload_to=random_document_filename)
+
+    def __str__(self):
+        ret_string = "Doc Image"
+        ret_string += f" - {self.document.name}"
+        return ret_string
+
+class LogbookEntry(models.Model):
+    id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
+    log_type = models.CharField(max_length=254, choices=LOG_TYPES, default='AC')
+    aircraft = models.ForeignKey(core_models.Aircraft, related_name='logbook_entries', on_delete=models.CASCADE, blank=True, null=True)
+    component = models.ManyToManyField(Component, related_name='logbook_entries', blank=True)
+    date = models.DateField()
+    text = models.TextField()
+    signoff_person = models.TextField(blank=True)
+    signoff_location = models.CharField(max_length=254, blank=True)
+    log_image = models.ForeignKey(Document, related_name='log_entry', blank=True, null=True, on_delete=models.SET_NULL)
+    related_documents = models.ManyToManyField(Document, related_name='related_logs', blank=True)
+
+    # Hours tracking fields
+    aircraft_hours_at_entry = models.DecimalField(
+        max_digits=8, decimal_places=1, blank=True, null=True,
+        help_text="Aircraft total hours at time of entry"
+    )
+    component_hours = models.JSONField(
+        blank=True, null=True,
+        help_text="Snapshot of component hours {component_id: hours}"
+    )
+    entry_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('FLIGHT', 'Flight'),
+            ('MAINTENANCE', 'Maintenance'),
+            ('INSPECTION', 'Inspection'),
+            ('HOURS_UPDATE', 'Hours Update'),
+            ('OTHER', 'Other'),
+        ],
+        default='OTHER'
+    )
+
+    def __str__(self):
+        ret_string = ""
+        if self.aircraft:
+            ret_string += f"{self.aircraft.tail_number}"
+        ret_string += f" - {self.log_type}"
+        ret_string += f" - {self.date}"
+        return ret_string
+
+class Squawk(models.Model):
+    id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
+    aircraft = models.ForeignKey(core_models.Aircraft, related_name='squawks', on_delete=models.CASCADE, blank=True, null=True)
+    component = models.ForeignKey(Component, related_name='squawks', blank=True, null=True, on_delete=models.SET_NULL)
+    priority = models.IntegerField(choices=SQUAWK_PRIORITIES, default=0)
+    issue_reported = models.TextField(blank=True)
+    attachment = models.FileField(upload_to=random_squawk_filename, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reported_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='reported_squawks', blank=True, null=True, on_delete=models.SET_NULL)
+    resolved = models.BooleanField(default=False)
+    logbook_entries = models.ManyToManyField(LogbookEntry, blank=True, related_name='squawks')
+    notes = models.TextField(blank=True)
+
+    def __str__(self):
+        ret_string = ""
+        if self.aircraft:
+            ret_string += f"{self.aircraft.tail_number}"
+        if self.component:
+            ret_string += f"{self.component.component_type}"
+        ret_string += f" - {self.issue_reported}"
+        ret_string += f" - Resolved: {self.resolved}"
+        return ret_string
+
+class InspectionType(models.Model):
+    id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=254)
+    recurring = models.BooleanField(default=False)
+    required = models.BooleanField(default=True)
+    recurring_hours = models.DecimalField(max_digits=8, decimal_places=1, default=0.0)
+    recurring_days = models.IntegerField(default=0)
+    recurring_months = models.IntegerField(default=0)
+    applicable_aircraft = models.ManyToManyField(core_models.Aircraft, related_name='applicable_inspections', blank=True)
+    applicable_component = models.ManyToManyField(Component, related_name='applicable_inspections', blank=True)
+
+    def __str__(self):
+        return self.name
+
+class AD(models.Model):
+    id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=254)
+    short_description = models.CharField(max_length=254)
+    required_action = models.TextField(blank=True)
+    recurring = models.BooleanField(default=False)
+    recurring_hours = models.DecimalField(max_digits=8, decimal_places=1, default=0.0)
+    recurring_months = models.IntegerField(default=0)
+    recurring_days = models.IntegerField(default=0)
+    on_inspection_type = models.ManyToManyField(InspectionType, blank=True)
+    applicable_aircraft = models.ManyToManyField(core_models.Aircraft, related_name='ads', blank=True)
+    applicable_component = models.ManyToManyField(Component, related_name='ads', blank=True)
+
+    def __str__(self):
+        return self.name
+
+class STCApplication(models.Model):
+    id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=254)
+    short_description = models.CharField(max_length=254)
+    date_applied = models.DateField()
+    aircraft = models.ForeignKey(core_models.Aircraft, related_name='stcs', on_delete=models.CASCADE, blank=True, null=True)
+    component = models.ForeignKey(Component, related_name='stcs', blank=True, null=True, on_delete=models.CASCADE)
+    logbook_entry = models.ForeignKey(LogbookEntry, related_name='stcs', blank=True, null=True, on_delete=models.CASCADE)
+    documents = models.ManyToManyField(Document, related_name='stcs', blank=True)
+
+    def __str__(self):
+        ret_string = ""
+        if self.aircraft:
+            ret_string += f"{self.aircraft.tail_number}"
+        if self.component:
+            ret_string += f"{self.component.component_type}"
+        ret_string += f" - {self.name}"
+        ret_string += f" - {self.short_description}"
+        return ret_string
+
+class InspectionRecord(models.Model):
+    id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
+    date = models.DateField()
+    inspection_type = models.ForeignKey(InspectionType, on_delete=models.CASCADE)
+    logbook_entry = models.ForeignKey(LogbookEntry, related_name='inspections', blank=True, null=True, on_delete=models.CASCADE)
+    documents = models.ManyToManyField(Document, related_name='inspections', blank=True)
+    aircraft = models.ForeignKey(core_models.Aircraft, related_name='inspections', on_delete=models.CASCADE, blank=True, null=True)
+    component = models.ManyToManyField(Component, related_name='inspections', blank=True)
+
+    def __str__(self):
+        ret_string = f"{self.inspection_type}"
+        if self.aircraft:
+            ret_string += f" - {self.aircraft.tail_number}"
+        ret_string += f" - {self.date}"
+        return ret_string
+
+class ADCompliance(models.Model):
+    id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
+    ad = models.ForeignKey(AD, on_delete=models.CASCADE)
+    date_complied = models.DateField()
+    compliance_notes = models.TextField()
+    permanent = models.BooleanField(default=False)
+    next_due_at_time = models.DecimalField(max_digits=8, decimal_places=1, default=0.0)
+    logbook_entry = models.ForeignKey(LogbookEntry, related_name='ads_complied', blank=True, null=True, on_delete=models.CASCADE)
+    inspection_record = models.ForeignKey(InspectionRecord, related_name='ads_complied', blank=True, null=True, on_delete=models.CASCADE)
+    aircraft = models.ForeignKey(core_models.Aircraft, related_name='ad_compliance', blank=True, null=True, on_delete=models.CASCADE)
+    component = models.ForeignKey(Component, related_name='ad_compliance', blank=True, null=True, on_delete=models.CASCADE)
+
+    def __str__(self):
+        ret_string = f"{self.ad.name}"
+        if self.aircraft:
+            ret_string += f" - {self.aircraft.tail_number}"
+        if self.component:
+            ret_string += f"{self.component.component_type}"
+        ret_string += f" - {self.date_complied}"
+        return ret_string
+

@@ -1,0 +1,99 @@
+/* Custom overrides and additions to PatternFly */
+
+/* Alpine.js cloak */
+[x-cloak] { display: none !important; }
+
+/* Hours display emphasis */
+.hours-display {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--pf-v5-global--primary-color--100);
+}
+
+/* Component status badges */
+.status-serviceable {
+    --pf-v5-c-label--m-green--BackgroundColor: var(--pf-v5-global--success-color--100);
+}
+
+.status-due {
+    --pf-v5-c-label--m-orange--BackgroundColor: var(--pf-v5-global--warning-color--100);
+}
+
+.status-overdue {
+    --pf-v5-c-label--m-red--BackgroundColor: var(--pf-v5-global--danger-color--100);
+}
+
+/* Card styling */
+.pf-v5-c-card {
+    height: 100%;
+}
+
+.pf-v5-c-card__body dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.5rem 1rem;
+    margin: 0;
+}
+
+.pf-v5-c-card__body dt {
+    font-weight: 600;
+}
+
+.pf-v5-c-card__body dd {
+    margin: 0;
+}
+
+/* Modal backdrop styling */
+.pf-v5-c-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+/* Gallery layout for cards */
+.pf-l-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.pf-l-gallery.pf-m-gutter {
+    gap: 1.5rem;
+}
+
+/* Loading spinner */
+.loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-left-color: var(--pf-v5-global--primary-color--100);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Alert positioning */
+.alert-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .pf-l-gallery {
+        grid-template-columns: 1fr;
+    }
+}
