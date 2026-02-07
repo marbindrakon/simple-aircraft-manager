@@ -8,12 +8,15 @@ class ComponentTypeSerializer(serializers.HyperlinkedModelSerializer):
         fields = '__all__'
 
 class ComponentSerializer(serializers.HyperlinkedModelSerializer):
+    component_type_name = serializers.CharField(source='component_type.name', read_only=True)
+
     class Meta:
         model = Component
         fields = [
                 'aircraft',
                 'parent_component',
                 'component_type',
+                'component_type_name',
                 'manufacturer',
                 'model',
                 'serial_number',

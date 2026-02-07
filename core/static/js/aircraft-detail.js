@@ -46,11 +46,7 @@ function aircraftDetail(aircraftId) {
         },
 
         getComponentTypeName(component) {
-            // Extract component type name from URL or use the component_type field
-            if (typeof component.component_type === 'string') {
-                return component.component_type.split('/').filter(x => x).pop() || 'Unknown';
-            }
-            return component.component_type?.name || 'Unknown';
+            return component.component_type_name || 'Unknown';
         },
 
         calculateHoursToTBO(component) {
