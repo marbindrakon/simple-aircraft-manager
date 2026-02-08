@@ -28,6 +28,9 @@ RUN dnf install -y --nodocs \
     && dnf clean all \
     && rm -rf /var/cache/dnf
 
+# Allow arbitrary UIDs to update /etc/passwd at runtime (OpenShift requirement)
+RUN chmod g=u /etc/passwd
+
 # Switch back to default user
 USER 1001
 
@@ -51,8 +54,7 @@ RUN mkdir -p ${APP_HOME}/staticfiles \
              ${APP_HOME}/data && \
     chmod -R g=u ${APP_HOME}/staticfiles \
                  ${APP_HOME}/mediafiles \
-                 ${APP_HOME}/data && \
-    chmod g=u /etc/passwd
+                 ${APP_HOME}/data
 
 # Collect static files
 RUN python manage.py collectstatic --noinput --settings=simple_aircraft_manager.settings_prod
