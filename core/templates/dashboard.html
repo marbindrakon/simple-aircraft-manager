@@ -6,8 +6,15 @@
     <!-- Page Header -->
     <div class="pf-v5-c-page__main-section pf-m-light">
         <div class="pf-v5-c-content">
-            <h1>Aircraft Fleet</h1>
-            <p>Manage your aircraft hours and maintenance</p>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>Aircraft Fleet</h1>
+                    <p>Manage your aircraft hours and maintenance</p>
+                </div>
+                <button class="pf-v5-c-button pf-m-primary" @click="window.dispatchEvent(new CustomEvent('open-aircraft-modal'))">
+                    <i class="fas fa-plus"></i> New Aircraft
+                </button>
+            </div>
         </div>
     </div>
 
@@ -109,17 +116,21 @@
                 <i class="fas fa-plane" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
                 <h2 class="pf-v5-c-title pf-m-lg">No aircraft found</h2>
                 <div class="pf-v5-c-empty-state__body">
-                    Add your first aircraft using the admin panel.
+                    Add your first aircraft to get started.
                 </div>
-                <a href="/admin/core/aircraft/add/" class="pf-v5-c-button pf-m-primary">
-                    Add Aircraft
-                </a>
+                <button class="pf-v5-c-button pf-m-primary" @click="window.dispatchEvent(new CustomEvent('open-aircraft-modal'))">
+                    <i class="fas fa-plus"></i> Add Aircraft
+                </button>
             </div>
         </div>
     </div>
+
+    <!-- Aircraft Modal -->
+    {% include 'includes/aircraft_modal.html' %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'js/dashboard.js' %}"></script>
+<script src="{% static 'js/aircraft-modal.js' %}"></script>
 {% endblock %}

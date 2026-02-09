@@ -1431,5 +1431,18 @@ function aircraftDetail(aircraftId) {
                     return 'Unknown';
             }
         },
+
+        // Aircraft edit/delete methods
+        openEditModal() {
+            window.dispatchEvent(new CustomEvent('open-aircraft-modal', {
+                detail: { aircraft: this.aircraft }
+            }));
+        },
+
+        openDeleteModal() {
+            window.dispatchEvent(new CustomEvent('open-aircraft-delete-modal', {
+                detail: { aircraft: this.aircraft }
+            }));
+        },
     }
 }

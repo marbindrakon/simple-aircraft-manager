@@ -1,0 +1,244 @@
+<!-- Aircraft Create/Edit Modal -->
+<div x-data="aircraftModal()" x-cloak>
+    <div class="pf-v5-c-backdrop" x-show="modalOpen" @click.self="closeModal()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-lg" @click.stop>
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeModal()" style="position: absolute; top: 1rem; right: 1rem;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title" x-text="editingAircraft ? 'Edit Aircraft' : 'New Aircraft'"></h1>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <form @submit.prevent="submitAircraft()">
+                        <div class="pf-v5-c-form">
+                            <!-- Tail Number -->
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="tail-number">
+                                    <span class="pf-v5-c-form__label-text">Tail Number:</span>
+                                    <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                                </label>
+                                <input type="text"
+                                       id="tail-number"
+                                       class="pf-v5-c-form-control"
+                                       x-model="aircraftForm.tail_number"
+                                       required>
+                            </div>
+
+                            <!-- Make and Model (side by side) -->
+                            <div class="pf-v5-l-grid pf-m-gutter">
+                                <div class="pf-v5-l-grid__item pf-m-6-col">
+                                    <div class="pf-v5-c-form__group">
+                                        <label class="pf-v5-c-form__label" for="make">
+                                            <span class="pf-v5-c-form__label-text">Make:</span>
+                                        </label>
+                                        <input type="text"
+                                               id="make"
+                                               class="pf-v5-c-form-control"
+                                               x-model="aircraftForm.make">
+                                    </div>
+                                </div>
+                                <div class="pf-v5-l-grid__item pf-m-6-col">
+                                    <div class="pf-v5-c-form__group">
+                                        <label class="pf-v5-c-form__label" for="model">
+                                            <span class="pf-v5-c-form__label-text">Model:</span>
+                                        </label>
+                                        <input type="text"
+                                               id="model"
+                                               class="pf-v5-c-form-control"
+                                               x-model="aircraftForm.model">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Serial Number -->
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="serial-number">
+                                    <span class="pf-v5-c-form__label-text">Serial Number:</span>
+                                </label>
+                                <input type="text"
+                                       id="serial-number"
+                                       class="pf-v5-c-form-control"
+                                       x-model="aircraftForm.serial_number">
+                            </div>
+
+                            <!-- Status and Flight Time -->
+                            <div class="pf-v5-l-grid pf-m-gutter">
+                                <div class="pf-v5-l-grid__item pf-m-6-col">
+                                    <div class="pf-v5-c-form__group">
+                                        <label class="pf-v5-c-form__label" for="status">
+                                            <span class="pf-v5-c-form__label-text">Status:</span>
+                                        </label>
+                                        <select id="status"
+                                                class="pf-v5-c-form-control"
+                                                x-model="aircraftForm.status">
+                                            <option value="AVAILABLE">Available</option>
+                                            <option value="MX">In Maintenance</option>
+                                            <option value="GROUND">Grounded</option>
+                                            <option value="UNAVAILABLE">Unavailable</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="pf-v5-l-grid__item pf-m-6-col">
+                                    <div class="pf-v5-c-form__group">
+                                        <label class="pf-v5-c-form__label" for="flight-time">
+                                            <span class="pf-v5-c-form__label-text">Flight Time (hours):</span>
+                                        </label>
+                                        <input type="number"
+                                               id="flight-time"
+                                               class="pf-v5-c-form-control"
+                                               x-model="aircraftForm.flight_time"
+                                               step="0.1"
+                                               min="0">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Purchased Date -->
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="purchased">
+                                    <span class="pf-v5-c-form__label-text">Purchased Date:</span>
+                                </label>
+                                <input type="date"
+                                       id="purchased"
+                                       class="pf-v5-c-form-control"
+                                       x-model="aircraftForm.purchased">
+                            </div>
+
+                            <!-- Description -->
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="description">
+                                    <span class="pf-v5-c-form__label-text">Description:</span>
+                                </label>
+                                <textarea id="description"
+                                          class="pf-v5-c-form-control"
+                                          x-model="aircraftForm.description"
+                                          rows="3"></textarea>
+                            </div>
+
+                            <!-- Picture Upload -->
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="picture">
+                                    <span class="pf-v5-c-form__label-text">Picture:</span>
+                                </label>
+
+                                <!-- Current Picture Preview (when editing) -->
+                                <template x-if="editingAircraft && editingAircraft.picture && !removePicture">
+                                    <div style="margin-bottom: 1rem;">
+                                        <img :src="editingAircraft.picture"
+                                             alt="Current aircraft picture"
+                                             style="max-width: 200px; max-height: 150px; border-radius: 3px; border: 1px solid var(--pf-v5-global--BorderColor--100);">
+                                        <div style="margin-top: 0.5rem;">
+                                            <label class="pf-v5-c-check">
+                                                <input class="pf-v5-c-check__input"
+                                                       type="checkbox"
+                                                       x-model="removePicture">
+                                                <span class="pf-v5-c-check__label">Remove current picture</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <input type="file"
+                                       id="picture"
+                                       class="pf-v5-c-form-control"
+                                       accept="image/jpeg,image/jpg,image/png,image/gif"
+                                       @change="handlePictureChange($event)">
+                                <div class="pf-v5-c-form__helper-text" aria-live="polite">
+                                    <span class="pf-v5-c-form__helper-text-icon">
+                                        <i class="fas fa-info-circle"></i>
+                                    </span>
+                                    <span>JPEG, PNG, or GIF. Max 15MB.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary"
+                            @click="submitAircraft()"
+                            :disabled="submitting">
+                        <span x-show="!submitting" x-text="editingAircraft ? 'Update Aircraft' : 'Create Aircraft'"></span>
+                        <span x-show="submitting">
+                            <span class="loading-spinner"></span>
+                            Saving...
+                        </span>
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link"
+                            @click="closeModal()"
+                            :disabled="submitting">
+                        Cancel
+                    </button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="pf-v5-c-backdrop" x-show="deleteModalOpen" @click.self="closeDeleteModal()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-sm" @click.stop>
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeDeleteModal()" style="position: absolute; top: 1rem; right: 1rem;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">Delete Aircraft</h1>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <div class="pf-v5-c-alert pf-m-danger pf-m-inline" role="alert">
+                        <div class="pf-v5-c-alert__icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="pf-v5-c-alert__title">
+                            This action cannot be undone
+                        </div>
+                        <div class="pf-v5-c-alert__description">
+                            All associated components, logs, squawks, and documents will also be deleted.
+                        </div>
+                    </div>
+
+                    <form @submit.prevent="deleteAircraft()" style="margin-top: 1.5rem;">
+                        <div class="pf-v5-c-form">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="delete-confirmation">
+                                    <span class="pf-v5-c-form__label-text">
+                                        Type <strong x-text="editingAircraft?.tail_number"></strong> to confirm:
+                                    </span>
+                                    <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                                </label>
+                                <input type="text"
+                                       id="delete-confirmation"
+                                       class="pf-v5-c-form-control"
+                                       x-model="deleteConfirmation"
+                                       required
+                                       autocomplete="off">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-danger"
+                            @click="deleteAircraft()"
+                            :disabled="deleting || deleteConfirmation !== editingAircraft?.tail_number">
+                        <span x-show="!deleting">Delete Aircraft</span>
+                        <span x-show="deleting">
+                            <span class="loading-spinner"></span>
+                            Deleting...
+                        </span>
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link"
+                            @click="closeDeleteModal()"
+                            :disabled="deleting">
+                        Cancel
+                    </button>
+                </footer>
+            </div>
+        </div>
+    </div>
+</div>

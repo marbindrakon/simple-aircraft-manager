@@ -34,11 +34,19 @@
                         <span class="status-text" x-text="getAirworthinessText()"></span>
                     </div>
                 </div>
-                <div x-show="aircraft" x-cloak>
+                <div x-show="aircraft" x-cloak style="display: flex; gap: 0.5rem;">
                     <button class="pf-v5-c-button pf-m-primary"
                             @click="openHoursModal()"
                             :disabled="aircraft?.airworthiness?.status === 'RED'">
                         Update Hours
+                    </button>
+                    <button class="pf-v5-c-button pf-m-secondary"
+                            @click="openEditModal()">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="pf-v5-c-button pf-m-danger"
+                            @click="openDeleteModal()">
+                        <i class="fas fa-trash"></i> Delete
                     </button>
                 </div>
             </div>
@@ -1633,9 +1641,13 @@
             </div>
         </div>
     </div>
+
+    <!-- Aircraft Modal -->
+    {% include 'includes/aircraft_modal.html' %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'js/aircraft-detail.js' %}"></script>
+<script src="{% static 'js/aircraft-modal.js' %}"></script>
 {% endblock %}
