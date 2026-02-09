@@ -897,6 +897,9 @@ function aircraftDetail(aircraftId) {
 
             if (dataPoints.length === 0) return;
 
+            const oilAvg = (dataPoints.reduce((sum, v) => sum + parseFloat(v), 0) / dataPoints.length).toFixed(1);
+            const oilAvgLine = new Array(dataPoints.length).fill(oilAvg);
+
             this.oilChart = new Chart(canvas, {
                 type: 'line',
                 data: {
@@ -908,6 +911,14 @@ function aircraftDetail(aircraftId) {
                         backgroundColor: 'rgba(0, 102, 204, 0.1)',
                         fill: true,
                         tension: 0.3,
+                    }, {
+                        label: `Average (${oilAvg})`,
+                        data: oilAvgLine,
+                        borderColor: '#0066cc',
+                        borderDash: [6, 4],
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false,
                     }],
                 },
                 options: {
@@ -1015,6 +1026,9 @@ function aircraftDetail(aircraftId) {
 
             if (dataPoints.length === 0) return;
 
+            const fuelAvg = (dataPoints.reduce((sum, v) => sum + parseFloat(v), 0) / dataPoints.length).toFixed(1);
+            const fuelAvgLine = new Array(dataPoints.length).fill(fuelAvg);
+
             this.fuelChart = new Chart(canvas, {
                 type: 'line',
                 data: {
@@ -1026,6 +1040,14 @@ function aircraftDetail(aircraftId) {
                         backgroundColor: 'rgba(0, 149, 150, 0.1)',
                         fill: true,
                         tension: 0.3,
+                    }, {
+                        label: `Average (${fuelAvg})`,
+                        data: fuelAvgLine,
+                        borderColor: '#009596',
+                        borderDash: [6, 4],
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false,
                     }],
                 },
                 options: {
