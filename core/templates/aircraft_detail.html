@@ -517,6 +517,12 @@
                                     <td>
                                         <div style="display: flex; gap: 0.25rem;">
                                             <button class="pf-v5-c-button pf-m-plain"
+                                                    @click="editAd(ad)"
+                                                    title="Edit AD"
+                                                    aria-label="Edit AD">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="pf-v5-c-button pf-m-plain"
                                                     @click="openComplianceModal(ad)"
                                                     title="Record Compliance">
                                                 <i class="fas fa-check"></i>
@@ -1378,12 +1384,12 @@
                 </button>
 
                 <header class="pf-v5-c-modal-box__header">
-                    <h1 class="pf-v5-c-modal-box__title">Add Airworthiness Directive</h1>
+                    <h1 class="pf-v5-c-modal-box__title" x-text="editingAd ? 'Edit Airworthiness Directive' : 'Add Airworthiness Directive'"></h1>
                 </header>
 
                 <div class="pf-v5-c-modal-box__body">
-                    <!-- Add existing AD -->
-                    <div class="pf-v5-c-form" style="margin-bottom: 1.5rem;">
+                    <!-- Add existing AD - only show when creating new -->
+                    <div class="pf-v5-c-form" style="margin-bottom: 1.5rem;" x-show="!editingAd">
                         <h3 style="margin-bottom: 0.5rem;">Add Existing AD</h3>
                         <div class="pf-v5-c-form__group">
                             <label class="pf-v5-c-form__label" for="existing-ad-select">
@@ -1403,10 +1409,10 @@
                         </div>
                     </div>
 
-                    <hr style="margin: 1rem 0; border-color: var(--pf-v5-global--BorderColor--100);">
+                    <hr style="margin: 1rem 0; border-color: var(--pf-v5-global--BorderColor--100);" x-show="!editingAd">
 
                     <!-- Create new AD -->
-                    <h3 style="margin-bottom: 0.5rem;">Or Create New AD</h3>
+                    <h3 style="margin-bottom: 0.5rem;" x-text="editingAd ? 'Edit AD Details' : 'Or Create New AD'"></h3>
                     <form @submit.prevent="createAndAddAd" class="pf-v5-c-form">
                         <div class="pf-v5-c-form__group">
                             <label class="pf-v5-c-form__label" for="ad-name">
@@ -1473,9 +1479,10 @@
                 </div>
 
                 <footer class="pf-v5-c-modal-box__footer">
-                    <button class="pf-v5-c-button pf-m-primary" @click="createAndAddAd" :disabled="adSubmitting || !adForm.name || !adForm.short_description">
-                        <span x-show="!adSubmitting">Create AD</span>
-                        <span x-show="adSubmitting">Saving...</span>
+                    <button class="pf-v5-c-button pf-m-primary"
+                            @click="editingAd ? updateAd() : createAndAddAd()"
+                            :disabled="adSubmitting || !adForm.name || !adForm.short_description"
+                            x-text="editingAd ? (adSubmitting ? 'Updating...' : 'Update AD') : (adSubmitting ? 'Creating...' : 'Create and Add to Aircraft')">
                     </button>
                     <button class="pf-v5-c-button pf-m-link" @click="closeAdModal()">Cancel</button>
                 </footer>

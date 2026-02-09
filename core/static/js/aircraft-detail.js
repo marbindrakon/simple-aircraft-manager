@@ -98,6 +98,7 @@ function aircraftDetail(aircraftId) {
         adModalOpen: false,
         complianceModalOpen: false,
         selectedAd: null,
+        editingAd: null,
         selectedExistingAdId: '',
         adSubmitting: false,
         complianceSubmitting: false,
@@ -1157,6 +1158,7 @@ function aircraftDetail(aircraftId) {
         },
 
         openAdModal() {
+            this.editingAd = null;
             this.selectedExistingAdId = '';
             this.adForm = {
                 name: '',
@@ -1171,8 +1173,24 @@ function aircraftDetail(aircraftId) {
             this.adModalOpen = true;
         },
 
+        editAd(ad) {
+            this.editingAd = ad;
+            this.selectedExistingAdId = '';
+            this.adForm = {
+                name: ad.name,
+                short_description: ad.short_description,
+                required_action: ad.required_action || '',
+                recurring: ad.recurring,
+                recurring_hours: ad.recurring_hours || 0,
+                recurring_months: ad.recurring_months || 0,
+                recurring_days: ad.recurring_days || 0,
+            };
+            this.adModalOpen = true;
+        },
+
         closeAdModal() {
             this.adModalOpen = false;
+            this.editingAd = null;
         },
 
         async addExistingAd() {
@@ -1245,6 +1263,50 @@ function aircraftDetail(aircraftId) {
             } catch (error) {
                 console.error('Error creating AD:', error);
                 showNotification('Error creating AD', 'danger');
+            } finally {
+                this.adSubmitting = false;
+            }
+        },
+
+        async updateAd() {
+            if (!this.adForm.name || !this.adForm.short_description || this.adSubmitting) return;
+            this.adSubmitting = true;
+            try {
+                const data = {
+                    name: this.adForm.name,
+                    short_description: this.adForm.short_description,
+                    required_action: this.adForm.required_action,
+                    recurring: this.adForm.recurring,
+                    recurring_hours: this.adForm.recurring ? parseFloat(this.adForm.recurring_hours) || 0 : 0,
+                    recurring_months: this.adForm.recurring ? parseInt(this.adForm.recurring_months) || 0 : 0,
+                    recurring_days: this.adForm.recurring ? parseInt(this.adForm.recurring_days) || 0 : 0,
+                };
+
+                const response = await fetch(`/api/ad/${this.editingAd.id}/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                if (response.ok) {
+                    showNotification('AD updated', 'success');
+                    this.closeAdModal();
+                    this.adsLoaded = false;
+                    await this.loadAds();
+                    await this.loadData();
+                } else {
+                    const errorData = await response.json();
+                    const msg = typeof errorData === 'object'
+                        ? Object.values(errorData).flat().join(', ')
+                        : 'Failed to update AD';
+                    showNotification(msg, 'danger');
+                }
+            } catch (error) {
+                console.error('Error updating AD:', error);
+                showNotification('Error updating AD', 'danger');
             } finally {
                 this.adSubmitting = false;
             }
