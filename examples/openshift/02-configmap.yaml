@@ -1,0 +1,40 @@
+# Application Configuration
+# Non-sensitive runtime configuration for Django
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sam-config
+  namespace: sam
+data:
+  # Django Settings
+  DJANGO_SETTINGS_MODULE: "simple_aircraft_manager.settings_prod"
+  DJANGO_DEBUG: "False"  # NEVER set to True in production
+
+  # IMPORTANT: Update these to match your deployment domain
+  DJANGO_ALLOWED_HOSTS: "your-app.apps.example.com"
+  DJANGO_CSRF_TRUSTED_ORIGINS: "https://your-app.apps.example.com"
+
+  # Database Configuration
+  DATABASE_ENGINE: "postgresql"  # Use PostgreSQL in production
+
+  # Timezone
+  TZ: "UTC"
+
+  # OIDC Authentication Configuration (Optional)
+  # Set to "false" if not using OIDC authentication
+  OIDC_ENABLED: "true"
+
+  # IMPORTANT: Update with your OIDC provider's discovery endpoint
+  # Examples:
+  #   - Keycloak: https://keycloak.example.com/realms/your-realm/.well-known/openid-configuration
+  #   - Azure AD: https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration
+  #   - Okta: https://your-org.okta.com/.well-known/openid-configuration
+  OIDC_OP_DISCOVERY_ENDPOINT: "https://idp.example.com/.well-known/openid-configuration"
+
+  # OIDC Settings (defaults shown, override as needed)
+  OIDC_RP_SIGN_ALGO: "RS256"
+  OIDC_RP_SCOPES: "openid email profile"
+  OIDC_EMAIL_CLAIM: "email"
+  OIDC_FIRSTNAME_CLAIM: "given_name"
+  OIDC_LASTNAME_CLAIM: "family_name"
+  OIDC_TOKEN_EXPIRY: "3600"  # 1 hour

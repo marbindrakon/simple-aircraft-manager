@@ -1,0 +1,16 @@
+# PostgreSQL Initialization SQL
+# Required for PostgreSQL 16 - grants schema permissions to the application user
+# PG 16 changed default permissions on the public schema
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sam-db-init-sql
+  namespace: sam
+  annotations:
+    # Uncomment if using ArgoCD
+    # argocd.argoproj.io/sync-wave: '0'
+data:
+  init.sql: |
+    -- Grant all privileges on the public schema to the application user
+    -- This is required for Django to create tables in PostgreSQL 16+
+    GRANT ALL ON SCHEMA public TO "sam-db";

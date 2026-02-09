@@ -158,23 +158,44 @@ if OIDC_ENABLED:
     OIDC_RP_CLIENT_ID = os.environ.get('OIDC_RP_CLIENT_ID', '')
     OIDC_RP_CLIENT_SECRET = os.environ.get('OIDC_RP_CLIENT_SECRET', '')
 
-    # OIDC Optional Configuration
-    OIDC_RP_SIGN_ALGO = os.environ.get('OIDC_RP_SIGN_ALGO', 'RS256')
-    OIDC_RP_SCOPES = os.environ.get('OIDC_RP_SCOPES', 'openid email profile')
+    # Fetch OIDC endpoints from discovery document
+    if OIDC_OP_DISCOVERY_ENDPOINT:
+        import requests
+        try:
+            discovery_response = requests.get(OIDC_OP_DISCOVERY_ENDPOINT, timeout=10)
+            discovery_response.raise_for_status()
+            discovery_doc = discovery_response.json()
 
-    # Claim Mappings
-    OIDC_EMAIL_CLAIM = os.environ.get('OIDC_EMAIL_CLAIM', 'email')
-    OIDC_FIRSTNAME_CLAIM = os.environ.get('OIDC_FIRSTNAME_CLAIM', 'given_name')
-    OIDC_LASTNAME_CLAIM = os.environ.get('OIDC_LASTNAME_CLAIM', 'family_name')
+            OIDC_OP_AUTHORIZATION_ENDPOINT = discovery_doc['authorization_endpoint']
+            OIDC_OP_TOKEN_ENDPOINT = discovery_doc['token_endpoint']
+            OIDC_OP_USER_ENDPOINT = discovery_doc['userinfo_endpoint']
+            OIDC_OP_JWKS_ENDPOINT = discovery_doc.get('jwks_uri')
+            OIDC_OP_LOGOUT_ENDPOINT = discovery_doc.get('end_session_endpoint')
+        except Exception as e:
+            import sys
+            print(f"WARNING: Failed to fetch OIDC discovery document from {OIDC_OP_DISCOVERY_ENDPOINT}: {e}", file=sys.stderr)
+            print("OIDC authentication will not be available", file=sys.stderr)
+            # Don't crash on startup - just disable OIDC
+            OIDC_ENABLED = False
 
-    # Username Algorithm
-    OIDC_USERNAME_ALGO = 'core.oidc.generate_username'
+    if OIDC_ENABLED and OIDC_OP_DISCOVERY_ENDPOINT:
+        # OIDC Optional Configuration
+        OIDC_RP_SIGN_ALGO = os.environ.get('OIDC_RP_SIGN_ALGO', 'RS256')
+        OIDC_RP_SCOPES = os.environ.get('OIDC_RP_SCOPES', 'openid email profile')
 
-    # Token Expiry (seconds)
-    OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS = int(os.environ.get('OIDC_TOKEN_EXPIRY', '3600'))
+        # Claim Mappings
+        OIDC_EMAIL_CLAIM = os.environ.get('OIDC_EMAIL_CLAIM', 'email')
+        OIDC_FIRSTNAME_CLAIM = os.environ.get('OIDC_FIRSTNAME_CLAIM', 'given_name')
+        OIDC_LASTNAME_CLAIM = os.environ.get('OIDC_LASTNAME_CLAIM', 'family_name')
 
-    # Authentication Backends
-    AUTHENTICATION_BACKENDS = [
-        'core.oidc.CustomOIDCAuthenticationBackend',
-        'django.contrib.auth.backends.ModelBackend',  # Fallback for local users
-    ]
+        # Username Algorithm
+        OIDC_USERNAME_ALGO = 'core.oidc.generate_username'
+
+        # Token Expiry (seconds)
+        OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS = int(os.environ.get('OIDC_TOKEN_EXPIRY', '3600'))
+
+        # Authentication Backends
+        AUTHENTICATION_BACKENDS = [
+            'core.oidc.CustomOIDCAuthenticationBackend',
+            'django.contrib.auth.backends.ModelBackend',  # Fallback for local users
+        ]

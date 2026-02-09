@@ -14,9 +14,9 @@ Simple Aircraft Manager is a comprehensive fleet management system designed for 
 - **Django 4.2.9** - Web framework
 - **Django REST Framework 3.14.0** - RESTful API
 - **django-filter 23.5** - Advanced filtering for querysets
+- **mozilla-django-oidc 4.0.1** - OpenID Connect authentication
 - **Pillow** - Image handling for documents and media
 - **Gunicorn** - Production WSGI server
-- **WhiteNoise** - Static file serving
 - **SQLite** - Database (development)
 - **PostgreSQL** - Database (production)
 - **Python 3.11** - Programming language
@@ -28,22 +28,39 @@ Simple Aircraft Manager is a comprehensive fleet management system designed for 
 
 ### Deployment
 - **Red Hat UBI 9** - Container base image
+- **nginx** - Static/media file serving and TLS termination
 - **OpenShift** - Container platform
 
 ## Features
 
+### Authentication
+- **OpenID Connect (OIDC)** integration with Keycloak
+- Automatic user provisioning from OIDC claims
+- Hybrid authentication (OIDC and local Django users)
+- Single sign-on and unified logout
+
 ### Dashboard
-- Fleet overview with aircraft cards
+- Fleet overview with aircraft cards and thumbnail images
 - Color-coded airworthiness status badges (Green/Orange/Red)
 - Quick access to update hours
 - Issue count summaries
+- Oil and fuel consumption tracking with Chart.js visualizations
 
-### Aircraft Detail Page
-- **Overview Tab** - Aircraft info, flight hours, and notes
-- **Components Tab** - Component list with service intervals and reset functionality
-- **Logbook Tab** - Maintenance log entries
-- **Squawks Tab** - Active maintenance issues with priority levels
-- **Documents Tab** - Document collections with image viewer
+### Aircraft Management
+- **Aircraft CRUD UI** - Create, edit, and delete aircraft with image upload
+- **Aircraft Detail Page** with tabbed interface:
+  - **Overview Tab** - Aircraft info, flight hours, and notes
+  - **Components Tab** - Component list with service intervals and reset functionality
+  - **Logbook Tab** - Maintenance log entries
+  - **Squawks Tab** - Active maintenance issues with priority levels
+  - **ADs Tab** - Airworthiness Directives management with compliance tracking
+  - **Documents Tab** - Document collections with image viewer
+
+### Component Management
+- **Component CRUD UI** - Create, edit, and delete components
+- **Parent-child hierarchy** - Support for nested component relationships
+- Component type management with consumable flags
+- Service interval tracking and automatic reset functionality
 
 ### Airworthiness Status
 Automatic status calculation based on:
@@ -66,6 +83,13 @@ Automatic status calculation based on:
 - Edit and delete notes
 - View all notes with timestamps and authors
 
+### Airworthiness Directives (ADs)
+- **AD Management UI** - Create and edit ADs directly from aircraft detail page
+- Compliance tracking with due dates
+- Recurrence support (one-time, hourly, monthly, annually)
+- Automatic end-of-month due date calculation for monthly/annual recurrence
+- Overdue AD detection with airworthiness status impact
+
 ### Component Service Reset
 - One-click service reset for replacement-critical components (e.g., oil changes)
 - Resets hours_in_service to 0 and updates date_in_service
@@ -75,6 +99,12 @@ Automatic status calculation based on:
 - Documents organized in collections
 - Multi-page document support with thumbnail navigation
 - Full-screen image viewing
+
+### User Interface
+- **PatternFly 5** enterprise design system
+- Responsive navigation bar with user dropdown menu
+- Alpine.js reactive components for dynamic interactions
+- Strict Content Security Policy (CSP) compliance
 
 ## Project Structure
 
@@ -207,36 +237,39 @@ All API endpoints require authentication and are accessible at `/api/`.
    - Admin Interface: http://localhost:8000/admin/
    - API Root: http://localhost:8000/api/
 
-### Container Deployment (OpenShift)
+### Container Deployment (OpenShift/Kubernetes)
+
+**See the [examples/openshift/](examples/openshift/) directory for complete production deployment manifests.**
+
+The example deployment includes:
+- PostgreSQL database with Crunchy Data PGO
+- nginx sidecar for TLS termination and static file serving
+- Persistent storage for media files
+- OIDC authentication integration
+- Security headers and Content Security Policy
+- Health checks and resource limits
+
+Quick start:
 
 1. **Build the container**
    ```bash
-   podman build -t aircraft-manager -f Containerfile .
+   podman build -t your-registry/simple-aircraft-manager:latest -f Containerfile .
+   podman push your-registry/simple-aircraft-manager:latest
    ```
 
-2. **Run locally for testing**
-   ```bash
-   podman run -p 8080:8080 \
-     -e DJANGO_SECRET_KEY=your-secret-key \
-     -e DJANGO_ALLOWED_HOSTS=localhost \
-     aircraft-manager
-   ```
+2. **Customize the manifests**
+   - Update domain names in `02-configmap.yaml`, `03-nginx-config.yaml`, and `10-route.yaml`
+   - Configure secrets in `04-externalsecret.yaml` (or create a plain Secret)
+   - Update container image in `08-deployment.yaml`
+   - Update storage class in `07-pvc.yaml`
 
 3. **Deploy to OpenShift**
    ```bash
-   # Create a new app from the container image
-   oc new-app --name=aircraft-manager \
-     --docker-image=your-registry/aircraft-manager:latest
-
-   # Set environment variables
-   oc set env deployment/aircraft-manager \
-     DJANGO_SECRET_KEY=your-secret-key \
-     DJANGO_ALLOWED_HOSTS=your-route-hostname \
-     DJANGO_CSRF_TRUSTED_ORIGINS=https://your-route-hostname
-
-   # Expose the service
-   oc expose svc/aircraft-manager
+   cd examples/openshift/
+   oc apply -f .
    ```
+
+See [examples/openshift/README.md](examples/openshift/README.md) for detailed instructions.
 
 ## Environment Variables
 
@@ -263,6 +296,18 @@ All API endpoints require authentication and are accessible at `/api/`.
 | `DJANGO_SUPERUSER_PASSWORD` | - | Superuser password |
 | `DJANGO_SUPERUSER_EMAIL` | `admin@example.com` | Superuser email |
 | `TZ` | `UTC` | Timezone |
+
+### OIDC Authentication (Optional)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OIDC_ENABLED` | `false` | Enable OIDC authentication |
+| `OIDC_RP_CLIENT_ID` | - | OIDC client ID (required if enabled) |
+| `OIDC_RP_CLIENT_SECRET` | - | OIDC client secret (required if enabled) |
+| `OIDC_OP_DISCOVERY_ENDPOINT` | - | OIDC discovery endpoint URL |
+| `OIDC_RP_SIGN_ALGO` | `RS256` | Token signing algorithm |
+| `OIDC_RP_SCOPES` | `openid email profile` | OIDC scopes |
+| `OIDC_TOKEN_EXPIRY` | `3600` | Token expiry in seconds |
 
 ## Database Models
 
@@ -326,8 +371,8 @@ When contributing to this project:
 
 ## License
 
-[Add license information here]
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this project except in compliance with the License. You may obtain a copy of the License at:
 
-## Contact
+http://www.apache.org/licenses/LICENSE-2.0
 
-[Add contact information here]
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.

@@ -1,0 +1,87 @@
+# nginx Configuration
+# Handles TLS termination, static/media serving, and security headers
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sam-nginx-config
+  namespace: sam
+  annotations:
+    # Uncomment if using ArgoCD
+    # argocd.argoproj.io/sync-wave: '0'
+data:
+  sam.conf: |
+    server {
+        listen 8443 ssl;
+
+        # IMPORTANT: Update with your actual hostname
+        server_name your-app.apps.example.com;
+
+        # TLS Configuration
+        ssl_certificate /etc/nginx/tls/tls.crt;
+        ssl_certificate_key /etc/nginx/tls/tls.key;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers on;
+
+        # Trust X-Forwarded-For from internal pod network
+        set_real_ip_from 10.0.0.0/8;
+        real_ip_header X-Forwarded-For;
+        real_ip_recursive on;
+
+        # Logging
+        access_log /dev/stdout;
+        error_log /dev/stderr;
+
+        # Security Headers
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        # Content Security Policy
+        # IMPORTANT: Update form-action if using OIDC with a different IdP
+        # Add your OIDC provider domain to form-action (e.g., https://idp.example.com)
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' unpkg.com; img-src 'self' data:; font-src 'self' cdn.jsdelivr.net unpkg.com; connect-src 'self'; form-action 'self' https://idp.example.com; frame-ancestors 'none';" always;
+
+        # Health Check Endpoint
+        # Handled directly by nginx to avoid Django ALLOWED_HOSTS validation
+        # Used by Kubernetes liveness/readiness probes
+        location /healthz/ {
+            access_log off;
+            return 200 '{"status": "ok"}';
+            add_header Content-Type application/json;
+        }
+
+        # Static Files (CSS, JS, etc.)
+        location /static/ {
+            alias /opt/app-root/src/static/;
+            expires 30d;
+            add_header Cache-Control "public, immutable";
+        }
+
+        # Media Files (User Uploads)
+        location /media/ {
+            alias /opt/app-root/src/media/;
+            expires 7d;
+            add_header Cache-Control "public";
+            # Force download for security (prevent executing uploaded files)
+            add_header Content-Disposition "attachment" always;
+            add_header X-Content-Type-Options "nosniff" always;
+        }
+
+        # Proxy to Django/Gunicorn
+        location / {
+            # Use 127.0.0.1 (not localhost) to avoid IPv6 issues
+            # Gunicorn binds to 127.0.0.1:8000 (IPv4 only)
+            proxy_pass http://127.0.0.1:8000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+        }
+
+        # Compression
+        gzip on;
+        gzip_types text/css application/javascript application/json text/plain image/svg+xml;
+        gzip_min_length 256;
+    }

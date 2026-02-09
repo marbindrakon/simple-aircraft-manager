@@ -1,0 +1,63 @@
+# PostgreSQL Database Cluster
+# Managed by Crunchy Data Postgres Operator (PGO)
+# PREREQUISITE: PGO must be installed in the cluster
+apiVersion: postgres-operator.crunchydata.com/v1beta1
+kind: PostgresCluster
+metadata:
+  name: sam-db
+  namespace: sam
+  annotations:
+    # Uncomment if using ArgoCD
+    # argocd.argoproj.io/sync-wave: '1'
+spec:
+  # PostgreSQL Version
+  postgresVersion: 16
+
+  # Database Instances
+  instances:
+    - replicas: 1  # Increase for HA (requires RWX storage or node affinity)
+      dataVolumeClaimSpec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi  # Adjust based on data size
+        # Optional: Specify storage class
+        # storageClassName: your-rwo-storage-class
+
+  # Database Initialization
+  # Runs the SQL from pg-init-sql ConfigMap on cluster creation
+  databaseInitSQL:
+    key: init.sql
+    name: sam-db-init-sql
+
+  # Database Users
+  # Creates a user 'sam-db' with access to database 'sam-db'
+  # Connection credentials auto-generated in secret: sam-db-pguser-sam-db
+  users:
+    - name: sam-db
+      databases:
+        - sam-db
+
+  # Backup Configuration
+  # Uses pgBackRest for automated backups
+  backups:
+    pgbackrest:
+      repos:
+        - name: repo1
+          volume:
+            volumeClaimSpec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 2Gi  # Adjust based on backup retention needs
+              # Optional: Specify storage class
+              # storageClassName: your-rwo-storage-class
+
+# The PGO creates these resources automatically:
+# - Secret: sam-db-pguser-sam-db (connection credentials)
+# - Service: sam-db-primary (database primary endpoint)
+# - Service: sam-db-replicas (read replicas, if any)
+# - PVC: sam-db-repo1 (backup storage)
+# - PVC: sam-db-<instance>-<uuid> (database data)

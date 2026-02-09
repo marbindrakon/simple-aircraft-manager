@@ -1,0 +1,28 @@
+# Persistent Volume Claim for Media Files
+# Stores user-uploaded images, documents, and other media
+# IMPORTANT: Requires ReadWriteMany (RWX) storage for multi-replica scaling
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sam-media
+  namespace: sam
+  annotations:
+    # Uncomment if using ArgoCD
+    # argocd.argoproj.io/sync-wave: '0'
+spec:
+  accessModes:
+  - ReadWriteMany  # RWX required for horizontal scaling
+
+  # IMPORTANT: Update to your cluster's RWX storage class
+  # Common options:
+  #   - OpenShift Data Foundation: ocs-storagecluster-cephfs
+  #   - NFS: nfs-client, nfs-storage
+  #   - Other: Run 'oc get storageclass' to see available options
+  storageClassName: your-rwx-storage-class
+
+  resources:
+    requests:
+      storage: 50Gi  # Adjust based on expected media upload volume
+
+# Note: If you only have RWO storage and won't scale horizontally,
+# you can change to ReadWriteOnce. However, you'll be limited to 1 replica.

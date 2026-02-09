@@ -1,0 +1,9 @@
+# Namespace for Simple Aircraft Manager
+# ArgoCD sync wave: -1 (created first)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sam
+  annotations:
+    # Uncomment if using ArgoCD for proper ordering
+    # argocd.argoproj.io/sync-wave: '-1'

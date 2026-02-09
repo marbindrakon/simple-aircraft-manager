@@ -1,0 +1,31 @@
+# Kubernetes Service
+# Exposes the application internally within the cluster
+apiVersion: v1
+kind: Service
+metadata:
+  name: sam
+  namespace: sam
+  annotations:
+    # OpenShift Service Serving Certificate
+    # Auto-generates a TLS certificate in the 'sam-nginx-tls' secret
+    # Valid for internal service DNS names (e.g., sam.sam.svc)
+    service.beta.openshift.io/serving-cert-secret-name: sam-nginx-tls
+
+    # Alternative: If using cert-manager instead, remove the above annotation
+    # and create a Certificate resource (see README.md)
+spec:
+  ports:
+  - port: 8443
+    protocol: TCP
+    targetPort: 8443
+    name: https
+  selector:
+    app: sam  # Matches the label in Deployment
+  type: ClusterIP
+
+  # Optional: Enable session affinity for sticky sessions
+  # Required if scaling horizontally without external session storage
+  # sessionAffinity: ClientIP
+  # sessionAffinityConfig:
+  #   clientIP:
+  #     timeoutSeconds: 10800  # 3 hours

@@ -1,0 +1,71 @@
+# OpenShift Route
+# Exposes the application externally via the OpenShift router
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: sam
+  namespace: sam
+spec:
+  # IMPORTANT: Update to your desired hostname
+  # If omitted, OpenShift auto-generates: sam-sam.apps.<cluster-domain>
+  host: your-app.apps.example.com
+
+  port:
+    targetPort: 8443
+
+  # TLS Configuration
+  tls:
+    # Re-encrypt: Router terminates external TLS, re-encrypts to backend
+    # Alternative: 'passthrough' (router forwards encrypted traffic as-is)
+    termination: reencrypt
+
+    # Redirect HTTP to HTTPS
+    insecureEdgeTerminationPolicy: Redirect
+
+    # Optional: Provide custom edge certificate
+    # If omitted, OpenShift uses the default wildcard cert
+    # certificate: |
+    #   -----BEGIN CERTIFICATE-----
+    #   ...
+    #   -----END CERTIFICATE-----
+    # key: |
+    #   -----BEGIN PRIVATE KEY-----
+    #   ...
+    #   -----END PRIVATE KEY-----
+    # caCertificate: |
+    #   -----BEGIN CERTIFICATE-----
+    #   ...
+    #   -----END CERTIFICATE-----
+
+  to:
+    kind: Service
+    name: sam
+    weight: 100
+  wildcardPolicy: None
+
+# Note: For non-OpenShift Kubernetes clusters, use an Ingress resource instead:
+#
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: sam
+#   namespace: sam
+#   annotations:
+#     cert-manager.io/cluster-issuer: letsencrypt-prod
+# spec:
+#   ingressClassName: nginx
+#   tls:
+#   - hosts:
+#     - your-app.example.com
+#     secretName: sam-tls
+#   rules:
+#   - host: your-app.example.com
+#     http:
+#       paths:
+#       - path: /
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: sam
+#             port:
+#               number: 8443
