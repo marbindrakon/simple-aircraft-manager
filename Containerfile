@@ -63,9 +63,9 @@ RUN python manage.py collectstatic --noinput --settings=simple_aircraft_manager.
 COPY --chown=1001:0 docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Expose port 8080 (OpenShift default non-privileged port)
-EXPOSE 8080
+# Expose port 8000 (gunicorn; nginx sidecar handles 8080)
+EXPOSE 8000
 
 # Set entrypoint and default command
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--threads", "4", "simple_aircraft_manager.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", "simple_aircraft_manager.wsgi:application"]
