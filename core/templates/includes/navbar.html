@@ -27,17 +27,19 @@
     <div class="pf-v5-c-page__header-tools">
         <div class="pf-v5-c-page__header-tools-group">
             {% if user.is_authenticated %}
-            <div class="pf-v5-c-dropdown">
-                <button class="pf-v5-c-dropdown__toggle pf-m-plain" type="button" aria-label="User menu">
-                    <span class="pf-v5-c-dropdown__toggle-text">{{ user.username }}</span>
+            <div class="pf-v5-c-dropdown" id="user-dropdown">
+                <button class="pf-v5-c-dropdown__toggle pf-m-plain" type="button" aria-label="User menu" aria-expanded="false" id="user-dropdown-toggle">
+                    <span class="pf-v5-c-dropdown__toggle-text">{{ user.get_full_name|default:user.username }}</span>
                     <span class="pf-v5-c-dropdown__toggle-icon">
                         <i class="fas fa-caret-down"></i>
                     </span>
                 </button>
-                <ul class="pf-v5-c-dropdown__menu" hidden>
+                <ul class="pf-v5-c-dropdown__menu" hidden id="user-dropdown-menu">
+                    {% if user.is_superuser %}
                     <li>
                         <a class="pf-v5-c-dropdown__menu-item" href="/admin/">Admin</a>
                     </li>
+                    {% endif %}
                     <li>
                         <a class="pf-v5-c-dropdown__menu-item" href="/accounts/logout/">Logout</a>
                     </li>
