@@ -13,6 +13,21 @@
 			<h2>Login</h2>
 		</div>
 		<div class="pf-v5-c-card__body">
+			{% if OIDC_ENABLED %}
+			<div style="margin-bottom: 2rem;">
+				<a href="{% url 'oidc_authentication_init' %}" class="pf-v5-c-button pf-m-primary pf-m-block" style="margin-bottom: 1rem;">
+					<i class="fas fa-sign-in-alt" style="margin-right: 0.5rem;"></i>
+					Sign in with Keycloak
+				</a>
+				<div style="text-align: center; margin: 1.5rem 0; color: #6a6e73; font-size: 0.875rem;">
+					<span style="display: inline-block; position: relative;">
+						<span style="background: white; padding: 0 0.5rem; position: relative; z-index: 1;">or use local account</span>
+						<span style="position: absolute; top: 50%; left: -100px; right: -100px; height: 1px; background: #d2d2d2; z-index: 0;"></span>
+					</span>
+				</div>
+			</div>
+			{% endif %}
+
 			<form action="{% url 'login' %}" method="post" class="pf-v5-c-form">
 				{% csrf_token %}
 
@@ -63,7 +78,7 @@
 				</div>
 
 				<div class="pf-v5-c-form__group pf-m-action">
-					<button type="submit" class="pf-v5-c-button pf-m-primary pf-m-block">
+					<button type="submit" class="pf-v5-c-button {% if OIDC_ENABLED %}pf-m-secondary{% else %}pf-m-primary{% endif %} pf-m-block">
 						Log In
 					</button>
 				</div>

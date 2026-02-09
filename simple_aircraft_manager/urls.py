@@ -56,6 +56,9 @@ urlpatterns = [
     path('aircraft/<uuid:pk>/squawks/history/', core_views.SquawkHistoryView.as_view(), name='squawk-history'),
     path('api/', include(router.urls)),
     path('admin/', admin.site.urls),
+    path("accounts/logout/", core_views.custom_logout, name='logout'),  # Custom logout before django.contrib.auth.urls
     path("accounts/", include("django.contrib.auth.urls")),
     path('api-auth/', include('rest_framework.urls')),
+    # Conditionally include OIDC URLs if OIDC is enabled
+    *([path('oidc/', include('mozilla_django_oidc.urls'))] if getattr(settings, 'OIDC_ENABLED', False) else []),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

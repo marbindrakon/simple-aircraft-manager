@@ -1,3 +1,6 @@
+from django.conf import settings
+from django.contrib.auth import logout
+from django.shortcuts import redirect
 from core.models import Aircraft, AircraftNote, AircraftEvent
 from core.serializers import (
     AircraftSerializer, AircraftListSerializer, AircraftNoteSerializer,
@@ -487,3 +490,31 @@ class SquawkHistoryView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         context['aircraft_id'] = self.kwargs['pk']
         return context
+
+
+def custom_logout(request):
+    """
+    Custom logout view that handles both OIDC and Django sessions.
+
+    If the user has an OIDC session (indicated by oidc_id_token in session),
+    redirect to the Keycloak logout endpoint to clear both sessions.
+    Otherwise, perform standard Django logout.
+    """
+    # Check if OIDC is enabled and user has OIDC session
+    if getattr(settings, 'OIDC_ENABLED', False) and 'oidc_id_token' in request.session:
+        # Import here to avoid issues when mozilla_django_oidc is not installed
+        from core.oidc import provider_logout
+
+        # Get Keycloak logout URL
+        logout_url = provider_logout(request)
+
+        # Clear Django session
+        logout(request)
+
+        # Redirect to Keycloak logout (which will redirect back to our app)
+        if logout_url:
+            return redirect(logout_url)
+
+    # Standard Django logout (for local users or if OIDC disabled)
+    logout(request)
+    return redirect('/')

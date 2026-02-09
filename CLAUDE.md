@@ -130,6 +130,141 @@ It checks:
 
 The result is serialized via `AircraftSerializer.get_airworthiness()`.
 
+### Authentication: OIDC and Django Hybrid
+
+Simple Aircraft Manager supports both OpenID Connect (OIDC) authentication via Keycloak and traditional Django username/password authentication. Both can coexist, allowing flexible authentication options.
+
+#### Configuration
+
+**Feature Flag**: `OIDC_ENABLED` environment variable (default: `false`)
+
+**Required Environment Variables** (when OIDC enabled):
+- `OIDC_RP_CLIENT_ID` - Keycloak client ID (from secret/Vault)
+- `OIDC_RP_CLIENT_SECRET` - Keycloak client secret (from secret/Vault)
+- `OIDC_OP_DISCOVERY_ENDPOINT` - Keycloak OIDC discovery URL
+
+**Optional Environment Variables**:
+- `OIDC_RP_SIGN_ALGO` - Signing algorithm (default: `RS256`)
+- `OIDC_RP_SCOPES` - OIDC scopes (default: `openid email profile`)
+- `OIDC_EMAIL_CLAIM` - Email claim name (default: `email`)
+- `OIDC_FIRSTNAME_CLAIM` - First name claim (default: `given_name`)
+- `OIDC_LASTNAME_CLAIM` - Last name claim (default: `family_name`)
+- `OIDC_TOKEN_EXPIRY` - Token expiry in seconds (default: `3600`)
+
+**Current Production Config**:
+- Keycloak URL: `https://login.home.signal9.gg/realms/signal9`
+- Discovery endpoint: `https://login.home.signal9.gg/realms/signal9/.well-known/openid-configuration`
+- Client ID: `simple-aircraft-manager` (stored in Vault)
+
+#### Authentication Flow
+
+1. User visits login page and sees "Sign in with Keycloak" button (if OIDC enabled)
+2. Click button → redirect to Keycloak → user authenticates
+3. Callback to `/oidc/callback/` → Django creates/updates user from OIDC claims
+4. User redirected to dashboard with Django session established
+5. `SessionRefresh` middleware auto-renews tokens before expiry
+
+**Username Generation Strategy** (priority order):
+1. `preferred_username` claim (Keycloak standard)
+2. Local part of email address (with uniqueness check)
+3. `sub` claim (OIDC subject identifier)
+
+#### Authentication Backends
+
+When OIDC is enabled, Django uses multiple authentication backends in priority order:
+
+```python
+AUTHENTICATION_BACKENDS = [
+    'core.oidc.CustomOIDCAuthenticationBackend',  # Try OIDC first
+    'django.contrib.auth.backends.ModelBackend',   # Fallback to local users
+]
+```
+
+This allows:
+- OIDC users to log in via Keycloak
+- Local Django users (like admin) to log in via username/password
+- Admin access even if Keycloak is unavailable
+
+#### Logout Behavior
+
+The custom logout view (`core.views.custom_logout`) handles both session types:
+
+- **OIDC session**: Redirects to Keycloak logout endpoint (clears both Django and Keycloak sessions)
+- **Django session**: Standard Django logout (redirects to home)
+
+#### User Creation and Sync
+
+**First Login** (OIDC user doesn't exist):
+- Django user auto-created from OIDC claims
+- Email, first name, last name populated from Keycloak
+
+**Subsequent Logins**:
+- User attributes synced from Keycloak on every login
+- Keeps local user data in sync with identity provider
+
+#### Keycloak Client Setup Requirements
+
+To integrate with Keycloak, create an OIDC client with these settings:
+
+- **Client ID**: `simple-aircraft-manager`
+- **Client Protocol**: `openid-connect`
+- **Access Type**: `confidential`
+- **Valid Redirect URIs**:
+  - `https://sam.apps.oatley.lab.signal9.gg/oidc/callback/`
+  - `http://localhost:8000/oidc/callback/` (dev)
+- **Valid Post Logout Redirect URIs**:
+  - `https://sam.apps.oatley.lab.signal9.gg/`
+  - `http://localhost:8000/`
+- **Client Scopes**: `openid`, `email`, `profile`
+- **Mappers** (verify these exist):
+  - `email` → `email` claim
+  - `given name` → `given_name` claim
+  - `family name` → `family_name` claim
+  - `username` → `preferred_username` claim
+
+After creating the client, copy the **Client Secret** from the Credentials tab and store in Vault.
+
+#### Security Considerations
+
+- Client secret stored in Vault (never in ConfigMap)
+- OIDC tokens stored in httpOnly Django session cookies
+- HTTPS enforced for all OIDC flows
+- CSP updated to allow Keycloak form submissions (`form-action 'self' https://login.home.signal9.gg`)
+- RP-initiated logout (clears both Django and Keycloak sessions)
+
+#### Troubleshooting
+
+**"OIDC_RP_CLIENT_ID not found" error**:
+- Check that `OIDC_ENABLED=true` in ConfigMap
+- Verify client ID and secret exist in Vault/ExternalSecret
+- Check deployment logs: `oc logs -f deployment/sam -n sam -c sam`
+
+**User redirected to Keycloak but callback fails**:
+- Verify redirect URI is registered in Keycloak client settings
+- Check that discovery endpoint is accessible from pod
+- Look for errors in Django logs during callback
+
+**OIDC button not visible on login page**:
+- Verify `OIDC_ENABLED=true` in environment
+- Check that context processor is in `TEMPLATES` settings
+- Verify `mozilla_django_oidc` is in `INSTALLED_APPS`
+
+**CSP violation when redirecting to Keycloak**:
+- Verify `form-action` directive includes Keycloak domain in nginx CSP
+- Check browser console for CSP errors
+
+**Admin can't log in after enabling OIDC**:
+- Local Django authentication still works (ModelBackend is fallback)
+- Use the standard username/password form on login page
+- If issues persist, temporarily disable OIDC: set `OIDC_ENABLED=false`
+
+#### Disabling OIDC
+
+To disable OIDC authentication:
+1. Set `OIDC_ENABLED=false` in ConfigMap
+2. Restart deployment: `oc rollout restart deployment/sam -n sam`
+3. Users will see only the Django username/password form
+
 ## Common Gotchas
 
 ### 1. Settings Files
@@ -195,6 +330,8 @@ TLS is terminated at the nginx sidecar (port 8443), not at the OpenShift router.
 | Production settings | `simple_aircraft_manager/settings_prod.py` |
 | URL routing | `simple_aircraft_manager/urls.py` |
 | Airworthiness logic | `health/services.py` |
+| OIDC backend | `core/oidc.py` |
+| Context processors | `core/context_processors.py` |
 | Frontend components | `core/static/js/` |
 | CSS overrides | `core/static/css/app.css` |
 | Base template | `core/templates/base.html` |

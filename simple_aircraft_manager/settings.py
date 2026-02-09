@@ -78,6 +78,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.oidc_settings',
             ],
         },
     },
@@ -139,3 +140,41 @@ LOGIN_REDIRECT_URL = '/dashboard'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# OIDC Configuration for Development
+# Set OIDC_ENABLED=false by default in dev - enable with environment variable for local testing
+OIDC_ENABLED = os.environ.get('OIDC_ENABLED', 'False').lower() in ('true', '1', 'yes')
+
+if OIDC_ENABLED:
+    # Add mozilla-django-oidc to installed apps
+    INSTALLED_APPS.append('mozilla_django_oidc')
+
+    # OIDC Provider Configuration
+    # For local Keycloak testing, set these environment variables:
+    # OIDC_OP_DISCOVERY_ENDPOINT=http://localhost:8080/realms/master/.well-known/openid-configuration
+    # OIDC_RP_CLIENT_ID=simple-aircraft-manager-dev
+    # OIDC_RP_CLIENT_SECRET=your-dev-client-secret
+    OIDC_OP_DISCOVERY_ENDPOINT = os.environ.get('OIDC_OP_DISCOVERY_ENDPOINT', '')
+    OIDC_RP_CLIENT_ID = os.environ.get('OIDC_RP_CLIENT_ID', '')
+    OIDC_RP_CLIENT_SECRET = os.environ.get('OIDC_RP_CLIENT_SECRET', '')
+
+    # OIDC Optional Configuration
+    OIDC_RP_SIGN_ALGO = os.environ.get('OIDC_RP_SIGN_ALGO', 'RS256')
+    OIDC_RP_SCOPES = os.environ.get('OIDC_RP_SCOPES', 'openid email profile')
+
+    # Claim Mappings
+    OIDC_EMAIL_CLAIM = os.environ.get('OIDC_EMAIL_CLAIM', 'email')
+    OIDC_FIRSTNAME_CLAIM = os.environ.get('OIDC_FIRSTNAME_CLAIM', 'given_name')
+    OIDC_LASTNAME_CLAIM = os.environ.get('OIDC_LASTNAME_CLAIM', 'family_name')
+
+    # Username Algorithm
+    OIDC_USERNAME_ALGO = 'core.oidc.generate_username'
+
+    # Token Expiry (seconds)
+    OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS = int(os.environ.get('OIDC_TOKEN_EXPIRY', '3600'))
+
+    # Authentication Backends
+    AUTHENTICATION_BACKENDS = [
+        'core.oidc.CustomOIDCAuthenticationBackend',
+        'django.contrib.auth.backends.ModelBackend',  # Fallback for local users
+    ]
