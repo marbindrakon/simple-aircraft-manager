@@ -226,7 +226,11 @@ class InspectionTypeSerializer(serializers.HyperlinkedModelSerializer):
 class ADSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = AD
-        fields = '__all__'
+        fields = [
+            'id', 'url', 'name', 'short_description', 'required_action',
+            'recurring', 'recurring_hours', 'recurring_months', 'recurring_days',
+            'on_inspection_type', 'applicable_aircraft', 'applicable_component',
+        ]
 
 
 class ADNestedSerializer(serializers.ModelSerializer):
