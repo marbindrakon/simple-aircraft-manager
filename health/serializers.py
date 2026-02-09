@@ -5,10 +5,13 @@ from .models import ComponentType, Component, DocumentCollection, Document, Docu
 class ComponentTypeSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = ComponentType
-        fields = '__all__'
+        fields = ['url', 'id', 'name', 'consumable']
 
 class ComponentSerializer(serializers.HyperlinkedModelSerializer):
     component_type_name = serializers.CharField(source='component_type.name', read_only=True)
+    component_type_id = serializers.UUIDField(source='component_type.id', read_only=True)
+    parent_component_id = serializers.UUIDField(source='parent_component.id', read_only=True, default=None)
+    parent_component_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Component
@@ -16,7 +19,10 @@ class ComponentSerializer(serializers.HyperlinkedModelSerializer):
                 'id',
                 'aircraft',
                 'parent_component',
+                'parent_component_id',
+                'parent_component_name',
                 'component_type',
+                'component_type_id',
                 'component_type_name',
                 'manufacturer',
                 'model',
@@ -47,6 +53,15 @@ class ComponentSerializer(serializers.HyperlinkedModelSerializer):
                 'inspections',
                 'ad_compliance',
                 ]
+
+    def get_parent_component_name(self, obj):
+        if obj.parent_component:
+            name = obj.parent_component.component_type.name
+            if obj.parent_component.install_location:
+                name += f" ({obj.parent_component.install_location})"
+            return name
+        return None
+
 
 class DocumentImageSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -227,6 +242,38 @@ class ADComplianceSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = ADCompliance
         fields = '__all__'
+
+
+class ComponentCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating/updating components"""
+
+    class Meta:
+        model = Component
+        fields = [
+            'id',
+            'parent_component',
+            'component_type',
+            'manufacturer',
+            'model',
+            'serial_number',
+            'install_location',
+            'notes',
+            'status',
+            'date_in_service',
+            'hours_in_service',
+            'hours_since_overhaul',
+            'overhaul_date',
+            'tbo_hours',
+            'tbo_days',
+            'inspection_hours',
+            'inspection_days',
+            'replacement_hours',
+            'replacement_days',
+            'tbo_critical',
+            'inspection_critical',
+            'replacement_critical',
+        ]
+        read_only_fields = ['id']
 
 
 class OilRecordNestedSerializer(serializers.ModelSerializer):

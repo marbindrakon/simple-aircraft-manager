@@ -7,7 +7,8 @@ from core.serializers import (
 from django.utils import timezone
 from health.models import Component, LogbookEntry, Squawk, Document, DocumentCollection, OilRecord, FuelRecord
 from health.serializers import (
-    ComponentSerializer, LogbookEntrySerializer, SquawkSerializer,
+    ComponentSerializer, ComponentCreateUpdateSerializer,
+    LogbookEntrySerializer, SquawkSerializer,
     SquawkNestedSerializer, SquawkCreateUpdateSerializer,
     DocumentCollectionNestedSerializer, DocumentNestedSerializer,
     OilRecordNestedSerializer, OilRecordCreateSerializer,
@@ -294,6 +295,27 @@ class AircraftViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_201_CREATED
                 )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    @action(detail=True, methods=['post'])
+    def components(self, request, pk=None):
+        """
+        Create a component for an aircraft
+        POST /api/aircraft/{id}/components/
+        """
+        aircraft = self.get_object()
+
+        data = request.data.copy()
+        data['aircraft'] = aircraft.id
+
+        serializer = ComponentCreateUpdateSerializer(data=data)
+        if serializer.is_valid():
+            component = serializer.save(aircraft=aircraft)
+            return Response(
+                ComponentSerializer(component, context={'request': request}).data,
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AircraftNoteViewSet(viewsets.ModelViewSet):

@@ -234,6 +234,14 @@
 
         <!-- Components Tab -->
         <div x-show="activeTab === 'components'" class="pf-v5-c-page__main-section">
+            <!-- Header with Add Button -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>Components</h2>
+                <button class="pf-v5-c-button pf-m-primary" @click="openComponentModal()">
+                    <i class="fas fa-plus"></i> Add Component
+                </button>
+            </div>
+
             <table class="pf-v5-c-table pf-m-grid-md">
                 <thead>
                     <tr>
@@ -253,10 +261,15 @@
                             <td colspan="8" style="text-align: center;">No components found</td>
                         </tr>
                     </template>
-                    <template x-for="component in components" :key="component.id">
+                    <template x-for="component in sortedComponents" :key="component.id">
                         <tr>
                             <td>
-                                <span x-text="getComponentTypeName(component)"></span>
+                                <span :style="'padding-left: ' + (getComponentDepth(component) * 1.5) + 'rem'">
+                                    <template x-if="getComponentDepth(component) > 0">
+                                        <i class="fas fa-level-up-alt fa-rotate-90" style="color: var(--pf-v5-global--Color--200); margin-right: 0.25rem; font-size: 0.75rem;"></i>
+                                    </template>
+                                    <span x-text="getComponentTypeName(component)"></span>
+                                </span>
                                 <template x-if="component.replacement_critical">
                                     <span class="pf-v5-c-label pf-m-compact pf-m-purple" style="margin-left: 0.25rem;" title="Replacement item">
                                         <i class="fas fa-sync-alt"></i>
@@ -274,13 +287,25 @@
                                       x-text="component.status"></span>
                             </td>
                             <td>
-                                <template x-if="component.replacement_critical && component.status === 'IN-USE'">
+                                <div style="display: flex; gap: 0.25rem;">
                                     <button class="pf-v5-c-button pf-m-plain"
-                                            @click="resetComponentService(component)"
-                                            :title="'Reset ' + getComponentTypeName(component) + ' service time'">
-                                        <i class="fas fa-redo"></i>
+                                            @click="editComponent(component)"
+                                            title="Edit component">
+                                        <i class="fas fa-pencil-alt"></i>
                                     </button>
-                                </template>
+                                    <template x-if="component.replacement_critical && component.status === 'IN-USE'">
+                                        <button class="pf-v5-c-button pf-m-plain"
+                                                @click="resetComponentService(component)"
+                                                :title="'Reset ' + getComponentTypeName(component) + ' service time'">
+                                            <i class="fas fa-redo"></i>
+                                        </button>
+                                    </template>
+                                    <button class="pf-v5-c-button pf-m-plain pf-m-danger"
+                                            @click="deleteComponent(component)"
+                                            title="Delete component">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     </template>
@@ -725,6 +750,254 @@
                         </div>
                     </template>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Component Modal -->
+    <div class="pf-v5-c-backdrop" x-show="componentModalOpen" x-cloak @click.self="closeComponentModal()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-lg" @click.stop style="max-height: 90vh; overflow-y: auto;">
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeComponentModal()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title" x-text="editingComponent ? 'Edit Component' : 'Add Component'"></h1>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <form @submit.prevent="submitComponent" class="pf-v5-c-form">
+                        <!-- Component Type -->
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="comp-type">
+                                <span class="pf-v5-c-form__label-text">Component Type</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <select id="comp-type" class="pf-v5-c-form-control" x-model="componentForm.component_type" required>
+                                    <option value="">-- Select type --</option>
+                                    <template x-for="ct in componentTypes" :key="ct.id">
+                                        <option :value="ct.id" x-text="ct.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Parent Component -->
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="comp-parent">
+                                <span class="pf-v5-c-form__label-text">Parent Component</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <select id="comp-parent" class="pf-v5-c-form-control" x-model="componentForm.parent_component">
+                                    <option value="">-- None (top-level) --</option>
+                                    <template x-for="comp in getParentOptions(editingComponent?.id)" :key="comp.id">
+                                        <option :value="comp.id" x-text="getComponentLabel(comp)"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Manufacturer / Model row -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="comp-manufacturer">
+                                    <span class="pf-v5-c-form__label-text">Manufacturer</span>
+                                    <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input id="comp-manufacturer" class="pf-v5-c-form-control" type="text" x-model="componentForm.manufacturer" required>
+                                </div>
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="comp-model">
+                                    <span class="pf-v5-c-form__label-text">Model</span>
+                                    <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input id="comp-model" class="pf-v5-c-form-control" type="text" x-model="componentForm.model" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Serial Number / Install Location row -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="comp-serial">
+                                    <span class="pf-v5-c-form__label-text">Serial Number</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input id="comp-serial" class="pf-v5-c-form-control" type="text" x-model="componentForm.serial_number">
+                                </div>
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="comp-location">
+                                    <span class="pf-v5-c-form__label-text">Install Location</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input id="comp-location" class="pf-v5-c-form-control" type="text" x-model="componentForm.install_location">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status / Date In Service row -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="comp-status">
+                                    <span class="pf-v5-c-form__label-text">Status</span>
+                                    <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <select id="comp-status" class="pf-v5-c-form-control" x-model="componentForm.status" required>
+                                        <option value="IN-USE">In Service</option>
+                                        <option value="SPARE">Spare Part</option>
+                                        <option value="DISPOSED">Disposed</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="comp-date-in-service">
+                                    <span class="pf-v5-c-form__label-text">Date In Service</span>
+                                    <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input id="comp-date-in-service" class="pf-v5-c-form-control" type="date" x-model="componentForm.date_in_service" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hours row -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="comp-hours-in-service">
+                                    <span class="pf-v5-c-form__label-text">Hours In Service</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input id="comp-hours-in-service" class="pf-v5-c-form-control" type="number" step="0.1" min="0" x-model="componentForm.hours_in_service">
+                                </div>
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="comp-hours-since-overhaul">
+                                    <span class="pf-v5-c-form__label-text">Hours Since Overhaul</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input id="comp-hours-since-overhaul" class="pf-v5-c-form-control" type="number" step="0.1" min="0" x-model="componentForm.hours_since_overhaul">
+                                </div>
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="comp-overhaul-date">
+                                    <span class="pf-v5-c-form__label-text">Overhaul Date</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input id="comp-overhaul-date" class="pf-v5-c-form-control" type="date" x-model="componentForm.overhaul_date">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tracking Flags -->
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label">
+                                <span class="pf-v5-c-form__label-text">Tracking</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control" style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" x-model="componentForm.tbo_critical"> TBO Critical
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" x-model="componentForm.inspection_critical"> Inspection Critical
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" x-model="componentForm.replacement_critical"> Replacement Critical
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- TBO Intervals (shown when tbo_critical) -->
+                        <template x-if="componentForm.tbo_critical">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="pf-v5-c-form__group">
+                                    <label class="pf-v5-c-form__label" for="comp-tbo-hours">
+                                        <span class="pf-v5-c-form__label-text">TBO Hours</span>
+                                    </label>
+                                    <div class="pf-v5-c-form__group-control">
+                                        <input id="comp-tbo-hours" class="pf-v5-c-form-control" type="number" min="0" x-model="componentForm.tbo_hours">
+                                    </div>
+                                </div>
+                                <div class="pf-v5-c-form__group">
+                                    <label class="pf-v5-c-form__label" for="comp-tbo-days">
+                                        <span class="pf-v5-c-form__label-text">TBO Days</span>
+                                    </label>
+                                    <div class="pf-v5-c-form__group-control">
+                                        <input id="comp-tbo-days" class="pf-v5-c-form-control" type="number" min="0" x-model="componentForm.tbo_days">
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Inspection Intervals (shown when inspection_critical) -->
+                        <template x-if="componentForm.inspection_critical">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="pf-v5-c-form__group">
+                                    <label class="pf-v5-c-form__label" for="comp-inspection-hours">
+                                        <span class="pf-v5-c-form__label-text">Inspection Hours</span>
+                                    </label>
+                                    <div class="pf-v5-c-form__group-control">
+                                        <input id="comp-inspection-hours" class="pf-v5-c-form-control" type="number" min="0" x-model="componentForm.inspection_hours">
+                                    </div>
+                                </div>
+                                <div class="pf-v5-c-form__group">
+                                    <label class="pf-v5-c-form__label" for="comp-inspection-days">
+                                        <span class="pf-v5-c-form__label-text">Inspection Days</span>
+                                    </label>
+                                    <div class="pf-v5-c-form__group-control">
+                                        <input id="comp-inspection-days" class="pf-v5-c-form-control" type="number" min="0" x-model="componentForm.inspection_days">
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Replacement Intervals (shown when replacement_critical) -->
+                        <template x-if="componentForm.replacement_critical">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="pf-v5-c-form__group">
+                                    <label class="pf-v5-c-form__label" for="comp-replacement-hours">
+                                        <span class="pf-v5-c-form__label-text">Replacement Hours</span>
+                                    </label>
+                                    <div class="pf-v5-c-form__group-control">
+                                        <input id="comp-replacement-hours" class="pf-v5-c-form-control" type="number" min="0" x-model="componentForm.replacement_hours">
+                                    </div>
+                                </div>
+                                <div class="pf-v5-c-form__group">
+                                    <label class="pf-v5-c-form__label" for="comp-replacement-days">
+                                        <span class="pf-v5-c-form__label-text">Replacement Days</span>
+                                    </label>
+                                    <div class="pf-v5-c-form__group-control">
+                                        <input id="comp-replacement-days" class="pf-v5-c-form-control" type="number" min="0" x-model="componentForm.replacement_days">
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Notes -->
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="comp-notes">
+                                <span class="pf-v5-c-form__label-text">Notes</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <textarea id="comp-notes" class="pf-v5-c-form-control" rows="2" x-model="componentForm.notes" placeholder="Additional notes..."></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" @click="submitComponent" :disabled="componentSubmitting">
+                        <span x-show="!componentSubmitting" x-text="editingComponent ? 'Save Changes' : 'Add Component'"></span>
+                        <span x-show="componentSubmitting">Saving...</span>
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeComponentModal()">Cancel</button>
+                </footer>
             </div>
         </div>
     </div>

@@ -17,6 +17,11 @@ class ComponentViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['aircraft', 'component_type', 'status']
 
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return ComponentCreateUpdateSerializer
+        return ComponentSerializer
+
     @action(detail=True, methods=['post'])
     def reset_service(self, request, pk=None):
         """
