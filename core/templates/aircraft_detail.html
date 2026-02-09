@@ -504,10 +504,13 @@
                                         <template x-if="ad.latest_compliance && ad.latest_compliance.permanent">
                                             <span>Permanent</span>
                                         </template>
-                                        <template x-if="ad.latest_compliance && !ad.latest_compliance.permanent && ad.latest_compliance.next_due_at_time > 0">
+                                        <template x-if="ad.latest_compliance && !ad.latest_compliance.permanent && ad.next_due_date_display">
+                                            <span x-text="'End of ' + ad.next_due_date_display"></span>
+                                        </template>
+                                        <template x-if="ad.latest_compliance && !ad.latest_compliance.permanent && !ad.next_due_date_display && ad.latest_compliance.next_due_at_time > 0">
                                             <span x-text="formatHours(ad.latest_compliance.next_due_at_time) + ' hrs'"></span>
                                         </template>
-                                        <template x-if="!ad.latest_compliance || (!ad.latest_compliance.permanent && (!ad.latest_compliance.next_due_at_time || ad.latest_compliance.next_due_at_time == 0))">
+                                        <template x-if="!ad.latest_compliance || (!ad.latest_compliance.permanent && !ad.next_due_date_display && (!ad.latest_compliance.next_due_at_time || ad.latest_compliance.next_due_at_time == 0))">
                                             <span>-</span>
                                         </template>
                                     </td>

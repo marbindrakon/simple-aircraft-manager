@@ -8,6 +8,7 @@ Determines if an aircraft is safe to fly based on:
 4. Component replacement intervals
 """
 
+import calendar
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import List, Dict, Any, Tuple
@@ -65,6 +66,15 @@ class AirworthinessStatus:
             'red_count': sum(1 for i in self.issues if i.severity == STATUS_RED),
             'orange_count': sum(1 for i in self.issues if i.severity == STATUS_ORANGE),
         }
+
+
+def _end_of_month_after(start_date: date, months: int) -> date:
+    """Return the last day of the month that is ``months`` after ``start_date``."""
+    total_months = (start_date.year * 12 + start_date.month - 1) + months
+    year = total_months // 12
+    month = total_months % 12 + 1
+    last_day = calendar.monthrange(year, month)[1]
+    return date(year, month, last_day)
 
 
 def calculate_airworthiness(aircraft) -> AirworthinessStatus:
@@ -135,27 +145,40 @@ def _check_ad_compliance(aircraft, current_hours: Decimal, today: date, result: 
                 item_id=str(ad.id),
             ))
         elif not compliance.permanent:
+            severity = None  # None / STATUS_ORANGE / STATUS_RED
+            parts = []
+
             # Check if due based on hours
             if compliance.next_due_at_time > 0:
                 if current_hours >= compliance.next_due_at_time:
-                    # Overdue - RED
-                    result.issues.append(AirworthinessIssue(
-                        category='AD',
-                        severity=STATUS_RED,
-                        title=f'AD {ad.name} - Overdue',
-                        description=f'{ad.short_description}. Due at {compliance.next_due_at_time} hrs, current: {current_hours} hrs.',
-                        item_id=str(ad.id),
-                    ))
+                    severity = STATUS_RED
+                    parts.append(f'Due at {compliance.next_due_at_time} hrs, current: {current_hours} hrs.')
                 elif current_hours + HOURS_WARNING_THRESHOLD >= compliance.next_due_at_time:
-                    # Approaching - ORANGE
+                    severity = STATUS_ORANGE
                     hours_remaining = compliance.next_due_at_time - current_hours
-                    result.issues.append(AirworthinessIssue(
-                        category='AD',
-                        severity=STATUS_ORANGE,
-                        title=f'AD {ad.name} - Due Soon',
-                        description=f'{ad.short_description}. Due in {hours_remaining} hrs.',
-                        item_id=str(ad.id),
-                    ))
+                    parts.append(f'Due in {hours_remaining} hrs.')
+
+            # Check if due based on calendar months
+            if ad.recurring and ad.recurring_months > 0:
+                next_due_date = _end_of_month_after(compliance.date_complied, ad.recurring_months)
+                if today > next_due_date:
+                    severity = STATUS_RED
+                    parts.append(f'Due by end of {next_due_date.strftime("%B %Y")}. Last complied {compliance.date_complied}.')
+                elif today + timedelta(days=DAYS_WARNING_THRESHOLD) >= next_due_date:
+                    if severity is None:
+                        severity = STATUS_ORANGE
+                    remaining = (next_due_date - today).days
+                    parts.append(f'Due by end of {next_due_date.strftime("%B %Y")}. {remaining} days remaining.')
+
+            if severity and parts:
+                title_suffix = 'Overdue' if severity == STATUS_RED else 'Due Soon'
+                result.issues.append(AirworthinessIssue(
+                    category='AD',
+                    severity=severity,
+                    title=f'AD {ad.name} - {title_suffix}',
+                    description=f'{ad.short_description}. {" ".join(parts)}',
+                    item_id=str(ad.id),
+                ))
 
 
 def _check_grounding_squawks(aircraft, result: AirworthinessStatus):
@@ -230,16 +253,11 @@ def _check_inspection_recurrency(aircraft, current_hours: Decimal, today: date, 
             continue
 
         # Check recurring inspection due dates
-        is_overdue = False
-        is_approaching = False
-        due_description = ''
+        severity = None  # None / STATUS_ORANGE / STATUS_RED
+        parts = []
 
         # Check hours-based recurrency
         if insp_type.recurring_hours > 0:
-            # We need to know hours at last inspection - approximation using date
-            # For now, assume inspection was done at current hours minus hours flown since
-            # This is a simplification; ideally we'd store hours_at_inspection
-            hours_since_inspection = current_hours  # Simplified
             next_due_hours = Decimal(str(insp_type.recurring_hours))
 
             # Check if we have logbook entry with hours
@@ -248,43 +266,42 @@ def _check_inspection_recurrency(aircraft, current_hours: Decimal, today: date, 
                 hours_since_inspection = current_hours - hours_at_inspection
 
                 if hours_since_inspection >= next_due_hours:
-                    is_overdue = True
-                    due_description = f'Due every {next_due_hours} hrs. Last done at {hours_at_inspection} hrs.'
+                    severity = STATUS_RED
+                    parts.append(f'Due every {next_due_hours} hrs. Last done at {hours_at_inspection} hrs.')
                 elif hours_since_inspection + HOURS_WARNING_THRESHOLD >= next_due_hours:
-                    is_approaching = True
+                    severity = STATUS_ORANGE
                     remaining = next_due_hours - hours_since_inspection
-                    due_description = f'Due in {remaining} hrs.'
+                    parts.append(f'Due in {remaining} hrs.')
 
         # Check calendar-based recurrency
         if insp_type.recurring_days > 0 or insp_type.recurring_months > 0:
-            days_interval = insp_type.recurring_days
+            next_due_date = last_inspection.date
             if insp_type.recurring_months > 0:
-                days_interval += insp_type.recurring_months * 30  # Approximate
+                next_due_date = _end_of_month_after(next_due_date, insp_type.recurring_months)
+            if insp_type.recurring_days > 0:
+                next_due_date = next_due_date + timedelta(days=insp_type.recurring_days)
 
-            next_due_date = last_inspection.date + timedelta(days=days_interval)
+            if insp_type.recurring_months > 0 and insp_type.recurring_days == 0:
+                due_label = f'Due by end of {next_due_date.strftime("%B %Y")}.'
+            else:
+                due_label = f'Due by {next_due_date.strftime("%b %d, %Y")}.'
 
-            if today >= next_due_date:
-                is_overdue = True
-                due_description = f'Due every {days_interval} days. Last done {last_inspection.date}.'
+            if today > next_due_date:
+                severity = STATUS_RED
+                parts.append(f'{due_label} Last done {last_inspection.date}.')
             elif today + timedelta(days=DAYS_WARNING_THRESHOLD) >= next_due_date:
-                is_approaching = True
+                if severity is None:
+                    severity = STATUS_ORANGE
                 remaining = (next_due_date - today).days
-                due_description = f'Due in {remaining} days.'
+                parts.append(f'{due_label} {remaining} days remaining.')
 
-        if is_overdue:
+        if severity and parts:
+            title_suffix = 'Overdue' if severity == STATUS_RED else 'Due Soon'
             result.issues.append(AirworthinessIssue(
                 category='INSPECTION',
-                severity=STATUS_RED,
-                title=f'{insp_type.name} - Overdue',
-                description=due_description,
-                item_id=str(insp_type.id),
-            ))
-        elif is_approaching:
-            result.issues.append(AirworthinessIssue(
-                category='INSPECTION',
-                severity=STATUS_ORANGE,
-                title=f'{insp_type.name} - Due Soon',
-                description=due_description,
+                severity=severity,
+                title=f'{insp_type.name} - {title_suffix}',
+                description=' '.join(parts),
                 item_id=str(insp_type.id),
             ))
 

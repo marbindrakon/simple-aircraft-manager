@@ -355,20 +355,35 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 else:
                     ad_dict['latest_compliance'] = None
 
-                # Compute compliance status
+                # Compute compliance status (worst of hours and calendar wins)
                 if not compliance:
                     ad_dict['compliance_status'] = 'no_compliance'
                 elif compliance.permanent:
                     ad_dict['compliance_status'] = 'compliant'
-                elif compliance.next_due_at_time > 0:
-                    if current_hours >= compliance.next_due_at_time:
-                        ad_dict['compliance_status'] = 'overdue'
-                    elif current_hours + Decimal('10.0') >= compliance.next_due_at_time:
-                        ad_dict['compliance_status'] = 'due_soon'
-                    else:
-                        ad_dict['compliance_status'] = 'compliant'
                 else:
-                    ad_dict['compliance_status'] = 'compliant'
+                    from health.services import _end_of_month_after
+                    from datetime import date as date_cls, timedelta as td
+                    today = date_cls.today()
+                    status_rank = 0  # 0=compliant, 1=due_soon, 2=overdue
+
+                    # Check hours-based due
+                    if compliance.next_due_at_time > 0:
+                        if current_hours >= compliance.next_due_at_time:
+                            status_rank = max(status_rank, 2)
+                        elif current_hours + Decimal('10.0') >= compliance.next_due_at_time:
+                            status_rank = max(status_rank, 1)
+
+                    # Check calendar-based due (month recurrence)
+                    if ad.recurring and ad.recurring_months > 0:
+                        next_due_date = _end_of_month_after(compliance.date_complied, ad.recurring_months)
+                        ad_dict['next_due_date'] = next_due_date.isoformat()
+                        ad_dict['next_due_date_display'] = next_due_date.strftime('%B %Y')
+                        if today > next_due_date:
+                            status_rank = max(status_rank, 2)
+                        elif today + td(days=30) >= next_due_date:
+                            status_rank = max(status_rank, 1)
+
+                    ad_dict['compliance_status'] = ['compliant', 'due_soon', 'overdue'][status_rank]
 
                 ads_data.append(ad_dict)
 
