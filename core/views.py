@@ -5,7 +5,7 @@ from core.serializers import (
     AircraftEventSerializer,
 )
 from django.utils import timezone
-from health.models import Component, LogbookEntry, Squawk, Document, DocumentCollection, OilRecord, FuelRecord
+from health.models import Component, LogbookEntry, Squawk, Document, DocumentCollection, OilRecord, FuelRecord, AD, ADCompliance
 from health.serializers import (
     ComponentSerializer, ComponentCreateUpdateSerializer,
     LogbookEntrySerializer, SquawkSerializer,
@@ -13,6 +13,8 @@ from health.serializers import (
     DocumentCollectionNestedSerializer, DocumentNestedSerializer,
     OilRecordNestedSerializer, OilRecordCreateSerializer,
     FuelRecordNestedSerializer, FuelRecordCreateSerializer,
+    ADNestedSerializer, ADComplianceNestedSerializer, ADComplianceCreateUpdateSerializer,
+    ADSerializer,
 )
 
 from django.http import JsonResponse
@@ -313,6 +315,119 @@ class AircraftViewSet(viewsets.ModelViewSet):
             component = serializer.save(aircraft=aircraft)
             return Response(
                 ComponentSerializer(component, context={'request': request}).data,
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    @action(detail=True, methods=['get', 'post'])
+    def ads(self, request, pk=None):
+        """
+        Get applicable ADs with compliance status, or add an AD to this aircraft.
+        GET /api/aircraft/{id}/ads/ - Get all applicable ADs with compliance info
+        POST /api/aircraft/{id}/ads/ - Add existing AD (ad_id) or create new AD
+        """
+        aircraft = self.get_object()
+
+        if request.method == 'GET':
+            from django.db.models import Q
+            # Get ADs applicable to this aircraft (direct or via components)
+            component_ids = aircraft.components.values_list('id', flat=True)
+            aircraft_ads = AD.objects.filter(applicable_aircraft=aircraft)
+            component_ads = AD.objects.filter(applicable_component__in=component_ids)
+            all_ads = (aircraft_ads | component_ads).distinct()
+
+            current_hours = aircraft.flight_time
+
+            ads_data = []
+            for ad in all_ads:
+                ad_dict = ADNestedSerializer(ad).data
+
+                # Get latest compliance record
+                compliance = ADCompliance.objects.filter(
+                    ad=ad
+                ).filter(
+                    Q(aircraft=aircraft) | Q(component__aircraft=aircraft)
+                ).order_by('-date_complied').first()
+
+                if compliance:
+                    ad_dict['latest_compliance'] = ADComplianceNestedSerializer(compliance).data
+                else:
+                    ad_dict['latest_compliance'] = None
+
+                # Compute compliance status
+                if not compliance:
+                    ad_dict['compliance_status'] = 'no_compliance'
+                elif compliance.permanent:
+                    ad_dict['compliance_status'] = 'compliant'
+                elif compliance.next_due_at_time > 0:
+                    if current_hours >= compliance.next_due_at_time:
+                        ad_dict['compliance_status'] = 'overdue'
+                    elif current_hours + Decimal('10.0') >= compliance.next_due_at_time:
+                        ad_dict['compliance_status'] = 'due_soon'
+                    else:
+                        ad_dict['compliance_status'] = 'compliant'
+                else:
+                    ad_dict['compliance_status'] = 'compliant'
+
+                ads_data.append(ad_dict)
+
+            return Response({'ads': ads_data})
+
+        elif request.method == 'POST':
+            ad_id = request.data.get('ad_id')
+            if ad_id:
+                # Add existing AD to this aircraft
+                try:
+                    ad = AD.objects.get(id=ad_id)
+                except AD.DoesNotExist:
+                    return Response({'error': 'AD not found'}, status=status.HTTP_404_NOT_FOUND)
+                ad.applicable_aircraft.add(aircraft)
+                return Response(ADNestedSerializer(ad).data, status=status.HTTP_200_OK)
+            else:
+                # Create a new AD and add to this aircraft
+                serializer = ADSerializer(data=request.data, context={'request': request})
+                if serializer.is_valid():
+                    ad = serializer.save()
+                    ad.applicable_aircraft.add(aircraft)
+                    return Response(ADNestedSerializer(ad).data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], url_path='remove_ad')
+    def remove_ad(self, request, pk=None):
+        """
+        Remove an AD from this aircraft's applicable_aircraft M2M.
+        POST /api/aircraft/{id}/remove_ad/
+        Body: {"ad_id": "<uuid>"}
+        """
+        aircraft = self.get_object()
+        ad_id = request.data.get('ad_id')
+        if not ad_id:
+            return Response({'error': 'ad_id required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            ad = AD.objects.get(id=ad_id)
+        except AD.DoesNotExist:
+            return Response({'error': 'AD not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        ad.applicable_aircraft.remove(aircraft)
+        return Response({'success': True})
+
+    @action(detail=True, methods=['post'])
+    def compliance(self, request, pk=None):
+        """
+        Create an AD compliance record for this aircraft.
+        POST /api/aircraft/{id}/compliance/
+        """
+        aircraft = self.get_object()
+        data = request.data.copy()
+        data['aircraft'] = aircraft.id
+
+        serializer = ADComplianceCreateUpdateSerializer(data=data)
+        if serializer.is_valid():
+            record = serializer.save()
+            return Response(
+                ADComplianceNestedSerializer(record).data,
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

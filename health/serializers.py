@@ -228,6 +228,37 @@ class ADSerializer(serializers.HyperlinkedModelSerializer):
         model = AD
         fields = '__all__'
 
+
+class ADNestedSerializer(serializers.ModelSerializer):
+    """Nested serializer for ADs without hyperlinks, used in aircraft detail."""
+    class Meta:
+        model = AD
+        fields = [
+            'id', 'name', 'short_description', 'required_action',
+            'recurring', 'recurring_hours', 'recurring_months', 'recurring_days',
+        ]
+
+
+class ADComplianceNestedSerializer(serializers.ModelSerializer):
+    """Nested serializer for AD compliance records."""
+    class Meta:
+        model = ADCompliance
+        fields = [
+            'id', 'ad', 'date_complied', 'compliance_notes',
+            'permanent', 'next_due_at_time', 'aircraft', 'component',
+        ]
+
+
+class ADComplianceCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating/updating AD compliance records."""
+    class Meta:
+        model = ADCompliance
+        fields = [
+            'id', 'ad', 'date_complied', 'compliance_notes',
+            'permanent', 'next_due_at_time', 'aircraft', 'component',
+        ]
+        read_only_fields = ['id']
+
 class STCApplicationSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = STCApplication

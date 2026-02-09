@@ -91,6 +91,32 @@ function aircraftDetail(aircraftId) {
             replacement_critical: false,
         },
 
+        // AD tracking state
+        applicableAds: [],
+        allAds: [],
+        adsLoaded: false,
+        adModalOpen: false,
+        complianceModalOpen: false,
+        selectedAd: null,
+        selectedExistingAdId: '',
+        adSubmitting: false,
+        complianceSubmitting: false,
+        adForm: {
+            name: '',
+            short_description: '',
+            required_action: '',
+            recurring: false,
+            recurring_hours: 0,
+            recurring_months: 0,
+            recurring_days: 0,
+        },
+        complianceForm: {
+            date_complied: '',
+            compliance_notes: '',
+            permanent: false,
+            next_due_at_time: '',
+        },
+
         // Notes state
         aircraftNotes: [],
         showAllNotes: false,
@@ -108,6 +134,9 @@ function aircraftDetail(aircraftId) {
             this.$watch('activeTab', (tab) => {
                 if (tab === 'documents' && !this.documentsLoaded) {
                     this.loadDocuments();
+                }
+                if (tab === 'ads' && !this.adsLoaded) {
+                    this.loadAds();
                 }
                 if (tab === 'oil' && !this.oilLoaded) {
                     this.loadOilRecords();
@@ -1086,6 +1115,259 @@ function aircraftDetail(aircraftId) {
             } finally {
                 this.noteSubmitting = false;
             }
-        }
+        },
+
+        // AD management methods
+        get adIssueCount() {
+            return this.applicableAds.filter(
+                ad => ad.compliance_status === 'overdue' || ad.compliance_status === 'no_compliance'
+            ).length;
+        },
+
+        async loadAds() {
+            try {
+                const response = await fetch(`/api/aircraft/${this.aircraftId}/ads/`);
+                const data = await response.json();
+                this.applicableAds = data.ads || [];
+                this.adsLoaded = true;
+            } catch (error) {
+                console.error('Error loading ADs:', error);
+                showNotification('Failed to load ADs', 'danger');
+            }
+        },
+
+        async loadAllAds() {
+            try {
+                const response = await fetch('/api/ad/');
+                const data = await response.json();
+                const all = data.results || data;
+                // Filter out ADs already applicable to this aircraft
+                const applicableIds = new Set(this.applicableAds.map(a => a.id));
+                this.allAds = all;
+                return all;
+            } catch (error) {
+                console.error('Error loading all ADs:', error);
+                return [];
+            }
+        },
+
+        get availableAds() {
+            const applicableIds = new Set(this.applicableAds.map(a => a.id));
+            return this.allAds.filter(a => !applicableIds.has(a.id));
+        },
+
+        openAdModal() {
+            this.selectedExistingAdId = '';
+            this.adForm = {
+                name: '',
+                short_description: '',
+                required_action: '',
+                recurring: false,
+                recurring_hours: 0,
+                recurring_months: 0,
+                recurring_days: 0,
+            };
+            this.loadAllAds();
+            this.adModalOpen = true;
+        },
+
+        closeAdModal() {
+            this.adModalOpen = false;
+        },
+
+        async addExistingAd() {
+            if (!this.selectedExistingAdId || this.adSubmitting) return;
+            this.adSubmitting = true;
+            try {
+                const response = await fetch(`/api/aircraft/${this.aircraftId}/ads/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({ ad_id: this.selectedExistingAdId }),
+                });
+
+                if (response.ok) {
+                    showNotification('AD added to aircraft', 'success');
+                    this.closeAdModal();
+                    this.adsLoaded = false;
+                    await this.loadAds();
+                    await this.loadData();
+                } else {
+                    const errorData = await response.json();
+                    showNotification(errorData.error || 'Failed to add AD', 'danger');
+                }
+            } catch (error) {
+                console.error('Error adding AD:', error);
+                showNotification('Error adding AD', 'danger');
+            } finally {
+                this.adSubmitting = false;
+            }
+        },
+
+        async createAndAddAd() {
+            if (!this.adForm.name || !this.adForm.short_description || this.adSubmitting) return;
+            this.adSubmitting = true;
+            try {
+                const data = {
+                    name: this.adForm.name,
+                    short_description: this.adForm.short_description,
+                    required_action: this.adForm.required_action,
+                    recurring: this.adForm.recurring,
+                    recurring_hours: this.adForm.recurring ? parseFloat(this.adForm.recurring_hours) || 0 : 0,
+                    recurring_months: this.adForm.recurring ? parseInt(this.adForm.recurring_months) || 0 : 0,
+                    recurring_days: this.adForm.recurring ? parseInt(this.adForm.recurring_days) || 0 : 0,
+                };
+
+                const response = await fetch(`/api/aircraft/${this.aircraftId}/ads/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                if (response.ok) {
+                    showNotification('AD created and added to aircraft', 'success');
+                    this.closeAdModal();
+                    this.adsLoaded = false;
+                    await this.loadAds();
+                    await this.loadData();
+                } else {
+                    const errorData = await response.json();
+                    const msg = typeof errorData === 'object'
+                        ? Object.values(errorData).flat().join(', ')
+                        : 'Failed to create AD';
+                    showNotification(msg, 'danger');
+                }
+            } catch (error) {
+                console.error('Error creating AD:', error);
+                showNotification('Error creating AD', 'danger');
+            } finally {
+                this.adSubmitting = false;
+            }
+        },
+
+        async removeAd(ad) {
+            if (!confirm(`Remove AD "${ad.name}" from this aircraft?`)) return;
+            try {
+                const response = await fetch(`/api/aircraft/${this.aircraftId}/remove_ad/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({ ad_id: ad.id }),
+                });
+
+                if (response.ok) {
+                    showNotification('AD removed from aircraft', 'success');
+                    this.adsLoaded = false;
+                    await this.loadAds();
+                    await this.loadData();
+                } else {
+                    showNotification('Failed to remove AD', 'danger');
+                }
+            } catch (error) {
+                console.error('Error removing AD:', error);
+                showNotification('Error removing AD', 'danger');
+            }
+        },
+
+        openComplianceModal(ad) {
+            this.selectedAd = ad;
+            this.complianceForm = {
+                date_complied: new Date().toISOString().split('T')[0],
+                compliance_notes: '',
+                permanent: false,
+                next_due_at_time: '',
+            };
+            // Auto-calculate next due if recurring
+            if (ad.recurring && ad.recurring_hours > 0 && this.aircraft) {
+                this.complianceForm.next_due_at_time = (
+                    parseFloat(this.aircraft.flight_time) + parseFloat(ad.recurring_hours)
+                ).toFixed(1);
+            }
+            this.complianceModalOpen = true;
+        },
+
+        closeComplianceModal() {
+            this.complianceModalOpen = false;
+            this.selectedAd = null;
+        },
+
+        async submitCompliance() {
+            if (this.complianceSubmitting || !this.selectedAd) return;
+            this.complianceSubmitting = true;
+            try {
+                const data = {
+                    ad: this.selectedAd.id,
+                    date_complied: this.complianceForm.date_complied,
+                    compliance_notes: this.complianceForm.compliance_notes,
+                    permanent: this.complianceForm.permanent,
+                    next_due_at_time: this.complianceForm.permanent ? 0 : (parseFloat(this.complianceForm.next_due_at_time) || 0),
+                };
+
+                const response = await fetch(`/api/aircraft/${this.aircraftId}/compliance/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                if (response.ok) {
+                    showNotification('Compliance recorded', 'success');
+                    this.closeComplianceModal();
+                    this.adsLoaded = false;
+                    await this.loadAds();
+                    await this.loadData();
+                } else {
+                    const errorData = await response.json();
+                    const msg = typeof errorData === 'object'
+                        ? Object.values(errorData).flat().join(', ')
+                        : 'Failed to record compliance';
+                    showNotification(msg, 'danger');
+                }
+            } catch (error) {
+                console.error('Error recording compliance:', error);
+                showNotification('Error recording compliance', 'danger');
+            } finally {
+                this.complianceSubmitting = false;
+            }
+        },
+
+        getAdStatusClass(ad) {
+            switch (ad.compliance_status) {
+                case 'compliant':
+                    return 'pf-m-green';
+                case 'due_soon':
+                    return 'pf-m-orange';
+                case 'overdue':
+                    return 'pf-m-red';
+                case 'no_compliance':
+                    return 'pf-m-red';
+                default:
+                    return 'pf-m-grey';
+            }
+        },
+
+        getAdStatusText(ad) {
+            switch (ad.compliance_status) {
+                case 'compliant':
+                    return 'Compliant';
+                case 'due_soon':
+                    return 'Due Soon';
+                case 'overdue':
+                    return 'Overdue';
+                case 'no_compliance':
+                    return 'No Compliance';
+                default:
+                    return 'Unknown';
+            }
+        },
     }
 }

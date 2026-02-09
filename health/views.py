@@ -103,3 +103,8 @@ class InspectionRecordViewSet(viewsets.ModelViewSet):
 class ADComplianceViewSet(viewsets.ModelViewSet):
     queryset = ADCompliance.objects.all()
     serializer_class = ADComplianceSerializer
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return ADComplianceCreateUpdateSerializer
+        return ADComplianceSerializer

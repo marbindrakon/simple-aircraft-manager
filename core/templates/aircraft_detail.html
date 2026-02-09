@@ -82,6 +82,14 @@
                         </template>
                     </button>
                 </li>
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'ads' }">
+                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'ads'">
+                        <span class="pf-v5-c-tabs__item-text">ADs</span>
+                        <template x-if="adIssueCount > 0">
+                            <span class="pf-v5-c-badge pf-m-unread" style="margin-left: 0.5rem;" x-text="adIssueCount"></span>
+                        </template>
+                    </button>
+                </li>
                 <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'oil' }">
                     <button class="pf-v5-c-tabs__link" @click="activeTab = 'oil'">
                         <span class="pf-v5-c-tabs__item-text">Oil</span>
@@ -418,6 +426,109 @@
                             </template>
                         </div>
                     </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- ADs Tab -->
+        <div x-show="activeTab === 'ads'" class="pf-v5-c-page__main-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>Airworthiness Directives</h2>
+                <button class="pf-v5-c-button pf-m-primary" @click="openAdModal()">
+                    <i class="fas fa-plus"></i> Add AD
+                </button>
+            </div>
+
+            <!-- Loading -->
+            <div x-show="!adsLoaded" class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
+                    <h2 class="pf-v5-c-title pf-m-lg">Loading ADs...</h2>
+                </div>
+            </div>
+
+            <div x-show="adsLoaded" x-cloak>
+                <!-- Empty State -->
+                <template x-if="applicableAds.length === 0">
+                    <div class="pf-v5-c-empty-state">
+                        <div class="pf-v5-c-empty-state__content">
+                            <i class="fas fa-clipboard-check" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                            <h2 class="pf-v5-c-title pf-m-lg">No Applicable ADs</h2>
+                            <div class="pf-v5-c-empty-state__body">
+                                No Airworthiness Directives are currently tracked for this aircraft.
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- AD Table -->
+                <template x-if="applicableAds.length > 0">
+                    <table class="pf-v5-c-table pf-m-grid-md">
+                        <thead>
+                            <tr>
+                                <th>AD Name</th>
+                                <th>Description</th>
+                                <th>Recurring</th>
+                                <th>Status</th>
+                                <th>Last Complied</th>
+                                <th>Next Due</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="ad in applicableAds" :key="ad.id">
+                                <tr>
+                                    <td x-text="ad.name"></td>
+                                    <td x-text="ad.short_description"></td>
+                                    <td>
+                                        <template x-if="ad.recurring">
+                                            <span>
+                                                Yes
+                                                <template x-if="ad.recurring_hours > 0">
+                                                    <span x-text="'(' + ad.recurring_hours + ' hrs)'"></span>
+                                                </template>
+                                                <template x-if="ad.recurring_months > 0">
+                                                    <span x-text="'(' + ad.recurring_months + ' mo)'"></span>
+                                                </template>
+                                            </span>
+                                        </template>
+                                        <template x-if="!ad.recurring">
+                                            <span>No</span>
+                                        </template>
+                                    </td>
+                                    <td>
+                                        <span class="pf-v5-c-label" :class="getAdStatusClass(ad)" x-text="getAdStatusText(ad)"></span>
+                                    </td>
+                                    <td x-text="ad.latest_compliance ? formatDate(ad.latest_compliance.date_complied) : '-'"></td>
+                                    <td>
+                                        <template x-if="ad.latest_compliance && ad.latest_compliance.permanent">
+                                            <span>Permanent</span>
+                                        </template>
+                                        <template x-if="ad.latest_compliance && !ad.latest_compliance.permanent && ad.latest_compliance.next_due_at_time > 0">
+                                            <span x-text="formatHours(ad.latest_compliance.next_due_at_time) + ' hrs'"></span>
+                                        </template>
+                                        <template x-if="!ad.latest_compliance || (!ad.latest_compliance.permanent && (!ad.latest_compliance.next_due_at_time || ad.latest_compliance.next_due_at_time == 0))">
+                                            <span>-</span>
+                                        </template>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.25rem;">
+                                            <button class="pf-v5-c-button pf-m-plain"
+                                                    @click="openComplianceModal(ad)"
+                                                    title="Record Compliance">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button class="pf-v5-c-button pf-m-plain pf-m-danger"
+                                                    @click="removeAd(ad)"
+                                                    title="Remove AD">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
                 </template>
             </div>
         </div>
@@ -1250,6 +1361,186 @@
                         <span x-show="oilSubmitting">Saving...</span>
                     </button>
                     <button class="pf-v5-c-button pf-m-link" @click="closeOilModal()">Cancel</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add AD Modal -->
+    <div class="pf-v5-c-backdrop" x-show="adModalOpen" x-cloak @click.self="closeAdModal()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-md" @click.stop style="max-height: 90vh; overflow-y: auto;">
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeAdModal()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">Add Airworthiness Directive</h1>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <!-- Add existing AD -->
+                    <div class="pf-v5-c-form" style="margin-bottom: 1.5rem;">
+                        <h3 style="margin-bottom: 0.5rem;">Add Existing AD</h3>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="existing-ad-select">
+                                <span class="pf-v5-c-form__label-text">Select AD</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control" style="display: flex; gap: 0.5rem;">
+                                <select id="existing-ad-select" class="pf-v5-c-form-control" x-model="selectedExistingAdId" style="flex: 1;">
+                                    <option value="">-- Select an AD --</option>
+                                    <template x-for="ad in availableAds" :key="ad.id">
+                                        <option :value="ad.id" x-text="ad.name + ' - ' + ad.short_description"></option>
+                                    </template>
+                                </select>
+                                <button class="pf-v5-c-button pf-m-primary" @click="addExistingAd()" :disabled="!selectedExistingAdId || adSubmitting">
+                                    Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr style="margin: 1rem 0; border-color: var(--pf-v5-global--BorderColor--100);">
+
+                    <!-- Create new AD -->
+                    <h3 style="margin-bottom: 0.5rem;">Or Create New AD</h3>
+                    <form @submit.prevent="createAndAddAd" class="pf-v5-c-form">
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="ad-name">
+                                <span class="pf-v5-c-form__label-text">AD Name</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input id="ad-name" class="pf-v5-c-form-control" type="text" x-model="adForm.name" placeholder="e.g. AD 2024-01-05">
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="ad-description">
+                                <span class="pf-v5-c-form__label-text">Short Description</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input id="ad-description" class="pf-v5-c-form-control" type="text" x-model="adForm.short_description">
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="ad-action">
+                                <span class="pf-v5-c-form__label-text">Required Action</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <textarea id="ad-action" class="pf-v5-c-form-control" rows="2" x-model="adForm.required_action"></textarea>
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-control">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" x-model="adForm.recurring"> Recurring
+                                </label>
+                            </div>
+                        </div>
+                        <template x-if="adForm.recurring">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                                <div class="pf-v5-c-form__group">
+                                    <label class="pf-v5-c-form__label" for="ad-recurring-hours">
+                                        <span class="pf-v5-c-form__label-text">Hours</span>
+                                    </label>
+                                    <div class="pf-v5-c-form__group-control">
+                                        <input id="ad-recurring-hours" class="pf-v5-c-form-control" type="number" step="0.1" min="0" x-model="adForm.recurring_hours">
+                                    </div>
+                                </div>
+                                <div class="pf-v5-c-form__group">
+                                    <label class="pf-v5-c-form__label" for="ad-recurring-months">
+                                        <span class="pf-v5-c-form__label-text">Months</span>
+                                    </label>
+                                    <div class="pf-v5-c-form__group-control">
+                                        <input id="ad-recurring-months" class="pf-v5-c-form-control" type="number" min="0" x-model="adForm.recurring_months">
+                                    </div>
+                                </div>
+                                <div class="pf-v5-c-form__group">
+                                    <label class="pf-v5-c-form__label" for="ad-recurring-days">
+                                        <span class="pf-v5-c-form__label-text">Days</span>
+                                    </label>
+                                    <div class="pf-v5-c-form__group-control">
+                                        <input id="ad-recurring-days" class="pf-v5-c-form-control" type="number" min="0" x-model="adForm.recurring_days">
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </form>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" @click="createAndAddAd" :disabled="adSubmitting || !adForm.name || !adForm.short_description">
+                        <span x-show="!adSubmitting">Create AD</span>
+                        <span x-show="adSubmitting">Saving...</span>
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeAdModal()">Cancel</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Record Compliance Modal -->
+    <div class="pf-v5-c-backdrop" x-show="complianceModalOpen" x-cloak @click.self="closeComplianceModal()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-md" @click.stop>
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeComplianceModal()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">Record AD Compliance</h1>
+                    <template x-if="selectedAd">
+                        <div class="pf-v5-c-modal-box__description" x-text="selectedAd.name + ' - ' + selectedAd.short_description"></div>
+                    </template>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <form @submit.prevent="submitCompliance" class="pf-v5-c-form">
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="compliance-date">
+                                <span class="pf-v5-c-form__label-text">Date Complied</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="date" id="compliance-date" class="pf-v5-c-form-control" x-model="complianceForm.date_complied" required>
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="compliance-notes">
+                                <span class="pf-v5-c-form__label-text">Compliance Notes</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <textarea id="compliance-notes" class="pf-v5-c-form-control" rows="3" x-model="complianceForm.compliance_notes" required placeholder="Describe compliance action taken..."></textarea>
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-control">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" x-model="complianceForm.permanent"> Permanent (one-time compliance, no recurrence)
+                                </label>
+                            </div>
+                        </div>
+                        <template x-if="!complianceForm.permanent">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="compliance-next-due">
+                                    <span class="pf-v5-c-form__label-text">Next Due At (aircraft hours)</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input type="number" step="0.1" min="0" id="compliance-next-due" class="pf-v5-c-form-control" x-model="complianceForm.next_due_at_time" :placeholder="'Current: ' + formatHours(aircraft?.flight_time)">
+                                </div>
+                            </div>
+                        </template>
+                    </form>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" @click="submitCompliance" :disabled="complianceSubmitting">
+                        <span x-show="!complianceSubmitting">Record Compliance</span>
+                        <span x-show="complianceSubmitting">Saving...</span>
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeComplianceModal()">Cancel</button>
                 </footer>
             </div>
         </div>
