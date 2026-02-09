@@ -29,8 +29,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-MEDIA_ROOT = "/home/aaustin/dev/simple-aircraft-manager/test-media"
-MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"
 
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
