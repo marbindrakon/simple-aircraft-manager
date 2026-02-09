@@ -58,15 +58,34 @@ Priority 0 squawks will ground the aircraft (airworthiness status = RED).
 ### Frontend: PatternFly + Alpine.js
 
 The frontend uses:
-- **PatternFly 5** CSS framework (loaded from CDN)
-- **Alpine.js 3** for reactivity (loaded from CDN)
+- **PatternFly 5** CSS framework (loaded from `unpkg.com` CDN)
+- **Alpine.js 3** for reactivity (loaded from `cdn.jsdelivr.net`)
+- **Chart.js 4** for charts (loaded from `cdn.jsdelivr.net`)
 - No build tools required
 
 Each page has a corresponding JavaScript file with an Alpine.js component:
 - `dashboard.js` → `aircraftDashboard()`
 - `aircraft-detail.js` → `aircraftDetail(aircraftId)`
+- `hours-update-modal.js` → `hoursUpdateModal()` (loaded globally via `base.html`)
+- `squawk-history.js` → `squawkHistory(aircraftId)`
 
 Alpine.js components are initialized via `x-data` attributes in templates.
+
+### Content Security Policy (CSP) — No Inline Scripts
+
+A strict CSP is enforced via nginx security headers. **All JavaScript must be in external `.js` files** — inline `<script>` blocks will be blocked by CSP and will not execute.
+
+When adding new JavaScript:
+1. Create a new `.js` file in `core/static/js/`
+2. Load it via `<script src="{% static 'js/your-file.js' %}">` in the template
+3. For page-specific JS, use the `{% block extra_js %}` block
+4. For globally-needed JS (shared components/modals), add to `base.html`
+
+The CSP allows scripts from `'self'` and `cdn.jsdelivr.net`, styles from `'self'` and `unpkg.com`, and `'unsafe-eval'` (required by Alpine.js). If you add a new CDN dependency, the CSP in `nginx-config.yaml` (gitops repo) must be updated.
+
+### File Upload Validation
+
+Squawk attachments are validated by `SquawkCreateUpdateSerializer.validate_attachment()` which checks both file extension and content type against an allowlist (images, PDFs, text). If adding new upload fields, follow the same pattern.
 
 ### Serializers: Nested vs Hyperlinked
 
@@ -118,7 +137,14 @@ The result is serialized via `AircraftSerializer.get_airworthiness()`.
 - `settings.py` - Development (DEBUG=True, SQLite)
 - `settings_prod.py` - Production (env vars, PostgreSQL support)
 
-Always test production settings: `python manage.py check --settings=simple_aircraft_manager.settings_prod`
+**Production settings require `DJANGO_SECRET_KEY` and `DJANGO_ALLOWED_HOSTS` env vars** — there are no fallback defaults. The app will crash on startup if they are missing (this is intentional).
+
+To test production settings locally:
+```bash
+DJANGO_SECRET_KEY=test DJANGO_ALLOWED_HOSTS=localhost python manage.py check --settings=simple_aircraft_manager.settings_prod
+```
+
+The Containerfile passes dummy values for `collectstatic` at build time since it doesn't need real secrets.
 
 ### 2. Component ID in Serializer
 
@@ -148,6 +174,18 @@ The `/api/aircraft/{id}/documents/` endpoint returns both grouped appropriately.
 ### 5. OpenShift Arbitrary UIDs
 
 The container runs as arbitrary user IDs in OpenShift. The entrypoint script handles adding the user to `/etc/passwd`. Directories need group write permissions (`chmod g=u`).
+
+### 6. No Inline JavaScript
+
+CSP blocks inline `<script>` tags. All JS must be in external files under `core/static/js/`. See the "Content Security Policy" section above.
+
+### 7. Health Check Endpoint
+
+`/healthz/` is handled directly by nginx (returns 200 JSON without proxying to Django). This avoids `ALLOWED_HOSTS` issues with kube-probe. The Django `healthz` view also exists but is not used by probes.
+
+### 8. TLS Termination
+
+TLS is terminated at the nginx sidecar (port 8443), not at the OpenShift router. The route uses `passthrough` termination. The cert is managed by cert-manager (`certificate.yaml` in gitops). Django receives `X-Forwarded-Proto: https` from nginx and has `SECURE_PROXY_SSL_HEADER` configured to trust it.
 
 ## File Locations
 

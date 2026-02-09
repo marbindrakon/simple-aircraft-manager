@@ -30,7 +30,6 @@ router = routers.DefaultRouter()
 router.register(r'aircraft', core_views.AircraftViewSet)
 router.register(r'aircraft-notes', core_views.AircraftNoteViewSet)
 router.register(r'aircraft-events', core_views.AircraftEventViewSet)
-router.register(r'users', core_views.UserViewSet)
 router.register(r'component-type', health_views.ComponentTypeViewSet)
 router.register(r'component', health_views.ComponentViewSet)
 router.register(r'document-collection', health_views.DocumentCollectionViewSet)
@@ -50,6 +49,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
 
 urlpatterns = [
+    path('healthz/', core_views.healthz, name='healthz'),
     path('', RedirectView.as_view(url='/dashboard/', permanent=False), name='home'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('aircraft/<uuid:pk>/', core_views.AircraftDetailView.as_view(), name='aircraft-detail'),

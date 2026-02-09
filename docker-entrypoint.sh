@@ -15,7 +15,7 @@ export DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE:-simple_aircraft_manager
 # Wait for database if using PostgreSQL
 if [ "${DATABASE_ENGINE}" = "postgresql" ]; then
     echo "Waiting for PostgreSQL..."
-    while ! python -c "import socket; socket.create_connection(('${DATABASE_HOST:-localhost}', ${DATABASE_PORT:-5432}), timeout=1)" 2>/dev/null; do
+    while ! python -c "import os, socket; socket.create_connection((os.environ.get('DATABASE_HOST', 'localhost'), int(os.environ.get('DATABASE_PORT', '5432'))), timeout=1)" 2>/dev/null; do
         echo "PostgreSQL is unavailable - sleeping"
         sleep 1
     done
@@ -27,21 +27,13 @@ echo "Running database migrations..."
 python manage.py migrate --noinput
 
 # Create superuser if credentials provided and user doesn't exist
+# Django's createsuperuser --noinput reads DJANGO_SUPERUSER_USERNAME,
+# DJANGO_SUPERUSER_PASSWORD, and DJANGO_SUPERUSER_EMAIL from the environment
+# directly — no shell interpolation needed.
 if [ -n "${DJANGO_SUPERUSER_USERNAME}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD}" ]; then
+    export DJANGO_SUPERUSER_EMAIL="${DJANGO_SUPERUSER_EMAIL:-admin@example.com}"
     echo "Checking for superuser..."
-    python manage.py shell -c "
-from django.contrib.auth import get_user_model
-User = get_user_model()
-if not User.objects.filter(username='${DJANGO_SUPERUSER_USERNAME}').exists():
-    User.objects.create_superuser(
-        '${DJANGO_SUPERUSER_USERNAME}',
-        '${DJANGO_SUPERUSER_EMAIL:-admin@example.com}',
-        '${DJANGO_SUPERUSER_PASSWORD}'
-    )
-    print('Superuser created')
-else:
-    print('Superuser already exists')
-"
+    python manage.py createsuperuser --noinput 2>/dev/null || echo "Superuser already exists"
 fi
 
 # Execute the main command

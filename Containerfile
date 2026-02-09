@@ -56,8 +56,9 @@ RUN mkdir -p ${APP_HOME}/staticfiles \
                  ${APP_HOME}/mediafiles \
                  ${APP_HOME}/data
 
-# Collect static files
-RUN python manage.py collectstatic --noinput --settings=simple_aircraft_manager.settings_prod
+# Collect static files (dummy values needed to satisfy required env vars at build time)
+RUN DJANGO_SECRET_KEY=build-only DJANGO_ALLOWED_HOSTS=localhost \
+    python manage.py collectstatic --noinput --settings=simple_aircraft_manager.settings_prod
 
 # Copy and set up entrypoint script
 COPY --chown=1001:0 docker-entrypoint.sh /usr/local/bin/

@@ -1,14 +1,7 @@
-from django.contrib.auth.models import User
 from rest_framework import serializers
 
 from .models import Aircraft, AircraftNote, AircraftEvent
 from health.services import calculate_airworthiness
-
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['username', 'first_name', 'last_name', 'email', 'id', 'url']
 
 
 class AircraftSerializer(serializers.HyperlinkedModelSerializer):

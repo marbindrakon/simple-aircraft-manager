@@ -2,7 +2,7 @@ from core.models import Aircraft, AircraftNote, AircraftEvent
 from core.serializers import (
     AircraftSerializer, AircraftListSerializer, AircraftNoteSerializer,
     AircraftNoteNestedSerializer, AircraftNoteCreateUpdateSerializer,
-    AircraftEventSerializer, UserSerializer
+    AircraftEventSerializer,
 )
 from django.utils import timezone
 from health.models import Component, LogbookEntry, Squawk, Document, DocumentCollection, OilRecord, FuelRecord
@@ -14,7 +14,8 @@ from health.serializers import (
     FuelRecordNestedSerializer, FuelRecordCreateSerializer,
 )
 
-from django.contrib.auth.models import User
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from rest_framework import viewsets
@@ -313,9 +314,9 @@ class AircraftEventViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AircraftEvent.objects.all()
     serializer_class = AircraftSerializer
 
-class UserViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+@require_GET
+def healthz(request):
+    return JsonResponse({"status": "ok"})
 
 
 class AircraftDetailView(LoginRequiredMixin, TemplateView):

@@ -169,6 +169,13 @@ class SquawkNestedSerializer(serializers.ModelSerializer):
 
 class SquawkCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating/updating squawks"""
+
+    ALLOWED_ATTACHMENT_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.pdf', '.txt'}
+    ALLOWED_ATTACHMENT_CONTENT_TYPES = {
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff',
+        'application/pdf', 'text/plain',
+    }
+
     class Meta:
         model = Squawk
         fields = [
@@ -182,6 +189,19 @@ class SquawkCreateUpdateSerializer(serializers.ModelSerializer):
             'notes',
         ]
         read_only_fields = ['id']
+
+    def validate_attachment(self, value):
+        import os
+        ext = os.path.splitext(value.name)[1].lower()
+        if ext not in self.ALLOWED_ATTACHMENT_EXTENSIONS:
+            raise serializers.ValidationError(
+                f"File type '{ext}' is not allowed. Allowed types: {', '.join(sorted(self.ALLOWED_ATTACHMENT_EXTENSIONS))}"
+            )
+        if value.content_type not in self.ALLOWED_ATTACHMENT_CONTENT_TYPES:
+            raise serializers.ValidationError(
+                f"Content type '{value.content_type}' is not allowed."
+            )
+        return value
 
 class InspectionTypeSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
