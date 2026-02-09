@@ -5,11 +5,13 @@ from core.serializers import (
     AircraftEventSerializer, UserSerializer
 )
 from django.utils import timezone
-from health.models import Component, LogbookEntry, Squawk, Document, DocumentCollection
+from health.models import Component, LogbookEntry, Squawk, Document, DocumentCollection, OilRecord, FuelRecord
 from health.serializers import (
     ComponentSerializer, LogbookEntrySerializer, SquawkSerializer,
     SquawkNestedSerializer, SquawkCreateUpdateSerializer,
-    DocumentCollectionNestedSerializer, DocumentNestedSerializer
+    DocumentCollectionNestedSerializer, DocumentNestedSerializer,
+    OilRecordNestedSerializer, OilRecordCreateSerializer,
+    FuelRecordNestedSerializer, FuelRecordCreateSerializer,
 )
 
 from django.contrib.auth.models import User
@@ -228,6 +230,66 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 )
                 return Response(
                     AircraftNoteNestedSerializer(note, context={'request': request}).data,
+                    status=status.HTTP_201_CREATED
+                )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get', 'post'])
+    def oil_records(self, request, pk=None):
+        """
+        Get or create oil records for an aircraft
+        GET /api/aircraft/{id}/oil_records/ - Get all oil records
+        POST /api/aircraft/{id}/oil_records/ - Create a new oil record
+        """
+        aircraft = self.get_object()
+
+        if request.method == 'GET':
+            records = aircraft.oil_records.all()
+            return Response({
+                'oil_records': OilRecordNestedSerializer(records, many=True).data,
+            })
+
+        elif request.method == 'POST':
+            data = request.data.copy()
+            data['aircraft'] = aircraft.id
+            if 'flight_hours' not in data or not data['flight_hours']:
+                data['flight_hours'] = str(aircraft.flight_time)
+
+            serializer = OilRecordCreateSerializer(data=data)
+            if serializer.is_valid():
+                record = serializer.save()
+                return Response(
+                    OilRecordNestedSerializer(record).data,
+                    status=status.HTTP_201_CREATED
+                )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get', 'post'])
+    def fuel_records(self, request, pk=None):
+        """
+        Get or create fuel records for an aircraft
+        GET /api/aircraft/{id}/fuel_records/ - Get all fuel records
+        POST /api/aircraft/{id}/fuel_records/ - Create a new fuel record
+        """
+        aircraft = self.get_object()
+
+        if request.method == 'GET':
+            records = aircraft.fuel_records.all()
+            return Response({
+                'fuel_records': FuelRecordNestedSerializer(records, many=True).data,
+            })
+
+        elif request.method == 'POST':
+            data = request.data.copy()
+            data['aircraft'] = aircraft.id
+            if 'flight_hours' not in data or not data['flight_hours']:
+                data['flight_hours'] = str(aircraft.flight_time)
+
+            serializer = FuelRecordCreateSerializer(data=data)
+            if serializer.is_valid():
+                record = serializer.save()
+                return Response(
+                    FuelRecordNestedSerializer(record).data,
                     status=status.HTTP_201_CREATED
                 )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -82,6 +82,16 @@
                         </template>
                     </button>
                 </li>
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'oil' }">
+                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'oil'">
+                        <span class="pf-v5-c-tabs__item-text">Oil</span>
+                    </button>
+                </li>
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'fuel' }">
+                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'fuel'">
+                        <span class="pf-v5-c-tabs__item-text">Fuel</span>
+                    </button>
+                </li>
                 <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'documents' }">
                     <button class="pf-v5-c-tabs__link" @click="activeTab = 'documents'">
                         <span class="pf-v5-c-tabs__item-text">Documents</span>
@@ -383,6 +393,148 @@
                             </template>
                         </div>
                     </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Oil Tab -->
+        <div x-show="activeTab === 'oil'" class="pf-v5-c-page__main-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>Oil Consumption</h2>
+                <button class="pf-v5-c-button pf-m-primary" @click="openOilModal()">
+                    <i class="fas fa-plus"></i> Add Oil Record
+                </button>
+            </div>
+
+            <!-- Loading -->
+            <div x-show="!oilLoaded" class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
+                    <h2 class="pf-v5-c-title pf-m-lg">Loading oil records...</h2>
+                </div>
+            </div>
+
+            <div x-show="oilLoaded" x-cloak>
+                <!-- Empty State -->
+                <template x-if="oilRecords.length === 0">
+                    <div class="pf-v5-c-empty-state">
+                        <div class="pf-v5-c-empty-state__content">
+                            <i class="fas fa-oil-can" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                            <h2 class="pf-v5-c-title pf-m-lg">No oil records</h2>
+                            <div class="pf-v5-c-empty-state__body">
+                                Track oil consumption by adding records each time you add oil.
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Oil Chart -->
+                <template x-if="oilRecords.length >= 2">
+                    <div class="pf-v5-c-card" style="margin-bottom: 1rem;">
+                        <div class="pf-v5-c-card__title"><h3>Oil Consumption Trend (Hours per Quart)</h3></div>
+                        <div class="pf-v5-c-card__body">
+                            <canvas id="oilChart" style="max-height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Oil Records Table -->
+                <template x-if="oilRecords.length > 0">
+                    <table class="pf-v5-c-table pf-m-grid-md">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Hours</th>
+                                <th>Qty (qt)</th>
+                                <th>Level After</th>
+                                <th>Type</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="record in oilRecords" :key="record.id">
+                                <tr>
+                                    <td x-text="formatDate(record.date)"></td>
+                                    <td x-text="formatHours(record.flight_hours)"></td>
+                                    <td x-text="record.quantity_added"></td>
+                                    <td x-text="record.level_after || '-'"></td>
+                                    <td x-text="record.oil_type || '-'"></td>
+                                    <td x-text="record.notes || '-'"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </template>
+            </div>
+        </div>
+
+        <!-- Fuel Tab -->
+        <div x-show="activeTab === 'fuel'" class="pf-v5-c-page__main-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>Fuel Consumption</h2>
+                <button class="pf-v5-c-button pf-m-primary" @click="openFuelModal()">
+                    <i class="fas fa-plus"></i> Add Fuel Record
+                </button>
+            </div>
+
+            <!-- Loading -->
+            <div x-show="!fuelLoaded" class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
+                    <h2 class="pf-v5-c-title pf-m-lg">Loading fuel records...</h2>
+                </div>
+            </div>
+
+            <div x-show="fuelLoaded" x-cloak>
+                <!-- Empty State -->
+                <template x-if="fuelRecords.length === 0">
+                    <div class="pf-v5-c-empty-state">
+                        <div class="pf-v5-c-empty-state__content">
+                            <i class="fas fa-gas-pump" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                            <h2 class="pf-v5-c-title pf-m-lg">No fuel records</h2>
+                            <div class="pf-v5-c-empty-state__body">
+                                Track fuel consumption by adding records each time you refuel.
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Fuel Chart -->
+                <template x-if="fuelRecords.length >= 2">
+                    <div class="pf-v5-c-card" style="margin-bottom: 1rem;">
+                        <div class="pf-v5-c-card__title"><h3>Fuel Consumption Trend (Gallons per Hour)</h3></div>
+                        <div class="pf-v5-c-card__body">
+                            <canvas id="fuelChart" style="max-height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Fuel Records Table -->
+                <template x-if="fuelRecords.length > 0">
+                    <table class="pf-v5-c-table pf-m-grid-md">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Hours</th>
+                                <th>Qty (gal)</th>
+                                <th>Level After</th>
+                                <th>Type</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="record in fuelRecords" :key="record.id">
+                                <tr>
+                                    <td x-text="formatDate(record.date)"></td>
+                                    <td x-text="formatHours(record.flight_hours)"></td>
+                                    <td x-text="record.quantity_added"></td>
+                                    <td x-text="record.level_after || '-'"></td>
+                                    <td x-text="record.fuel_type || '-'"></td>
+                                    <td x-text="record.notes || '-'"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
                 </template>
             </div>
         </div>
@@ -747,6 +899,162 @@
                         <i class="fas fa-plus"></i> Add Note
                     </button>
                     <button class="pf-v5-c-button pf-m-link" @click="showAllNotes = false">Close</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Oil Record Modal -->
+    <div class="pf-v5-c-backdrop" x-show="oilModalOpen" x-cloak @click.self="closeOilModal()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-md" @click.stop>
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeOilModal()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">Add Oil Record</h1>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <form @submit.prevent="submitOilRecord" class="pf-v5-c-form">
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="oil-date">
+                                <span class="pf-v5-c-form__label-text">Date</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="date" id="oil-date" class="pf-v5-c-form-control" x-model="oilForm.date" required>
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="oil-quantity">
+                                <span class="pf-v5-c-form__label-text">Quantity Added (quarts)</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="number" step="0.25" min="0" id="oil-quantity" class="pf-v5-c-form-control" x-model="oilForm.quantity_added" required>
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="oil-level">
+                                <span class="pf-v5-c-form__label-text">Level After (quarts, optional)</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="number" step="0.25" min="0" id="oil-level" class="pf-v5-c-form-control" x-model="oilForm.level_after">
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="oil-hours">
+                                <span class="pf-v5-c-form__label-text">Aircraft Hours</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="number" step="0.1" min="0" id="oil-hours" class="pf-v5-c-form-control" x-model="oilForm.flight_hours" :placeholder="formatHours(aircraft?.flight_time)">
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="oil-type">
+                                <span class="pf-v5-c-form__label-text">Oil Type (optional)</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="text" id="oil-type" class="pf-v5-c-form-control" x-model="oilForm.oil_type" placeholder="e.g. Aeroshell W100">
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="oil-notes">
+                                <span class="pf-v5-c-form__label-text">Notes (optional)</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <textarea id="oil-notes" class="pf-v5-c-form-control" rows="2" x-model="oilForm.notes"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" @click="submitOilRecord" :disabled="oilSubmitting">
+                        <span x-show="!oilSubmitting">Add Record</span>
+                        <span x-show="oilSubmitting">Saving...</span>
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeOilModal()">Cancel</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fuel Record Modal -->
+    <div class="pf-v5-c-backdrop" x-show="fuelModalOpen" x-cloak @click.self="closeFuelModal()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-md" @click.stop>
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeFuelModal()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">Add Fuel Record</h1>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <form @submit.prevent="submitFuelRecord" class="pf-v5-c-form">
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="fuel-date">
+                                <span class="pf-v5-c-form__label-text">Date</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="date" id="fuel-date" class="pf-v5-c-form-control" x-model="fuelForm.date" required>
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="fuel-quantity">
+                                <span class="pf-v5-c-form__label-text">Quantity Added (gallons)</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="number" step="0.1" min="0" id="fuel-quantity" class="pf-v5-c-form-control" x-model="fuelForm.quantity_added" required>
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="fuel-level">
+                                <span class="pf-v5-c-form__label-text">Level After (gallons, optional)</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="number" step="0.1" min="0" id="fuel-level" class="pf-v5-c-form-control" x-model="fuelForm.level_after">
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="fuel-hours">
+                                <span class="pf-v5-c-form__label-text">Aircraft Hours</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="number" step="0.1" min="0" id="fuel-hours" class="pf-v5-c-form-control" x-model="fuelForm.flight_hours" :placeholder="formatHours(aircraft?.flight_time)">
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="fuel-type">
+                                <span class="pf-v5-c-form__label-text">Fuel Type (optional)</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="text" id="fuel-type" class="pf-v5-c-form-control" x-model="fuelForm.fuel_type" placeholder="e.g. 100LL">
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="fuel-notes">
+                                <span class="pf-v5-c-form__label-text">Notes (optional)</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <textarea id="fuel-notes" class="pf-v5-c-form-control" rows="2" x-model="fuelForm.notes"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" @click="submitFuelRecord" :disabled="fuelSubmitting">
+                        <span x-show="!fuelSubmitting">Add Record</span>
+                        <span x-show="fuelSubmitting">Saving...</span>
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeFuelModal()">Cancel</button>
                 </footer>
             </div>
         </div>

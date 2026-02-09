@@ -53,6 +53,10 @@
                         </div>
                     </div>
                     <div class="pf-v5-c-card__body">
+                        <template x-if="aircraft.picture">
+                            <img :src="aircraft.picture" :alt="aircraft.tail_number"
+                                 style="max-height: 150px; object-fit: cover; width: 100%; border-radius: 3px; margin-bottom: 0.75rem;">
+                        </template>
                         <dl>
                             <dt>Make/Model:</dt>
                             <dd x-text="`${aircraft.make} ${aircraft.model}`"></dd>

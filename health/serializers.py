@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import ComponentType, Component, DocumentCollection, Document, DocumentImage, LogbookEntry, Squawk, InspectionType, AD, STCApplication, InspectionRecord, ADCompliance
+from .models import ComponentType, Component, DocumentCollection, Document, DocumentImage, LogbookEntry, Squawk, InspectionType, AD, STCApplication, InspectionRecord, ADCompliance, OilRecord, FuelRecord
 
 class ComponentTypeSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -207,3 +207,29 @@ class ADComplianceSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = ADCompliance
         fields = '__all__'
+
+
+class OilRecordNestedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OilRecord
+        fields = ['id', 'aircraft', 'date', 'quantity_added', 'level_after', 'oil_type', 'flight_hours', 'notes', 'created_at']
+
+
+class OilRecordCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OilRecord
+        fields = ['id', 'aircraft', 'date', 'quantity_added', 'level_after', 'oil_type', 'flight_hours', 'notes']
+        read_only_fields = ['id']
+
+
+class FuelRecordNestedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FuelRecord
+        fields = ['id', 'aircraft', 'date', 'quantity_added', 'level_after', 'fuel_type', 'flight_hours', 'notes', 'created_at']
+
+
+class FuelRecordCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FuelRecord
+        fields = ['id', 'aircraft', 'date', 'quantity_added', 'level_after', 'fuel_type', 'flight_hours', 'notes']
+        read_only_fields = ['id']
