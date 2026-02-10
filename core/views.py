@@ -358,6 +358,12 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 else:
                     ad_dict['latest_compliance'] = None
 
+                # Conditional ADs use a separate status that doesn't affect airworthiness
+                if ad.compliance_type == 'conditional':
+                    ad_dict['compliance_status'] = 'compliant' if compliance else 'conditional'
+                    ads_data.append(ad_dict)
+                    continue
+
                 # Compute compliance status (worst of hours and calendar wins)
                 if not compliance:
                     ad_dict['compliance_status'] = 'no_compliance'

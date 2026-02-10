@@ -497,7 +497,14 @@
                             <template x-for="ad in applicableAds" :key="ad.id">
                                 <tr>
                                     <td x-text="ad.name"></td>
-                                    <td x-text="ad.short_description"></td>
+                                    <td>
+                                        <span x-text="ad.short_description"></span>
+                                        <template x-if="ad.compliance_type === 'conditional' && ad.trigger_condition">
+                                            <div style="font-size: 0.85em; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;">
+                                                Trigger: <span x-text="ad.trigger_condition"></span>
+                                            </div>
+                                        </template>
+                                    </td>
                                     <td>
                                         <template x-if="ad.recurring">
                                             <span>
@@ -1543,6 +1550,27 @@
                                 <textarea id="ad-action" class="pf-v5-c-form-control" rows="2" x-model="adForm.required_action"></textarea>
                             </div>
                         </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="ad-compliance-type">
+                                <span class="pf-v5-c-form__label-text">Compliance Type</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <select id="ad-compliance-type" class="pf-v5-c-form-control" x-model="adForm.compliance_type">
+                                    <option value="standard">Standard</option>
+                                    <option value="conditional">Conditional (trigger-based)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <template x-if="adForm.compliance_type === 'conditional'">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="ad-trigger-condition">
+                                    <span class="pf-v5-c-form__label-text">Trigger Condition</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <textarea id="ad-trigger-condition" class="pf-v5-c-form-control" rows="2" x-model="adForm.trigger_condition" placeholder="e.g. Upon crankshaft removal from engine"></textarea>
+                                </div>
+                            </div>
+                        </template>
                         <div class="pf-v5-c-form__group">
                             <div class="pf-v5-c-form__group-control">
                                 <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">

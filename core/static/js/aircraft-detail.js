@@ -137,6 +137,8 @@ function aircraftDetail(aircraftId) {
             name: '',
             short_description: '',
             required_action: '',
+            compliance_type: 'standard',
+            trigger_condition: '',
             recurring: false,
             recurring_hours: 0,
             recurring_months: 0,
@@ -1214,6 +1216,8 @@ function aircraftDetail(aircraftId) {
                 name: '',
                 short_description: '',
                 required_action: '',
+                compliance_type: 'standard',
+                trigger_condition: '',
                 recurring: false,
                 recurring_hours: 0,
                 recurring_months: 0,
@@ -1230,6 +1234,8 @@ function aircraftDetail(aircraftId) {
                 name: ad.name,
                 short_description: ad.short_description,
                 required_action: ad.required_action || '',
+                compliance_type: ad.compliance_type || 'standard',
+                trigger_condition: ad.trigger_condition || '',
                 recurring: ad.recurring,
                 recurring_hours: ad.recurring_hours || 0,
                 recurring_months: ad.recurring_months || 0,
@@ -1282,6 +1288,8 @@ function aircraftDetail(aircraftId) {
                     name: this.adForm.name,
                     short_description: this.adForm.short_description,
                     required_action: this.adForm.required_action,
+                    compliance_type: this.adForm.compliance_type,
+                    trigger_condition: this.adForm.compliance_type === 'conditional' ? this.adForm.trigger_condition : '',
                     recurring: this.adForm.recurring,
                     recurring_hours: this.adForm.recurring ? parseFloat(this.adForm.recurring_hours) || 0 : 0,
                     recurring_months: this.adForm.recurring ? parseInt(this.adForm.recurring_months) || 0 : 0,
@@ -1326,6 +1334,8 @@ function aircraftDetail(aircraftId) {
                     name: this.adForm.name,
                     short_description: this.adForm.short_description,
                     required_action: this.adForm.required_action,
+                    compliance_type: this.adForm.compliance_type,
+                    trigger_condition: this.adForm.compliance_type === 'conditional' ? this.adForm.trigger_condition : '',
                     recurring: this.adForm.recurring,
                     recurring_hours: this.adForm.recurring ? parseFloat(this.adForm.recurring_hours) || 0 : 0,
                     recurring_months: this.adForm.recurring ? parseInt(this.adForm.recurring_months) || 0 : 0,
@@ -1462,6 +1472,8 @@ function aircraftDetail(aircraftId) {
                     return 'pf-m-red';
                 case 'no_compliance':
                     return 'pf-m-red';
+                case 'conditional':
+                    return 'pf-m-blue';
                 default:
                     return 'pf-m-grey';
             }
@@ -1477,6 +1489,8 @@ function aircraftDetail(aircraftId) {
                     return 'Overdue';
                 case 'no_compliance':
                     return 'No Compliance';
+                case 'conditional':
+                    return 'Conditional';
                 default:
                     return 'Unknown';
             }

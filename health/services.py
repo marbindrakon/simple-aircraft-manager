@@ -128,6 +128,10 @@ def _check_ad_compliance(aircraft, current_hours: Decimal, today: date, result: 
     all_ads = (aircraft_ads | component_ads).distinct()
 
     for ad in all_ads:
+        # Conditional ADs are informational only — they never affect airworthiness
+        if ad.compliance_type == 'conditional':
+            continue
+
         # Get compliance records for this AD related to this aircraft
         compliance = ADCompliance.objects.filter(
             ad=ad

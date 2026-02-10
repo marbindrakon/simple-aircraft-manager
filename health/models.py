@@ -232,11 +232,18 @@ class InspectionType(models.Model):
     def __str__(self):
         return self.name
 
+COMPLIANCE_TYPES = (
+    ('standard', 'Standard'),
+    ('conditional', 'Conditional'),
+)
+
 class AD(models.Model):
     id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=254)
     short_description = models.CharField(max_length=254)
     required_action = models.TextField(blank=True)
+    compliance_type = models.CharField(max_length=20, choices=COMPLIANCE_TYPES, default='standard')
+    trigger_condition = models.TextField(blank=True)
     recurring = models.BooleanField(default=False)
     recurring_hours = models.DecimalField(max_digits=8, decimal_places=1, default=0.0)
     recurring_months = models.IntegerField(default=0)

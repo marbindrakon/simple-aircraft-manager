@@ -253,6 +253,7 @@ class ADSerializer(serializers.HyperlinkedModelSerializer):
         model = AD
         fields = [
             'id', 'url', 'name', 'short_description', 'required_action',
+            'compliance_type', 'trigger_condition',
             'recurring', 'recurring_hours', 'recurring_months', 'recurring_days',
             'on_inspection_type', 'applicable_aircraft', 'applicable_component',
         ]
@@ -264,6 +265,7 @@ class ADNestedSerializer(serializers.ModelSerializer):
         model = AD
         fields = [
             'id', 'name', 'short_description', 'required_action',
+            'compliance_type', 'trigger_condition',
             'recurring', 'recurring_hours', 'recurring_months', 'recurring_days',
         ]
 
