@@ -125,18 +125,28 @@
                         <h2>Aircraft Information</h2>
                     </div>
                     <div class="pf-v5-c-card__body">
-                        <dl>
-                            <dt>Tail Number:</dt>
-                            <dd x-text="aircraft?.tail_number"></dd>
-                            <dt>Make:</dt>
-                            <dd x-text="aircraft?.make"></dd>
-                            <dt>Model:</dt>
-                            <dd x-text="aircraft?.model"></dd>
-                            <dt>Status:</dt>
-                            <dd>
-                                <span class="pf-v5-c-label pf-m-blue" x-text="aircraft?.status"></span>
-                            </dd>
-                        </dl>
+                        <div class="aircraft-info-container">
+                            <!-- Aircraft Image -->
+                            <div x-show="aircraft?.picture" class="aircraft-image">
+                                <img :src="aircraft?.picture"
+                                     :alt="aircraft?.tail_number + ' photo'">
+                            </div>
+                            <!-- Aircraft Details -->
+                            <div class="aircraft-details">
+                                <dl>
+                                    <dt>Tail Number:</dt>
+                                    <dd x-text="aircraft?.tail_number"></dd>
+                                    <dt>Make:</dt>
+                                    <dd x-text="aircraft?.make"></dd>
+                                    <dt>Model:</dt>
+                                    <dd x-text="aircraft?.model"></dd>
+                                    <dt>Status:</dt>
+                                    <dd>
+                                        <span class="pf-v5-c-label pf-m-blue" x-text="aircraft?.status"></span>
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

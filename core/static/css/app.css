@@ -91,6 +91,31 @@
     z-index: 9999;
 }
 
+/* Aircraft image container */
+.aircraft-info-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+.aircraft-image {
+    flex-shrink: 0;
+}
+
+.aircraft-image img {
+    max-width: 250px;
+    max-height: 250px;
+    width: auto;
+    height: auto;
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+.aircraft-details {
+    width: 100%;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .pf-l-gallery {
