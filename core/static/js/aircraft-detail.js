@@ -164,13 +164,13 @@ function aircraftDetail(aircraftId) {
         async init() {
             await this.loadData();
 
+            // Load ADs eagerly so the issue count badge is visible immediately
+            this.loadAds();
+
             // Watch for tab changes to load data lazily
             this.$watch('activeTab', (tab) => {
                 if (tab === 'documents' && !this.documentsLoaded) {
                     this.loadDocuments();
-                }
-                if (tab === 'ads' && !this.adsLoaded) {
-                    this.loadAds();
                 }
                 if (tab === 'oil' && !this.oilLoaded) {
                     this.loadOilRecords();
