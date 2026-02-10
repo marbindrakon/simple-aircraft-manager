@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import FileExtensionValidator
 from django.db import models
 
 from core import models as core_models
@@ -141,7 +142,12 @@ class DocumentImage(models.Model):
     id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
     document = models.ForeignKey(Document, related_name='images', on_delete=models.CASCADE)
     notes = models.TextField(blank=True)
-    image = models.ImageField(upload_to=random_document_filename)
+    image = models.FileField(
+        upload_to=random_document_filename,
+        validators=[FileExtensionValidator(
+            allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'pdf', 'txt']
+        )],
+    )
 
     def __str__(self):
         ret_string = "Doc Image"

@@ -64,9 +64,29 @@ class ComponentSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class DocumentImageSerializer(serializers.HyperlinkedModelSerializer):
+    ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.pdf', '.txt'}
+    ALLOWED_CONTENT_TYPES = {
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff',
+        'application/pdf', 'text/plain',
+    }
+
     class Meta:
         model = DocumentImage
         fields = '__all__'
+        read_only_fields = ['id']
+
+    def validate_image(self, value):
+        import os
+        ext = os.path.splitext(value.name)[1].lower()
+        if ext not in self.ALLOWED_EXTENSIONS:
+            raise serializers.ValidationError(
+                f"File type '{ext}' is not allowed. Allowed types: {', '.join(sorted(self.ALLOWED_EXTENSIONS))}"
+            )
+        if value.content_type not in self.ALLOWED_CONTENT_TYPES:
+            raise serializers.ValidationError(
+                f"Content type '{value.content_type}' is not allowed."
+            )
+        return value
 
 
 class DocumentImageNestedSerializer(serializers.ModelSerializer):
@@ -80,6 +100,7 @@ class DocumentNestedSerializer(serializers.ModelSerializer):
     """Nested serializer for documents with images included"""
     images = DocumentImageNestedSerializer(many=True, read_only=True)
     doc_type_display = serializers.CharField(source='get_doc_type_display', read_only=True)
+    collection_id = serializers.PrimaryKeyRelatedField(source='collection', read_only=True)
 
     class Meta:
         model = Document
@@ -89,6 +110,7 @@ class DocumentNestedSerializer(serializers.ModelSerializer):
             'description',
             'doc_type',
             'doc_type_display',
+            'collection_id',
             'images',
         ]
 
@@ -124,6 +146,7 @@ class DocumentCollectionSerializer(serializers.HyperlinkedModelSerializer):
                 'description',
                 'documents',
                 ]
+        read_only_fields = ['documents']
 
 class DocumentSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -136,10 +159,12 @@ class DocumentSerializer(serializers.HyperlinkedModelSerializer):
                 'collection',
                 'name',
                 'description',
+                'doc_type',
                 'related_logs',
                 'log_entry',
                 'images',
                 ]
+        read_only_fields = ['images', 'related_logs', 'log_entry']
 
 class LogbookEntrySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:

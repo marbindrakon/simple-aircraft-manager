@@ -704,6 +704,19 @@
 
         <!-- Documents Tab -->
         <div x-show="activeTab === 'documents'" class="pf-v5-c-page__main-section">
+            <!-- Header with action buttons -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>Documents</h2>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="pf-v5-c-button pf-m-secondary" @click="openCollectionModal()">
+                        <i class="fas fa-folder-plus"></i> Add Collection
+                    </button>
+                    <button class="pf-v5-c-button pf-m-primary" @click="openDocumentModal()">
+                        <i class="fas fa-plus"></i> Add Document
+                    </button>
+                </div>
+            </div>
+
             <!-- Loading State for Documents -->
             <div x-show="documentsLoading" class="pf-v5-c-empty-state">
                 <div class="pf-v5-c-empty-state__content">
@@ -723,6 +736,14 @@
                             <div class="pf-v5-c-empty-state__body">
                                 No documents have been uploaded for this aircraft yet.
                             </div>
+                            <div class="pf-v5-c-empty-state__primary" style="margin-top: 1rem;">
+                                <button class="pf-v5-c-button pf-m-secondary" @click="openCollectionModal()">
+                                    <i class="fas fa-folder-plus"></i> Add Collection
+                                </button>
+                                <button class="pf-v5-c-button pf-m-primary" @click="openDocumentModal()" style="margin-left: 0.5rem;">
+                                    <i class="fas fa-plus"></i> Add Document
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </template>
@@ -738,7 +759,13 @@
                                         <h2 x-text="collection.name"></h2>
                                     </div>
                                 </div>
-                                <div class="pf-v5-c-card__actions">
+                                <div class="pf-v5-c-card__actions" style="display: flex; align-items: center; gap: 0.25rem;">
+                                    <button class="pf-v5-c-button pf-m-plain" @click="editCollection(collection)" title="Edit collection">
+                                        <i class="fas fa-pencil-alt"></i>
+                                    </button>
+                                    <button class="pf-v5-c-button pf-m-plain pf-m-danger" @click="deleteCollection(collection)" title="Delete collection">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                     <span class="pf-v5-c-label pf-m-blue">
                                         <span x-text="collection.document_count"></span> pages
                                     </span>
@@ -752,10 +779,23 @@
                             <div class="pf-v5-c-card__body">
                                 <div class="document-grid">
                                     <template x-for="doc in collection.documents" :key="doc.id">
-                                        <div class="document-item" @click="openDocumentViewer(doc, collection.name)">
+                                        <div class="document-item" style="position: relative;" @click="openDocumentViewer(doc, collection.name)">
+                                            <div class="document-item-actions" style="position: absolute; top: 0.25rem; right: 0.25rem; display: flex; gap: 0.125rem; z-index: 2;">
+                                                <button class="pf-v5-c-button pf-m-plain" style="padding: 0.25rem; font-size: 0.75rem;" @click="editDocument(doc, $event)" title="Edit document">
+                                                    <i class="fas fa-pencil-alt"></i>
+                                                </button>
+                                                <button class="pf-v5-c-button pf-m-plain pf-m-danger" style="padding: 0.25rem; font-size: 0.75rem;" @click="deleteDocument(doc, $event)" title="Delete document">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
                                             <div class="document-thumbnail">
-                                                <template x-if="doc.images && doc.images.length > 0">
+                                                <template x-if="doc.images && doc.images.length > 0 && getFileType(doc.images[0].image) === 'image'">
                                                     <img :src="doc.images[0].image" :alt="doc.name">
+                                                </template>
+                                                <template x-if="doc.images && doc.images.length > 0 && getFileType(doc.images[0].image) !== 'image'">
+                                                    <div class="document-placeholder">
+                                                        <i :class="getFileIcon(doc.images[0].image)" style="color: var(--pf-v5-global--danger-color--100);"></i>
+                                                    </div>
                                                 </template>
                                                 <template x-if="!doc.images || doc.images.length === 0">
                                                     <div class="document-placeholder">
@@ -792,10 +832,23 @@
                             <div class="pf-v5-c-card__body">
                                 <div class="document-grid">
                                     <template x-for="doc in uncollectedDocuments" :key="doc.id">
-                                        <div class="document-item" @click="openDocumentViewer(doc, 'Other Documents')">
+                                        <div class="document-item" style="position: relative;" @click="openDocumentViewer(doc, 'Other Documents')">
+                                            <div class="document-item-actions" style="position: absolute; top: 0.25rem; right: 0.25rem; display: flex; gap: 0.125rem; z-index: 2;">
+                                                <button class="pf-v5-c-button pf-m-plain" style="padding: 0.25rem; font-size: 0.75rem;" @click="editDocument(doc, $event)" title="Edit document">
+                                                    <i class="fas fa-pencil-alt"></i>
+                                                </button>
+                                                <button class="pf-v5-c-button pf-m-plain pf-m-danger" style="padding: 0.25rem; font-size: 0.75rem;" @click="deleteDocument(doc, $event)" title="Delete document">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
                                             <div class="document-thumbnail">
-                                                <template x-if="doc.images && doc.images.length > 0">
+                                                <template x-if="doc.images && doc.images.length > 0 && getFileType(doc.images[0].image) === 'image'">
                                                     <img :src="doc.images[0].image" :alt="doc.name">
+                                                </template>
+                                                <template x-if="doc.images && doc.images.length > 0 && getFileType(doc.images[0].image) !== 'image'">
+                                                    <div class="document-placeholder">
+                                                        <i :class="getFileIcon(doc.images[0].image)" style="color: var(--pf-v5-global--danger-color--100);"></i>
+                                                    </div>
                                                 </template>
                                                 <template x-if="!doc.images || doc.images.length === 0">
                                                     <div class="document-placeholder">
@@ -822,9 +875,16 @@
     <div class="pf-v5-c-backdrop" x-show="viewerOpen" x-cloak @click.self="closeDocumentViewer()">
         <div class="pf-v5-l-bullseye">
             <div class="pf-v5-c-modal-box pf-m-lg document-viewer-modal" @click.stop>
-                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeDocumentViewer()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
-                    <i class="fas fa-times"></i>
-                </button>
+                <div style="position: absolute; top: 1rem; right: 1rem; z-index: 10; display: flex; gap: 0.25rem;">
+                    <template x-if="viewerDocument?.images && viewerDocument.images.length > 0">
+                        <a :href="viewerDocument.images[viewerImageIndex]?.image" class="pf-v5-c-button pf-m-plain" download target="_blank" title="Download file">
+                            <i class="fas fa-download"></i>
+                        </a>
+                    </template>
+                    <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeDocumentViewer()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
 
                 <header class="pf-v5-c-modal-box__header">
                     <h1 class="pf-v5-c-modal-box__title" x-text="viewerDocument?.name"></h1>
@@ -839,26 +899,44 @@
                         <p style="margin-bottom: 1rem; color: var(--pf-v5-global--Color--200);" x-text="viewerDocument.description"></p>
                     </template>
 
-                    <!-- Image Navigation -->
+                    <!-- File Navigation -->
                     <template x-if="viewerDocument?.images && viewerDocument.images.length > 0">
                         <div class="document-viewer-images">
-                            <!-- Image Counter -->
+                            <!-- File Counter -->
                             <div class="image-counter" x-show="viewerDocument.images.length > 1">
                                 <span x-text="viewerImageIndex + 1"></span> / <span x-text="viewerDocument.images.length"></span>
                             </div>
 
-                            <!-- Main Image -->
+                            <!-- Main Content Area -->
                             <div class="viewer-image-container">
                                 <button class="nav-button nav-prev" @click="prevImage()" x-show="viewerDocument.images.length > 1 && viewerImageIndex > 0">
                                     <i class="fas fa-chevron-left"></i>
                                 </button>
-                                <img :src="viewerDocument.images[viewerImageIndex]?.image" :alt="viewerDocument.name" class="viewer-image">
+
+                                <!-- Image file -->
+                                <template x-if="getFileType(viewerDocument.images[viewerImageIndex]?.image) === 'image'">
+                                    <img :src="viewerDocument.images[viewerImageIndex]?.image" :alt="viewerDocument.name" class="viewer-image">
+                                </template>
+
+                                <!-- PDF file -->
+                                <template x-if="getFileType(viewerDocument.images[viewerImageIndex]?.image) === 'pdf'">
+                                    <iframe :src="viewerDocument.images[viewerImageIndex]?.image" style="width: 100%; height: 70vh; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 4px;"></iframe>
+                                </template>
+
+                                <!-- Text or other file -->
+                                <template x-if="getFileType(viewerDocument.images[viewerImageIndex]?.image) !== 'image' && getFileType(viewerDocument.images[viewerImageIndex]?.image) !== 'pdf'">
+                                    <div style="text-align: center; padding: 2rem;">
+                                        <i :class="getFileIcon(viewerDocument.images[viewerImageIndex]?.image)" style="font-size: 4rem; color: var(--pf-v5-global--Color--200); margin-bottom: 1rem;"></i>
+                                        <p style="color: var(--pf-v5-global--Color--200);">This file cannot be previewed. Use the download button above.</p>
+                                    </div>
+                                </template>
+
                                 <button class="nav-button nav-next" @click="nextImage()" x-show="viewerDocument.images.length > 1 && viewerImageIndex < viewerDocument.images.length - 1">
                                     <i class="fas fa-chevron-right"></i>
                                 </button>
                             </div>
 
-                            <!-- Image Notes -->
+                            <!-- File Notes -->
                             <template x-if="viewerDocument.images[viewerImageIndex]?.notes">
                                 <p class="image-notes" x-text="viewerDocument.images[viewerImageIndex].notes"></p>
                             </template>
@@ -869,7 +947,14 @@
                                     <div class="thumbnail"
                                          :class="{ 'active': idx === viewerImageIndex }"
                                          @click="viewerImageIndex = idx">
-                                        <img :src="img.image" :alt="`Page ${idx + 1}`">
+                                        <template x-if="getFileType(img.image) === 'image'">
+                                            <img :src="img.image" :alt="`Page ${idx + 1}`">
+                                        </template>
+                                        <template x-if="getFileType(img.image) !== 'image'">
+                                            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--pf-v5-global--BackgroundColor--200);">
+                                                <i :class="getFileIcon(img.image)" style="font-size: 1.25rem; color: var(--pf-v5-global--Color--200);"></i>
+                                            </div>
+                                        </template>
                                     </div>
                                 </template>
                             </div>
@@ -879,10 +964,10 @@
                     <template x-if="!viewerDocument?.images || viewerDocument.images.length === 0">
                         <div class="pf-v5-c-empty-state">
                             <div class="pf-v5-c-empty-state__content">
-                                <i class="fas fa-image" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
-                                <h2 class="pf-v5-c-title pf-m-lg">No images</h2>
+                                <i class="fas fa-file" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                                <h2 class="pf-v5-c-title pf-m-lg">No files</h2>
                                 <div class="pf-v5-c-empty-state__body">
-                                    This document has no attached images.
+                                    This document has no attached files.
                                 </div>
                             </div>
                         </div>
@@ -1647,6 +1732,158 @@
                         <span x-show="fuelSubmitting">Saving...</span>
                     </button>
                     <button class="pf-v5-c-button pf-m-link" @click="closeFuelModal()">Cancel</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collection Modal -->
+    <div class="pf-v5-c-backdrop" x-show="collectionModalOpen" x-cloak @click.self="closeCollectionModal()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-md" @click.stop>
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeCollectionModal()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title" x-text="editingCollection ? 'Edit Collection' : 'Add Collection'"></h1>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <form @submit.prevent="submitCollection" class="pf-v5-c-form">
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="collection-name">
+                                <span class="pf-v5-c-form__label-text">Name</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input id="collection-name" class="pf-v5-c-form-control" type="text" x-model="collectionForm.name" required placeholder="e.g. Engine Logbook">
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="collection-description">
+                                <span class="pf-v5-c-form__label-text">Description</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <textarea id="collection-description" class="pf-v5-c-form-control" rows="3" x-model="collectionForm.description" placeholder="Optional description..."></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" @click="submitCollection" :disabled="collectionSubmitting">
+                        <span x-show="!collectionSubmitting" x-text="editingCollection ? 'Save Changes' : 'Create Collection'"></span>
+                        <span x-show="collectionSubmitting">Saving...</span>
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeCollectionModal()">Cancel</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Modal -->
+    <div class="pf-v5-c-backdrop" x-show="documentModalOpen" x-cloak @click.self="closeDocumentModal()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-md" @click.stop style="max-height: 90vh; overflow-y: auto;">
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeDocumentModal()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title" x-text="editingDocument ? 'Edit Document' : 'Add Document'"></h1>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <form @submit.prevent="submitDocument" class="pf-v5-c-form">
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="doc-name">
+                                <span class="pf-v5-c-form__label-text">Name</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input id="doc-name" class="pf-v5-c-form-control" type="text" x-model="documentForm.name" required placeholder="e.g. Annual Inspection 2024">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="doc-type">
+                                    <span class="pf-v5-c-form__label-text">Document Type</span>
+                                    <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <select id="doc-type" class="pf-v5-c-form-control" x-model="documentForm.doc_type" required>
+                                        <template x-for="dt in documentTypes" :key="dt.value">
+                                            <option :value="dt.value" x-text="dt.label"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="doc-collection">
+                                    <span class="pf-v5-c-form__label-text">Collection</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <select id="doc-collection" class="pf-v5-c-form-control" x-model="documentForm.collection">
+                                        <option value="">-- None --</option>
+                                        <template x-for="col in documentCollections" :key="col.id">
+                                            <option :value="col.id" x-text="col.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="doc-description">
+                                <span class="pf-v5-c-form__label-text">Description</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <textarea id="doc-description" class="pf-v5-c-form-control" rows="2" x-model="documentForm.description" placeholder="Optional description..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Existing images (edit mode) -->
+                        <template x-if="editingDocument && editingDocument.images && editingDocument.images.length > 0">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label">
+                                    <span class="pf-v5-c-form__label-text">Existing Images</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                        <template x-for="img in editingDocument.images" :key="img.id">
+                                            <div style="position: relative; width: 80px; height: 80px; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 4px; overflow: hidden;">
+                                                <img :src="img.image" style="width: 100%; height: 100%; object-fit: cover;">
+                                                <button type="button" class="pf-v5-c-button pf-m-plain" @click="deleteDocumentImage(img.id)"
+                                                        style="position: absolute; top: 0; right: 0; padding: 0.125rem 0.25rem; background: rgba(0,0,0,0.6); color: white; font-size: 0.625rem; border-radius: 0 0 0 4px;"
+                                                        title="Delete image">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="doc-images">
+                                <span class="pf-v5-c-form__label-text" x-text="editingDocument ? 'Add More Images' : 'Images'"></span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input id="doc-images" type="file" class="pf-v5-c-form-control" multiple accept="image/*,.pdf,.txt,.text" @change="onDocumentFilesSelected($event)">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" @click="submitDocument" :disabled="documentSubmitting">
+                        <span x-show="!documentSubmitting" x-text="editingDocument ? 'Save Changes' : 'Create Document'"></span>
+                        <span x-show="documentSubmitting">Saving...</span>
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeDocumentModal()">Cancel</button>
                 </footer>
             </div>
         </div>
