@@ -4,6 +4,25 @@ from rest_framework import serializers
 
 from .models import ComponentType, Component, DocumentCollection, Document, DocumentImage, LogbookEntry, Squawk, InspectionType, AD, STCApplication, InspectionRecord, ADCompliance, OilRecord, FuelRecord
 
+ALLOWED_UPLOAD_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.pdf', '.txt'}
+ALLOWED_UPLOAD_CONTENT_TYPES = {
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff',
+    'application/pdf', 'text/plain',
+}
+
+
+def validate_uploaded_file(value):
+    ext = os.path.splitext(value.name)[1].lower()
+    if ext not in ALLOWED_UPLOAD_EXTENSIONS:
+        raise serializers.ValidationError(
+            f"File type '{ext}' is not allowed. Allowed types: {', '.join(sorted(ALLOWED_UPLOAD_EXTENSIONS))}"
+        )
+    if value.content_type not in ALLOWED_UPLOAD_CONTENT_TYPES:
+        raise serializers.ValidationError(
+            f"Content type '{value.content_type}' is not allowed."
+        )
+    return value
+
 class ComponentTypeSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = ComponentType
@@ -67,27 +86,13 @@ class ComponentSerializer(serializers.HyperlinkedModelSerializer):
 
 class DocumentImageSerializer(serializers.HyperlinkedModelSerializer):
     id = serializers.UUIDField(read_only=True)
-    ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.pdf', '.txt'}
-    ALLOWED_CONTENT_TYPES = {
-        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff',
-        'application/pdf', 'text/plain',
-    }
 
     class Meta:
         model = DocumentImage
         fields = '__all__'
 
     def validate_image(self, value):
-        ext = os.path.splitext(value.name)[1].lower()
-        if ext not in self.ALLOWED_EXTENSIONS:
-            raise serializers.ValidationError(
-                f"File type '{ext}' is not allowed. Allowed types: {', '.join(sorted(self.ALLOWED_EXTENSIONS))}"
-            )
-        if value.content_type not in self.ALLOWED_CONTENT_TYPES:
-            raise serializers.ValidationError(
-                f"Content type '{value.content_type}' is not allowed."
-            )
-        return value
+        return validate_uploaded_file(value)
 
 
 class DocumentImageNestedSerializer(serializers.ModelSerializer):
@@ -217,14 +222,6 @@ class SquawkNestedSerializer(serializers.ModelSerializer):
 
 
 class SquawkCreateUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for creating/updating squawks"""
-
-    ALLOWED_ATTACHMENT_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.pdf', '.txt'}
-    ALLOWED_ATTACHMENT_CONTENT_TYPES = {
-        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff',
-        'application/pdf', 'text/plain',
-    }
-
     class Meta:
         model = Squawk
         fields = [
@@ -240,16 +237,7 @@ class SquawkCreateUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
     def validate_attachment(self, value):
-        ext = os.path.splitext(value.name)[1].lower()
-        if ext not in self.ALLOWED_ATTACHMENT_EXTENSIONS:
-            raise serializers.ValidationError(
-                f"File type '{ext}' is not allowed. Allowed types: {', '.join(sorted(self.ALLOWED_ATTACHMENT_EXTENSIONS))}"
-            )
-        if value.content_type not in self.ALLOWED_ATTACHMENT_CONTENT_TYPES:
-            raise serializers.ValidationError(
-                f"Content type '{value.content_type}' is not allowed."
-            )
-        return value
+        return validate_uploaded_file(value)
 
 class InspectionTypeSerializer(serializers.HyperlinkedModelSerializer):
     id = serializers.UUIDField(read_only=True)
