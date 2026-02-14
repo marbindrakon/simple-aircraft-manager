@@ -1,11 +1,22 @@
-from health.models import *
-from health.serializers import *
-
 from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
+
+from health.models import (
+    ComponentType, Component, DocumentCollection, Document, DocumentImage,
+    LogbookEntry, Squawk, InspectionType, AD, STCApplication,
+    InspectionRecord, ADCompliance,
+)
+from health.serializers import (
+    ComponentTypeSerializer, ComponentSerializer, ComponentCreateUpdateSerializer,
+    DocumentCollectionSerializer, DocumentSerializer, DocumentImageSerializer,
+    LogbookEntrySerializer, SquawkSerializer, SquawkCreateUpdateSerializer,
+    InspectionTypeSerializer, ADSerializer, STCApplicationSerializer,
+    InspectionRecordSerializer, InspectionRecordCreateUpdateSerializer,
+    ADComplianceSerializer, ADComplianceCreateUpdateSerializer,
+)
 
 class ComponentTypeViewSet(viewsets.ModelViewSet):
     queryset = ComponentType.objects.all()
