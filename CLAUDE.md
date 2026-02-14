@@ -65,11 +65,43 @@ The frontend uses:
 
 Each page has a corresponding JavaScript file with an Alpine.js component:
 - `dashboard.js` → `aircraftDashboard()`
-- `aircraft-detail.js` → `aircraftDetail(aircraftId)`
+- `aircraft-detail.js` → `aircraftDetail(aircraftId)` (composer — spreads feature mixins)
 - `hours-update-modal.js` → `hoursUpdateModal()` (loaded globally via `base.html`)
 - `squawk-history.js` → `squawkHistory(aircraftId)`
 
 Alpine.js components are initialized via `x-data` attributes in templates.
+
+#### Aircraft Detail Mixin Pattern
+
+The aircraft detail page is composed from feature-specific mixin files, each returning a plain object with that feature's state and methods:
+
+| Mixin file | Function | Feature |
+|-----------|----------|---------|
+| `aircraft-detail-components.js` | `componentsMixin()` | Component CRUD, tree sorting, status |
+| `aircraft-detail-squawks.js` | `squawksMixin()` | Squawk CRUD, priority helpers |
+| `aircraft-detail-notes.js` | `notesMixin()` | Note CRUD |
+| `aircraft-detail-oil.js` | `oilMixin()` | Oil record CRUD, consumption chart |
+| `aircraft-detail-fuel.js` | `fuelMixin()` | Fuel record CRUD, burn rate chart |
+| `aircraft-detail-logbook.js` | `logbookMixin()` | Logbook CRUD, file uploads |
+| `aircraft-detail-ads.js` | `adsMixin()` | AD CRUD, compliance records, history |
+| `aircraft-detail-inspections.js` | `inspectionsMixin()` | Inspection CRUD, history |
+| `aircraft-detail-documents.js` | `documentsMixin()` | Document/collection CRUD, viewer |
+
+The composer (`aircraft-detail.js`) merges all mixins using `mergeMixins()` from `utils.js`. **Do not use the spread operator (`...`) for this** — spread eagerly evaluates `get` properties, breaking cross-mixin `this` references. `mergeMixins()` copies property descriptors intact so getters resolve lazily against the final merged object.
+
+When adding a new feature to the aircraft detail page, create a new mixin file following the pattern above and add it to both the composer and the template's `{% block extra_js %}`.
+
+#### Shared JS Utilities (`utils.js`)
+
+Common helpers loaded globally via `base.html`:
+- `getCookie(name)` — CSRF token retrieval
+- `mergeMixins(...sources)` — Merge objects preserving getter descriptors
+- `apiRequest(url, options)` — Fetch wrapper with CSRF, JSON, and 204 handling
+- `showNotification(message, type)` — Toast notifications
+- `formatDate(dateString)`, `formatHours(hours)` — Display formatting
+- `getAirworthinessClass/Text/Tooltip(...)` — Airworthiness badge helpers
+- `getSquawkPriorityClass(priority)` — Squawk priority badge helper
+- `formatApiError(errorData, fallback)` — API error message formatting
 
 ### Content Security Policy (CSP) — No Inline Scripts
 
@@ -85,16 +117,16 @@ The CSP allows scripts from `'self'` and `cdn.jsdelivr.net`, styles from `'self'
 
 ### File Upload Validation
 
-Squawk attachments are validated by `SquawkCreateUpdateSerializer.validate_attachment()` which checks both file extension and content type against an allowlist (images, PDFs, text). If adding new upload fields, follow the same pattern.
+File uploads are validated by `validate_uploaded_file()` in `health/serializers.py`, which checks both file extension and content type against shared allowlists (`ALLOWED_UPLOAD_EXTENSIONS`, `ALLOWED_UPLOAD_CONTENT_TYPES`). This is used by squawk attachments and document images. When adding new upload fields, call `validate_uploaded_file(value)` in your serializer's field validator.
 
 ### Serializers: Nested vs Hyperlinked
 
 The codebase uses two serializer patterns:
 
 1. **HyperlinkedModelSerializer** - For standard CRUD endpoints, includes URLs
-2. **Nested Serializers** (e.g., `SquawkNestedSerializer`) - For embedding in responses, includes display fields like `priority_display`, `component_name`
+2. **Nested Serializers** (e.g., `SquawkNestedSerializer`) - For embedding in responses, includes display fields like `priority_display`, `component_name`. These also serve as create/update serializers (with `read_only_fields` for computed fields) to avoid maintaining separate serializer pairs.
 
-When adding new features, create a nested serializer if you need computed/display fields for the frontend.
+When adding new features, create a nested serializer with both display fields and `read_only_fields` rather than separate read/write serializers.
 
 ### Custom ViewSet Actions
 
@@ -128,7 +160,12 @@ It checks:
 3. Inspection recurrency (overdue required = RED, due within 30 days = ORANGE)
 4. Component replacement (overdue critical = RED, due within 10 hrs = ORANGE)
 
-The result is serialized via `AircraftSerializer.get_airworthiness()`.
+The result is serialized via `AircraftSerializer.get_airworthiness()` (provided by `AirworthinessMixin` in `core/serializers.py`).
+
+Individual status checks are also available as shared functions for use outside airworthiness calculation (e.g., in views):
+- `ad_compliance_status(ad, compliance, current_hours, today)` → `(rank, extras_dict)`
+- `inspection_compliance_status(insp_type, last_record, current_hours, today)` → `(rank, extras_dict)`
+- Status constants: `STATUS_COMPLIANT`, `STATUS_DUE_SOON`, `STATUS_OVERDUE`, `STATUS_LABELS`
 
 ### Authentication: OIDC and Django Hybrid
 
@@ -295,18 +332,22 @@ The Containerfile passes dummy values for `collectstatic` at build time since it
 
 ### 3. CSRF for API Calls
 
-Frontend JavaScript must include CSRF token for POST/PATCH/DELETE:
+Frontend JavaScript must include CSRF token for POST/PATCH/DELETE. Use `apiRequest()` from `utils.js` which handles this automatically:
 
 ```javascript
-headers: {
-    'Content-Type': 'application/json',
-    'X-CSRFToken': getCookie('csrftoken'),
-}
+const { ok, data } = await apiRequest('/api/squawks/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+});
 ```
 
-The `getCookie` helper is in `utils.js`.
+For `FormData` uploads (where `Content-Type` must not be set manually), use raw `fetch` with `getCookie('csrftoken')`.
 
-### 4. Document Collections
+### 4. Spread Operator vs Getters in Mixins
+
+**Never use `{...obj}` to merge objects containing `get` properties.** The spread operator eagerly evaluates getters, which breaks cross-mixin `this` references and can crash the entire Alpine component. Use `mergeMixins()` from `utils.js` instead, which preserves getter descriptors via `Object.getOwnPropertyDescriptors()`.
+
+### 5. Document Collections
 
 Documents can be:
 - In a collection (`collection` FK set)
@@ -314,23 +355,23 @@ Documents can be:
 
 The `/api/aircraft/{id}/documents/` endpoint returns both grouped appropriately.
 
-### 5. OpenShift Arbitrary UIDs
+### 6. OpenShift Arbitrary UIDs
 
 The container runs as arbitrary user IDs in OpenShift. The entrypoint script handles adding the user to `/etc/passwd`. Directories need group write permissions (`chmod g=u`).
 
-### 6. No Inline JavaScript
+### 7. No Inline JavaScript
 
 CSP blocks inline `<script>` tags. All JS must be in external files under `core/static/js/`. See the "Content Security Policy" section above.
 
-### 7. Health Check Endpoint
+### 8. Health Check Endpoint
 
 `/healthz/` is handled directly by nginx (returns 200 JSON without proxying to Django). This avoids `ALLOWED_HOSTS` issues with kube-probe. The Django `healthz` view also exists but is not used by probes.
 
-### 8. TLS Termination
+### 9. TLS Termination
 
 TLS is terminated at the nginx sidecar (port 8443), not at the OpenShift router. The route uses `passthrough` termination. The cert is managed by cert-manager (`certificate.yaml` in gitops). Django receives `X-Forwarded-Proto: https` from nginx and has `SECURE_PROXY_SSL_HEADER` configured to trust it.
 
-### 9. Stacking Modals (PatternFly Backdrop z-index)
+### 10. Stacking Modals (PatternFly Backdrop z-index)
 
 PatternFly 5's `.pf-v5-c-backdrop` sets `z-index: 1000` via CSS custom property. When a second modal must appear **on top of** a first modal (e.g. logbook modal opening from the compliance modal), the second modal's backdrop needs `style="z-index: 1100;"` (or higher). Setting it to anything ≤ 1000 has no effect — it will render behind the other modal regardless of DOM order.
 
@@ -343,10 +384,14 @@ The logbook entry modal (`logbookModalOpen`) currently has `z-index: 1100` for t
 | Django settings | `simple_aircraft_manager/settings.py` |
 | Production settings | `simple_aircraft_manager/settings_prod.py` |
 | URL routing | `simple_aircraft_manager/urls.py` |
-| Airworthiness logic | `health/services.py` |
+| Airworthiness + status logic | `health/services.py` |
+| Upload validation | `health/serializers.py` (`validate_uploaded_file`) |
+| Shared upload path factory | `core/models.py` (`make_upload_path`) |
 | OIDC backend | `core/oidc.py` |
 | Context processors | `core/context_processors.py` |
-| Frontend components | `core/static/js/` |
+| JS shared utilities | `core/static/js/utils.js` |
+| Aircraft detail mixins | `core/static/js/aircraft-detail-*.js` |
+| Aircraft detail composer | `core/static/js/aircraft-detail.js` |
 | CSS overrides | `core/static/css/app.css` |
 | Base template | `core/templates/base.html` |
 | Container config | `Containerfile`, `docker-entrypoint.sh` |
@@ -372,10 +417,11 @@ python manage.py migrate
 
 ## API Endpoint Naming
 
-The API uses plural nouns for collections:
-- `/api/aircraft/` (not aircrafts - aircraft is already plural)
-- `/api/squawks/` (plural)
-- `/api/aircraft-notes/` (hyphenated)
-- `/api/component/` (currently singular - could be made consistent)
+The API uses plural nouns consistently for all collection endpoints:
+- `/api/aircraft/`, `/api/squawks/`, `/api/aircraft-notes/`, `/api/aircraft-events/`
+- `/api/components/`, `/api/component-types/`
+- `/api/documents/`, `/api/document-collections/`, `/api/document-images/`
+- `/api/logbook-entries/`, `/api/inspection-types/`, `/api/inspections/`
+- `/api/ads/`, `/api/ad-compliances/`, `/api/stcs/`
 
 Custom actions use snake_case: `update_hours`, `reset_service`
