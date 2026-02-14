@@ -7,3 +7,4 @@ pytz==2023.3.post1
 sqlparse==0.4.4
 Pillow==12.1.0
 mozilla-django-oidc==4.0.1
+anthropic>=0.40.0

@@ -19,6 +19,9 @@
                     <a href="/dashboard" class="pf-v5-c-nav__link">Dashboard</a>
                 </li>
                 <li class="pf-v5-c-nav__item">
+                    <a href="{% url 'logbook-import' %}" class="pf-v5-c-nav__link {% if request.resolver_match.url_name == 'logbook-import' %}pf-m-current{% endif %}">Tools</a>
+                </li>
+                <li class="pf-v5-c-nav__item">
                     <a href="/api/" class="pf-v5-c-nav__link">API</a>
                 </li>
             </ul>

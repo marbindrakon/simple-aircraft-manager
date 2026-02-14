@@ -50,6 +50,7 @@ urlpatterns = [
     path('dashboard/', core_views.DashboardView.as_view(), name='dashboard'),
     path('aircraft/<uuid:pk>/', core_views.AircraftDetailView.as_view(), name='aircraft-detail'),
     path('aircraft/<uuid:pk>/squawks/history/', core_views.SquawkHistoryView.as_view(), name='squawk-history'),
+    path('tools/import-logbook/', core_views.LogbookImportView.as_view(), name='logbook-import'),
     path('api/', include(router.urls)),
     path('admin/', admin.site.urls),
     path("accounts/logout/", core_views.custom_logout, name='logout'),  # Custom logout before django.contrib.auth.urls

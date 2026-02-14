@@ -1,12 +1,20 @@
+import json
+import os
+import shutil
+import tarfile
+import tempfile
+import zipfile
 from datetime import date as date_cls, timedelta as td
 from decimal import Decimal
+from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth import logout
 from django.db.models import Q
-from django.http import JsonResponse
-from django.shortcuts import redirect
+from django.http import JsonResponse, StreamingHttpResponse
+from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.views import View
 from django.views.decorators.http import require_GET
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -643,6 +651,212 @@ class SquawkHistoryView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         context['aircraft_id'] = self.kwargs['pk']
         return context
+
+
+class LogbookImportView(LoginRequiredMixin, View):
+    """
+    Web UI for importing scanned logbook pages.
+
+    GET  /tools/import-logbook/  — render the form
+    POST /tools/import-logbook/  — accept uploaded files (multiple images or a
+                                   single zip/tar archive), run the import
+                                   service, and stream NDJSON progress events.
+    """
+
+    # Archive extensions we accept
+    _ARCHIVE_SUFFIXES = {'.zip', '.tar', '.gz', '.bz2', '.xz', '.tgz'}
+    _IMAGE_SUFFIXES = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff'}
+
+    def get(self, request):
+        aircraft_list = Aircraft.objects.all().order_by('tail_number')
+        return render(request, 'logbook_import.html', {'aircraft_list': aircraft_list})
+
+    def post(self, request):
+        tmpdir = None
+        try:
+            aircraft, error_response = self._resolve_aircraft(request)
+            if error_response:
+                return error_response
+
+            tmpdir = tempfile.mkdtemp(prefix='sam_logbook_')
+            image_paths, prep_error = self._prepare_images(request, tmpdir)
+            if prep_error:
+                return JsonResponse({'type': 'error', 'message': prep_error}, status=400)
+
+            if not image_paths:
+                return JsonResponse(
+                    {'type': 'error', 'message': 'No supported image files found in upload.'},
+                    status=400,
+                )
+
+            opts = self._parse_options(request)
+
+            # Capture tmpdir reference for the closure
+            _tmpdir = tmpdir
+            tmpdir = None  # prevent finally-block cleanup; generator owns it now
+
+            def event_stream():
+                try:
+                    from health.logbook_import import run_import
+                    for event in run_import(
+                        aircraft=aircraft,
+                        image_paths=image_paths,
+                        collection_name=opts['collection_name'],
+                        doc_name=opts['doc_name'],
+                        doc_type=opts['doc_type'],
+                        model=opts['model'],
+                        upload_only=opts['upload_only'],
+                        log_type_override=opts['log_type_override'] or None,
+                        batch_size=opts['batch_size'],
+                    ):
+                        yield json.dumps(event) + '\n'
+                except Exception as exc:
+                    yield json.dumps({'type': 'error', 'message': str(exc)}) + '\n'
+                finally:
+                    shutil.rmtree(_tmpdir, ignore_errors=True)
+
+            response = StreamingHttpResponse(event_stream(), content_type='application/x-ndjson')
+            response['X-Accel-Buffering'] = 'no'
+            response['Cache-Control'] = 'no-cache'
+            return response
+
+        except Exception as exc:
+            return JsonResponse({'type': 'error', 'message': str(exc)}, status=500)
+        finally:
+            if tmpdir:
+                shutil.rmtree(tmpdir, ignore_errors=True)
+
+    # -------------------------------------------------------------------------
+    # Helpers
+    # -------------------------------------------------------------------------
+
+    def _resolve_aircraft(self, request):
+        aircraft_id = request.POST.get('aircraft')
+        if not aircraft_id:
+            return None, JsonResponse({'type': 'error', 'message': 'aircraft is required'}, status=400)
+        try:
+            aircraft = Aircraft.objects.get(pk=aircraft_id)
+        except (Aircraft.DoesNotExist, ValueError):
+            return None, JsonResponse({'type': 'error', 'message': 'Aircraft not found'}, status=404)
+        return aircraft, None
+
+    def _prepare_images(self, request, tmpdir: str):
+        """
+        Write uploaded files into tmpdir and return a sorted list of image Paths.
+        Handles two upload modes:
+          - file_mode='images': multiple image files in request.FILES.getlist('images')
+          - file_mode='archive': single zip/tar in request.FILES['archive']
+        """
+        file_mode = request.POST.get('file_mode', 'images')
+
+        if file_mode == 'archive':
+            archive_file = request.FILES.get('archive')
+            if not archive_file:
+                return None, 'No archive file uploaded.'
+            error = self._extract_archive(archive_file, tmpdir)
+            if error:
+                return None, error
+        else:
+            uploaded = request.FILES.getlist('images')
+            if not uploaded:
+                return None, 'No image files uploaded.'
+            for uf in uploaded:
+                dest = Path(tmpdir) / uf.name
+                with open(dest, 'wb') as fh:
+                    for chunk in uf.chunks():
+                        fh.write(chunk)
+
+        image_paths = sorted(
+            p for p in Path(tmpdir).rglob('*')
+            if p.is_file() and p.suffix.lower() in self._IMAGE_SUFFIXES
+        )
+        return image_paths, None
+
+    def _extract_archive(self, archive_file, tmpdir: str):
+        """
+        Extract a zip or tar archive into tmpdir.
+        Returns an error string on failure, None on success.
+        Guards against path-traversal (zip-slip) attacks.
+        """
+        name = archive_file.name.lower()
+
+        # Write upload to a temp file so we can seek for format detection
+        tmp_archive = os.path.join(tmpdir, '_upload_archive')
+        with open(tmp_archive, 'wb') as fh:
+            for chunk in archive_file.chunks():
+                fh.write(chunk)
+
+        real_tmpdir = os.path.realpath(tmpdir)
+
+        if zipfile.is_zipfile(tmp_archive):
+            try:
+                with zipfile.ZipFile(tmp_archive) as zf:
+                    for member in zf.infolist():
+                        if member.filename.endswith('/'):
+                            continue  # skip directory entries
+                        target = os.path.realpath(
+                            os.path.join(real_tmpdir, member.filename)
+                        )
+                        if not target.startswith(real_tmpdir + os.sep):
+                            continue  # skip path-traversal attempts
+                        os.makedirs(os.path.dirname(target), exist_ok=True)
+                        with zf.open(member) as src, open(target, 'wb') as dst:
+                            dst.write(src.read())
+            except zipfile.BadZipFile as exc:
+                return f"Invalid ZIP file: {exc}"
+        elif tarfile.is_tarfile(tmp_archive):
+            try:
+                with tarfile.open(tmp_archive) as tf:
+                    for member in tf.getmembers():
+                        if not member.isfile():
+                            continue
+                        target = os.path.realpath(
+                            os.path.join(real_tmpdir, member.name)
+                        )
+                        if not target.startswith(real_tmpdir + os.sep):
+                            continue  # skip path-traversal attempts
+                        os.makedirs(os.path.dirname(target), exist_ok=True)
+                        src = tf.extractfile(member)
+                        if src:
+                            with open(target, 'wb') as dst:
+                                dst.write(src.read())
+            except tarfile.TarError as exc:
+                return f"Invalid archive file: {exc}"
+        else:
+            return f"Unrecognised archive format for file: {archive_file.name}"
+
+        os.remove(tmp_archive)
+        return None
+
+    @staticmethod
+    def _parse_options(request) -> dict:
+        def _int(key, default):
+            try:
+                return int(request.POST.get(key, default))
+            except (ValueError, TypeError):
+                return default
+
+        upload_only_raw = request.POST.get('upload_only', 'false')
+        upload_only = upload_only_raw.lower() in ('true', '1', 'on', 'yes')
+
+        collection_name = request.POST.get('collection_name', '').strip()
+        doc_name = request.POST.get('doc_name', '').strip()
+
+        # Fall back to a generic name if the client sent nothing
+        if not collection_name:
+            collection_name = 'Imported Logbook'
+        if not doc_name:
+            doc_name = collection_name
+
+        return {
+            'collection_name': collection_name,
+            'doc_name': doc_name,
+            'doc_type': request.POST.get('doc_type', 'LOG'),
+            'model': request.POST.get('model', 'claude-sonnet-4-5-20250929'),
+            'upload_only': upload_only,
+            'log_type_override': request.POST.get('log_type_override', ''),
+            'batch_size': _int('batch_size', 10),
+        }
 
 
 def custom_logout(request):

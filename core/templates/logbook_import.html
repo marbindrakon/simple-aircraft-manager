@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Import Logbook — Simple Aircraft Manager{% endblock %}
+
+{% block content %}
+<div x-data="logbookImport()">
+
+  <!-- ── Page header ────────────────────────────────────────────────────── -->
+  <div class="pf-v5-c-content" style="margin-bottom: 1.5rem;">
+    <h1 class="pf-v5-c-title pf-m-2xl">
+      <i class="fas fa-file-import" style="margin-right: 0.5rem;"></i>
+      Import Logbook Pages
+    </h1>
+    <p class="pf-v5-u-color-200">
+      Upload scanned aircraft logbook pages as individual images or a zip/tar archive.
+      Claude AI extracts logbook entries and saves them to the maintenance record.
+    </p>
+  </div>
+
+  <!-- ── Import form (hidden while running or after completion) ─────────── -->
+  <div x-show="!importing && !done" x-cloak>
+    <div class="pf-v5-l-grid pf-m-gutter">
+
+      <!-- ── Left column: file + destination ──────────────────────────── -->
+      <div class="pf-v5-l-grid__item pf-m-8-col-on-md">
+
+        <!-- File upload card -->
+        <div class="pf-v5-c-card" style="margin-bottom: 1rem;">
+          <div class="pf-v5-c-card__header">
+            <div class="pf-v5-c-card__header-main">
+              <span class="pf-v5-c-card__title-text">
+                <i class="fas fa-upload" style="margin-right: 0.4rem;"></i>
+                Source Files
+                <span class="pf-v5-c-form__label-required" aria-hidden="true"> *</span>
+              </span>
+            </div>
+          </div>
+          <div class="pf-v5-c-card__body">
+
+            <!-- Mode toggle -->
+            <div style="display: flex; gap: 1.5rem; margin-bottom: 1.25rem;">
+              <label class="pf-v5-c-radio">
+                <input class="pf-v5-c-radio__input" type="radio"
+                       name="file-mode" value="images" x-model="fileMode">
+                <span class="pf-v5-c-radio__label">
+                  <i class="fas fa-images" style="margin-right: 0.3rem;"></i>
+                  Multiple image files
+                </span>
+              </label>
+              <label class="pf-v5-c-radio">
+                <input class="pf-v5-c-radio__input" type="radio"
+                       name="file-mode" value="archive" x-model="fileMode">
+                <span class="pf-v5-c-radio__label">
+                  <i class="fas fa-file-zipper" style="margin-right: 0.3rem;"></i>
+                  Archive (zip / tar)
+                </span>
+              </label>
+            </div>
+
+            <!-- Image file input -->
+            <div x-show="fileMode === 'images'">
+              <label class="pf-v5-c-form__label" for="image-input" style="display:block; margin-bottom: 0.4rem;">
+                <span class="pf-v5-c-form__label-text">Select images</span>
+              </label>
+              <input id="image-input"
+                     x-ref="imageInput"
+                     type="file"
+                     class="pf-v5-c-form-control"
+                     accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff"
+                     multiple
+                     @change="onImagesChange($event)">
+              <p class="pf-v5-c-form__helper-text" style="margin-top: 0.3rem;">
+                JPEG, PNG, TIFF, WebP, BMP, GIF. Files are sorted lexically —
+                name them so alphabetical order matches page order.
+              </p>
+              <p x-show="selectedImages.length > 0"
+                 style="margin-top: 0.3rem; color: var(--pf-v5-global--success-color--100);">
+                <i class="fas fa-check"></i>
+                <span x-text="selectedImages.length + ' file(s) selected'"></span>
+              </p>
+            </div>
+
+            <!-- Archive file input -->
+            <div x-show="fileMode === 'archive'">
+              <label class="pf-v5-c-form__label" for="archive-input" style="display:block; margin-bottom: 0.4rem;">
+                <span class="pf-v5-c-form__label-text">Select archive</span>
+              </label>
+              <input id="archive-input"
+                     x-ref="archiveInput"
+                     type="file"
+                     class="pf-v5-c-form-control"
+                     accept=".zip,.tar,.tar.gz,.tgz,.tar.bz2,.tar.xz"
+                     @change="onArchiveChange($event)">
+              <p class="pf-v5-c-form__helper-text" style="margin-top: 0.3rem;">
+                zip, tar, tar.gz / tgz, tar.bz2, or tar.xz.
+                Images inside are sorted lexically by filename.
+              </p>
+              <p x-show="selectedArchive"
+                 style="margin-top: 0.3rem; color: var(--pf-v5-global--success-color--100);">
+                <i class="fas fa-check"></i>
+                <span x-text="selectedArchive ? selectedArchive.name : ''"></span>
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Destination card -->
+        <div class="pf-v5-c-card" style="margin-bottom: 1rem;">
+          <div class="pf-v5-c-card__header">
+            <div class="pf-v5-c-card__header-main">
+              <span class="pf-v5-c-card__title-text">
+                <i class="fas fa-plane" style="margin-right: 0.4rem;"></i>
+                Destination
+              </span>
+            </div>
+          </div>
+          <div class="pf-v5-c-card__body">
+
+            <!-- Aircraft -->
+            <div class="pf-v5-c-form__group" style="margin-bottom: 1rem;">
+              <label class="pf-v5-c-form__label" for="aircraft-select">
+                <span class="pf-v5-c-form__label-text">Aircraft</span>
+                <span class="pf-v5-c-form__label-required" aria-hidden="true"> *</span>
+              </label>
+              <select id="aircraft-select" class="pf-v5-c-form-control"
+                      x-model="aircraftId" required>
+                <option value="">— Select aircraft —</option>
+                {% for ac in aircraft_list %}
+                <option value="{{ ac.id }}">{{ ac.tail_number }} — {{ ac.make }} {{ ac.model }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Collection name -->
+            <div class="pf-v5-c-form__group" style="margin-bottom: 1rem;">
+              <label class="pf-v5-c-form__label" for="collection-name">
+                <span class="pf-v5-c-form__label-text">Collection name</span>
+              </label>
+              <input id="collection-name" class="pf-v5-c-form-control" type="text"
+                     x-model="collectionName" placeholder="e.g. Airframe Log #4">
+              <p class="pf-v5-c-form__helper-text">
+                Groups this import with related documents. Auto-filled from filename.
+              </p>
+            </div>
+
+            <!-- Document name -->
+            <div class="pf-v5-c-form__group">
+              <label class="pf-v5-c-form__label" for="doc-name">
+                <span class="pf-v5-c-form__label-text">Document name</span>
+              </label>
+              <input id="doc-name" class="pf-v5-c-form-control" type="text"
+                     x-model="docName" placeholder="Defaults to collection name">
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- end left column -->
+
+      <!-- ── Right column: options + submit ───────────────────────────── -->
+      <div class="pf-v5-l-grid__item pf-m-4-col-on-md">
+        <div class="pf-v5-c-card" style="position: sticky; top: 1rem;">
+          <div class="pf-v5-c-card__header">
+            <div class="pf-v5-c-card__header-main">
+              <span class="pf-v5-c-card__title-text">
+                <i class="fas fa-sliders" style="margin-right: 0.4rem;"></i>
+                Options
+              </span>
+            </div>
+          </div>
+          <div class="pf-v5-c-card__body">
+
+            <!-- Upload only -->
+            <div style="margin-bottom: 1.25rem;">
+              <label class="pf-v5-c-check">
+                <input class="pf-v5-c-check__input" type="checkbox"
+                       id="upload-only" x-model="uploadOnly">
+                <span class="pf-v5-c-check__label">Upload only (no transcription)</span>
+                <span class="pf-v5-c-check__description">
+                  Save images as documents without calling Claude AI.
+                </span>
+              </label>
+            </div>
+
+            <!-- Document type -->
+            <div class="pf-v5-c-form__group" style="margin-bottom: 1.25rem;">
+              <label class="pf-v5-c-form__label" for="doc-type">
+                <span class="pf-v5-c-form__label-text">Document type</span>
+              </label>
+              <select id="doc-type" class="pf-v5-c-form-control" x-model="docType">
+                <option value="LOG">Log</option>
+                <option value="ALTER">Alteration</option>
+                <option value="REPORT">Report</option>
+                <option value="INVOICE">Invoice</option>
+                <option value="AIRCRAFT">Aircraft Record</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
+
+            <!-- AI options (hidden when upload-only) -->
+            <div x-show="!uploadOnly">
+
+              <div class="pf-v5-c-form__group" style="margin-bottom: 1.25rem;">
+                <label class="pf-v5-c-form__label" for="model-select">
+                  <span class="pf-v5-c-form__label-text">AI model</span>
+                </label>
+                <select id="model-select" class="pf-v5-c-form-control" x-model="model">
+                  <option value="claude-sonnet-4-5-20250929">Sonnet 4.5 (recommended)</option>
+                  <option value="claude-haiku-4-5-20251001">Haiku 4.5 (faster / cheaper)</option>
+                  <option value="claude-opus-4-6">Opus 4.6 (highest quality)</option>
+                </select>
+              </div>
+
+              <div class="pf-v5-c-form__group" style="margin-bottom: 1.25rem;">
+                <label class="pf-v5-c-form__label" for="log-type-override">
+                  <span class="pf-v5-c-form__label-text">Log type override</span>
+                </label>
+                <select id="log-type-override" class="pf-v5-c-form-control"
+                        x-model="logTypeOverride">
+                  <option value="">Auto-detect</option>
+                  <option value="AC">Airframe (AC)</option>
+                  <option value="ENG">Engine (ENG)</option>
+                  <option value="PROP">Propeller (PROP)</option>
+                  <option value="OTHER">Other</option>
+                </select>
+                <p class="pf-v5-c-form__helper-text">Force all entries to this type.</p>
+              </div>
+
+              <div class="pf-v5-c-form__group" style="margin-bottom: 1rem;">
+                <label class="pf-v5-c-form__label" for="batch-size">
+                  <span class="pf-v5-c-form__label-text">Batch size</span>
+                </label>
+                <input id="batch-size" class="pf-v5-c-form-control" type="number"
+                       min="1" max="20" x-model.number="batchSize">
+                <p class="pf-v5-c-form__helper-text">Images per API call (1–20).</p>
+              </div>
+
+            </div><!-- end AI options -->
+
+          </div>
+          <div class="pf-v5-c-card__footer">
+            <button class="pf-v5-c-button pf-m-primary pf-m-block"
+                    type="button"
+                    :disabled="!canSubmit"
+                    @click="startImport()">
+              <template x-if="uploadOnly">
+                <span>
+                  <i class="fas fa-upload" style="margin-right: 0.4rem;"></i>Upload images
+                </span>
+              </template>
+              <template x-if="!uploadOnly">
+                <span>
+                  <i class="fas fa-wand-magic-sparkles" style="margin-right: 0.4rem;"></i>Import &amp; transcribe
+                </span>
+              </template>
+            </button>
+          </div>
+        </div>
+      </div><!-- end right column -->
+
+    </div><!-- end grid -->
+  </div><!-- end form section -->
+
+  <!-- ── Progress / results ─────────────────────────────────────────────── -->
+  <div x-show="importing || done" x-cloak>
+
+    <!-- Status header -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+      <div style="display:flex; align-items:center; gap:0.75rem;">
+        <template x-if="importing">
+          <span class="pf-v5-c-spinner pf-m-md" role="progressbar" aria-label="Importing">
+            <span class="pf-v5-c-spinner__clipper"></span>
+            <span class="pf-v5-c-spinner__lead-ball"></span>
+            <span class="pf-v5-c-spinner__tail-ball"></span>
+          </span>
+        </template>
+        <template x-if="done && !fatalError">
+          <i class="fas fa-circle-check"
+             style="font-size:1.4rem; color:var(--pf-v5-global--success-color--100);"></i>
+        </template>
+        <template x-if="fatalError">
+          <i class="fas fa-circle-xmark"
+             style="font-size:1.4rem; color:var(--pf-v5-global--danger-color--100);"></i>
+        </template>
+        <h2 class="pf-v5-c-title pf-m-xl"
+            x-text="importing ? 'Importing…' : (fatalError ? 'Import failed' : 'Import complete')"></h2>
+      </div>
+      <button x-show="done" class="pf-v5-c-button pf-m-secondary"
+              type="button" @click="reset()">
+        <i class="fas fa-arrow-left" style="margin-right:0.4rem;"></i>New import
+      </button>
+    </div>
+
+    <!-- Progress bar -->
+    <div x-show="importing" style="margin-bottom:1rem;">
+      <div class="pf-v5-c-progress" role="progressbar"
+           :aria-valuenow="progressPercent" aria-valuemin="0" aria-valuemax="100">
+        <div class="pf-v5-c-progress__description">
+          <span x-text="progressPercent + '% complete'"></span>
+        </div>
+        <div class="pf-v5-c-progress__bar">
+          <div class="pf-v5-c-progress__indicator"
+               :style="'width:' + progressPercent + '%'"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary chips on completion -->
+    <template x-if="done && result">
+      <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+        <span class="pf-v5-c-label pf-m-green">
+          <span class="pf-v5-c-label__content">
+            <i class="fas fa-book" style="margin-right:0.3rem;"></i>
+            <span x-text="result.entries_created + ' entries created'"></span>
+          </span>
+        </span>
+        <span class="pf-v5-c-label">
+          <span class="pf-v5-c-label__content">
+            <i class="fas fa-image" style="margin-right:0.3rem;"></i>
+            <span x-text="uploadedCount + ' images uploaded'"></span>
+          </span>
+        </span>
+        <span x-show="warningCount > 0" class="pf-v5-c-label pf-m-gold">
+          <span class="pf-v5-c-label__content">
+            <i class="fas fa-triangle-exclamation" style="margin-right:0.3rem;"></i>
+            <span x-text="warningCount + ' warning(s)'"></span>
+          </span>
+        </span>
+        <span x-show="errorCount > 0" class="pf-v5-c-label pf-m-red">
+          <span class="pf-v5-c-label__content">
+            <i class="fas fa-circle-xmark" style="margin-right:0.3rem;"></i>
+            <span x-text="errorCount + ' error(s)'"></span>
+          </span>
+        </span>
+      </div>
+    </template>
+
+    <!-- Fatal error alert -->
+    <template x-if="fatalError">
+      <div class="pf-v5-c-alert pf-m-danger" style="margin-bottom:1rem;">
+        <div class="pf-v5-c-alert__icon"><i class="fas fa-circle-xmark"></i></div>
+        <p class="pf-v5-c-alert__title">Import failed</p>
+        <div class="pf-v5-c-alert__description" x-text="fatalError"></div>
+      </div>
+    </template>
+
+    <!-- Event log -->
+    <div class="pf-v5-c-card">
+      <div class="pf-v5-c-card__header">
+        <div class="pf-v5-c-card__header-main">
+          <span class="pf-v5-c-card__title-text">
+            <i class="fas fa-terminal" style="margin-right:0.4rem;"></i>
+            Progress log
+          </span>
+        </div>
+        <div class="pf-v5-c-card__actions">
+          <span class="pf-v5-c-badge pf-m-read" x-text="events.length + ' events'"></span>
+        </div>
+      </div>
+      <div class="pf-v5-c-card__body" style="padding:0;">
+        <div x-ref="eventLog"
+             style="background:#1e1e1e; color:#d4d4d4; font-family:monospace; font-size:0.8rem;
+                    line-height:1.6; max-height:480px; overflow-y:auto; padding:0.75rem 1rem;">
+          <template x-for="(ev, idx) in events" :key="idx">
+            <div style="display:flex; gap:0.5rem; margin-bottom:0.1rem;">
+              <span style="flex-shrink:0; width:1rem; text-align:center;">
+                <i :class="'fas ' + eventIcon(ev)"
+                   :style="ev.type==='error'   ? 'color:#f85149'
+                           : ev.type==='warning' ? 'color:#d29922'
+                           : ev.type==='entry'   ? 'color:#79c0ff'
+                           : ev.type==='image'   ? 'color:#56d364'
+                           : ev.type==='complete'? 'color:#56d364'
+                           : 'color:#8b949e'"></i>
+              </span>
+              <span x-text="ev.message"
+                    style="flex:1; white-space:pre-wrap; word-break:break-word;"></span>
+              <template x-if="ev.type==='entry' && ev.hours">
+                <span x-text="ev.hours + ' hrs'"
+                      style="color:#8b949e; flex-shrink:0; font-size:0.75rem;"></span>
+              </template>
+            </div>
+          </template>
+          <template x-if="importing">
+            <div style="color:#8b949e;">
+              <i class="fas fa-ellipsis"></i>
+              <span style="margin-left:0.4rem;">Processing…</span>
+            </div>
+          </template>
+          <template x-if="events.length === 0 && !importing">
+            <div style="color:#8b949e; font-style:italic;">No events yet.</div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end progress section -->
+
+</div><!-- end x-data -->
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/logbook-import.js' %}"></script>
+{% endblock %}
