@@ -298,6 +298,7 @@ class ADCompliance(models.Model):
     compliance_notes = models.TextField()
     permanent = models.BooleanField(default=False)
     next_due_at_time = models.DecimalField(max_digits=8, decimal_places=1, default=0.0)
+    aircraft_hours_at_compliance = models.DecimalField(max_digits=8, decimal_places=1, blank=True, null=True)
     logbook_entry = models.ForeignKey(LogbookEntry, related_name='ads_complied', blank=True, null=True, on_delete=models.CASCADE)
     inspection_record = models.ForeignKey(InspectionRecord, related_name='ads_complied', blank=True, null=True, on_delete=models.CASCADE)
     aircraft = models.ForeignKey(core_models.Aircraft, related_name='ad_compliance', blank=True, null=True, on_delete=models.CASCADE)

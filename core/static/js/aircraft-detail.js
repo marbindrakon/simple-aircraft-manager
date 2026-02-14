@@ -144,12 +144,49 @@ function aircraftDetail(aircraftId) {
             recurring_months: 0,
             recurring_days: 0,
         },
+        editingComplianceRecord: null,
         complianceForm: {
             date_complied: '',
             compliance_notes: '',
             permanent: false,
             next_due_at_time: '',
+            aircraft_hours: '',
+            logbook_entry_id: '',
         },
+
+        // Document collections (loaded on demand for modals)
+        aircraftCollections: [],
+        collectionsLoaded: false,
+
+        // Logbook state
+        logbookEntries: [],
+        logbookLoaded: false,
+        logbookModalOpen: false,
+        editingLogEntry: null,
+        logbookSubmitting: false,
+        logbookImageFiles: [],
+        logbookForm: {
+            date: '',
+            entry_type: 'MAINTENANCE',
+            log_type: 'AC',
+            text: '',
+            aircraft_hours_at_entry: '',
+            signoff_person: '',
+            signoff_location: '',
+            link_ad_id: '',
+            document_collection: '',  // collection for uploaded files
+        },
+
+        // Compliance history state
+        complianceHistoryOpen: false,
+        selectedAdForHistory: null,
+        complianceHistory: [],
+        complianceHistoryLoading: false,
+
+        // Logbook entry detail (view from compliance history)
+        logEntryDetailOpen: false,
+        logEntryDetail: null,
+        logEntryDetailLoading: false,
 
         // Notes state
         aircraftNotes: [],
@@ -169,6 +206,9 @@ function aircraftDetail(aircraftId) {
 
             // Watch for tab changes to load data lazily
             this.$watch('activeTab', (tab) => {
+                if (tab === 'logbook' && !this.logbookLoaded) {
+                    this.loadLogbookEntries();
+                }
                 if (tab === 'documents' && !this.documentsLoaded) {
                     this.loadDocuments();
                 }
@@ -1170,6 +1210,323 @@ function aircraftDetail(aircraftId) {
             }
         },
 
+        // Collections loader (for document upload modals)
+        async loadCollectionsForModal() {
+            if (this.collectionsLoaded) return;
+            try {
+                const response = await fetch(`/api/document-collection/?aircraft=${this.aircraftId}`);
+                const data = await response.json();
+                this.aircraftCollections = data.results || data;
+                this.collectionsLoaded = true;
+            } catch (error) {
+                console.error('Error loading collections:', error);
+            }
+        },
+
+        // Logbook management methods
+        async loadLogbookEntries() {
+            try {
+                const response = await fetch(`/api/logbook/?aircraft=${this.aircraftId}`);
+                const data = await response.json();
+                this.logbookEntries = data.results || data;
+                this.logbookLoaded = true;
+            } catch (error) {
+                console.error('Error loading logbook entries:', error);
+                showNotification('Failed to load logbook entries', 'danger');
+            }
+        },
+
+        openLogbookModal(linkAdId) {
+            this.editingLogEntry = null;
+            this.logbookImageFiles = [];
+            this.logbookForm = {
+                date: new Date().toISOString().split('T')[0],
+                entry_type: 'MAINTENANCE',
+                log_type: 'AC',
+                text: '',
+                aircraft_hours_at_entry: this.aircraft ? parseFloat(this.aircraft.flight_time || 0).toFixed(1) : '',
+                signoff_person: '',
+                signoff_location: '',
+                link_ad_id: linkAdId || '',
+                document_collection: '',
+            };
+            this.loadCollectionsForModal();
+            this.logbookModalOpen = true;
+        },
+
+        editLogEntry(entry) {
+            this.editingLogEntry = entry;
+            this.logbookImageFiles = [];
+            this.logbookForm = {
+                date: entry.date || '',
+                entry_type: entry.entry_type || 'MAINTENANCE',
+                log_type: entry.log_type || 'AC',
+                text: entry.text || '',
+                aircraft_hours_at_entry: entry.aircraft_hours_at_entry || '',
+                signoff_person: entry.signoff_person || '',
+                signoff_location: entry.signoff_location || '',
+                link_ad_id: '',
+                document_collection: '',
+            };
+            this.loadCollectionsForModal();
+            this.logbookModalOpen = true;
+        },
+
+        closeLogbookModal() {
+            this.logbookModalOpen = false;
+            this.editingLogEntry = null;
+            this.logbookImageFiles = [];
+        },
+
+        onLogbookFilesSelected(event) {
+            this.logbookImageFiles = Array.from(event.target.files);
+        },
+
+
+        async submitLogEntry() {
+            if (this.logbookSubmitting) return;
+            if (!this.logbookForm.text.trim()) {
+                showNotification('Entry text is required', 'warning');
+                return;
+            }
+
+            this.logbookSubmitting = true;
+            try {
+                // Step 1: If new files selected, create a document and upload images first
+                let logImageUrl = null;
+                if (this.logbookImageFiles.length > 0) {
+                    const docPayload = {
+                        aircraft: `/api/aircraft/${this.aircraftId}/`,
+                        name: `Logbook - ${this.logbookForm.date}`,
+                        doc_type: 'LOG',
+                        components: [],
+                    };
+                    if (this.logbookForm.document_collection) {
+                        docPayload.collection = `/api/document-collection/${this.logbookForm.document_collection}/`;
+                    }
+                    const docResp = await fetch('/api/document/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken'),
+                        },
+                        body: JSON.stringify(docPayload),
+                    });
+                    if (docResp.ok) {
+                        const docData = await docResp.json();
+                        logImageUrl = `/api/document/${docData.id}/`;
+                        for (const file of this.logbookImageFiles) {
+                            const formData = new FormData();
+                            formData.append('document', logImageUrl);
+                            formData.append('image', file);
+                            formData.append('notes', '');
+                            await fetch('/api/document-image/', {
+                                method: 'POST',
+                                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                                body: formData,
+                            });
+                        }
+                    } else {
+                        showNotification('Failed to create document for images', 'warning');
+                    }
+                }
+
+                // Step 2: Save the logbook entry
+                const data = {
+                    date: this.logbookForm.date,
+                    entry_type: this.logbookForm.entry_type,
+                    log_type: this.logbookForm.log_type,
+                    text: this.logbookForm.text,
+                };
+                if (this.logbookForm.aircraft_hours_at_entry) {
+                    data.aircraft_hours_at_entry = parseFloat(this.logbookForm.aircraft_hours_at_entry);
+                }
+                if (this.logbookForm.signoff_person) data.signoff_person = this.logbookForm.signoff_person;
+                if (this.logbookForm.signoff_location) data.signoff_location = this.logbookForm.signoff_location;
+                if (logImageUrl) data.log_image = logImageUrl;
+
+                let response;
+                if (this.editingLogEntry) {
+                    response = await fetch(`/api/logbook/${this.editingLogEntry.id}/`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken'),
+                        },
+                        body: JSON.stringify(data),
+                    });
+                } else {
+                    data.aircraft = `/api/aircraft/${this.aircraftId}/`;
+                    response = await fetch('/api/logbook/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken'),
+                        },
+                        body: JSON.stringify(data),
+                    });
+                }
+
+                if (response.ok) {
+                    const entryData = await response.json();
+
+                    // Step 3: If an AD was selected, record compliance linked to this entry
+                    if (!this.editingLogEntry && this.logbookForm.link_ad_id) {
+                        const complianceData = {
+                            ad: this.logbookForm.link_ad_id,
+                            date_complied: this.logbookForm.date,
+                            compliance_notes: this.logbookForm.text,
+                            permanent: false,
+                            next_due_at_time: 0,
+                            logbook_entry: entryData.id,
+                        };
+                        await fetch(`/api/aircraft/${this.aircraftId}/compliance/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken'),
+                            },
+                            body: JSON.stringify(complianceData),
+                        });
+                        this.adsLoaded = false;
+                        await this.loadAds();
+                    }
+
+                    showNotification(
+                        this.editingLogEntry ? 'Log entry updated' : 'Log entry created',
+                        'success'
+                    );
+                    this.closeLogbookModal();
+                    this.logbookLoaded = false;
+                    await this.loadLogbookEntries();
+                    await this.loadData();
+                    if (this.documentsLoaded) {
+                        this.documentsLoaded = false;
+                        await this.loadDocuments();
+                    }
+                } else {
+                    const errorData = await response.json();
+                    const msg = typeof errorData === 'object'
+                        ? Object.values(errorData).flat().join(', ')
+                        : 'Failed to save log entry';
+                    showNotification(msg, 'danger');
+                }
+            } catch (error) {
+                console.error('Error saving log entry:', error);
+                showNotification('Error saving log entry', 'danger');
+            } finally {
+                this.logbookSubmitting = false;
+            }
+        },
+
+        async deleteLogEntry(entry) {
+            if (!confirm('Delete this logbook entry? This cannot be undone.')) return;
+
+            try {
+                const response = await fetch(`/api/logbook/${entry.id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                });
+
+                if (response.ok || response.status === 204) {
+                    showNotification('Log entry deleted', 'success');
+                    this.logbookLoaded = false;
+                    await this.loadLogbookEntries();
+                    await this.loadData();
+                } else {
+                    showNotification('Failed to delete log entry', 'danger');
+                }
+            } catch (error) {
+                console.error('Error deleting log entry:', error);
+                showNotification('Error deleting log entry', 'danger');
+            }
+        },
+
+        // AD compliance history methods
+        async openComplianceHistory(ad) {
+            this.selectedAdForHistory = ad;
+            this.complianceHistory = [];
+            this.complianceHistoryLoading = true;
+            this.complianceHistoryOpen = true;
+
+            try {
+                const response = await fetch(`/api/ad-compliance/?ad=${ad.id}&aircraft=${this.aircraftId}`);
+                const data = await response.json();
+                this.complianceHistory = data.results || data;
+            } catch (error) {
+                console.error('Error loading compliance history:', error);
+                showNotification('Failed to load compliance history', 'danger');
+            } finally {
+                this.complianceHistoryLoading = false;
+            }
+        },
+
+        logbookEntryLabel(entry) {
+            const date = this.formatDate(entry.date);
+            const type = entry.entry_type || entry.log_type || '';
+            const text = entry.text ? (entry.text.length > 60 ? entry.text.slice(0, 60) + '…' : entry.text) : '';
+            const hrs = entry.aircraft_hours_at_entry ? ` · ${parseFloat(entry.aircraft_hours_at_entry).toFixed(1)} hrs` : '';
+            return `${date}${hrs} — ${type}: ${text}`;
+        },
+
+        closeComplianceHistory() {
+            this.complianceHistoryOpen = false;
+            this.selectedAdForHistory = null;
+            this.complianceHistory = [];
+        },
+
+        extractIdFromUrl(url) {
+            if (!url) return null;
+            const match = url.match(/\/([0-9a-f-]{36})\/?$/i);
+            return match ? match[1] : null;
+        },
+
+        async viewLogEntryFromCompliance(logbookEntryUrl) {
+            const entryId = this.extractIdFromUrl(logbookEntryUrl);
+            if (!entryId) return;
+
+            this.logEntryDetailLoading = true;
+            this.logEntryDetail = null;
+            this.logEntryDetailOpen = true;
+
+            try {
+                const response = await fetch(`/api/logbook/${entryId}/`);
+                if (response.ok) {
+                    this.logEntryDetail = await response.json();
+                } else {
+                    showNotification('Failed to load logbook entry', 'danger');
+                    this.logEntryDetailOpen = false;
+                }
+            } catch (error) {
+                console.error('Error loading logbook entry:', error);
+                showNotification('Error loading logbook entry', 'danger');
+                this.logEntryDetailOpen = false;
+            } finally {
+                this.logEntryDetailLoading = false;
+            }
+        },
+
+        closeLogEntryDetail() {
+            this.logEntryDetailOpen = false;
+            this.logEntryDetail = null;
+        },
+
+        async viewLogEntryDocument(log) {
+            const docId = this.extractIdFromUrl(log.log_image);
+            if (!docId) return;
+            try {
+                const resp = await fetch(`/api/document/${docId}/`);
+                if (resp.ok) {
+                    const doc = await resp.json();
+                    this.openDocumentViewer(doc, 'Logbook Document');
+                }
+            } catch (error) {
+                console.error('Error loading logbook document:', error);
+            }
+        },
+
         // AD management methods
         get adIssueCount() {
             return this.applicableAds.filter(
@@ -1399,14 +1756,16 @@ function aircraftDetail(aircraftId) {
         },
 
         openComplianceModal(ad) {
+            this.editingComplianceRecord = null;
             this.selectedAd = ad;
             this.complianceForm = {
                 date_complied: new Date().toISOString().split('T')[0],
                 compliance_notes: '',
                 permanent: false,
                 next_due_at_time: '',
+                aircraft_hours: this.aircraft ? parseFloat(this.aircraft.flight_time || 0).toFixed(1) : '',
+                logbook_entry_id: '',
             };
-            // Auto-calculate next due if recurring
             if (ad.recurring && ad.recurring_hours > 0 && this.aircraft) {
                 this.complianceForm.next_due_at_time = (
                     parseFloat(this.aircraft.flight_time) + parseFloat(ad.recurring_hours)
@@ -1415,9 +1774,25 @@ function aircraftDetail(aircraftId) {
             this.complianceModalOpen = true;
         },
 
+        async openEditComplianceModal(record) {
+            this.editingComplianceRecord = record;
+            this.selectedAd = this.selectedAdForHistory;
+            this.complianceForm = {
+                date_complied: record.date_complied,
+                compliance_notes: record.compliance_notes || '',
+                permanent: record.permanent,
+                next_due_at_time: record.next_due_at_time || '',
+                aircraft_hours: record.aircraft_hours_at_compliance || '',
+                logbook_entry_id: record.logbook_entry ? this.extractIdFromUrl(record.logbook_entry) : '',
+            };
+            if (!this.logbookLoaded) await this.loadLogbookEntries();
+            this.complianceModalOpen = true;
+        },
+
         closeComplianceModal() {
             this.complianceModalOpen = false;
             this.selectedAd = null;
+            this.editingComplianceRecord = null;
         },
 
         async submitCompliance() {
@@ -1425,40 +1800,76 @@ function aircraftDetail(aircraftId) {
             this.complianceSubmitting = true;
             try {
                 const data = {
-                    ad: this.selectedAd.id,
                     date_complied: this.complianceForm.date_complied,
                     compliance_notes: this.complianceForm.compliance_notes,
                     permanent: this.complianceForm.permanent,
                     next_due_at_time: this.complianceForm.permanent ? 0 : (parseFloat(this.complianceForm.next_due_at_time) || 0),
+                    aircraft_hours_at_compliance: this.complianceForm.aircraft_hours ? parseFloat(this.complianceForm.aircraft_hours) : null,
+                    logbook_entry: this.complianceForm.logbook_entry_id || null,
                 };
 
-                const response = await fetch(`/api/aircraft/${this.aircraftId}/compliance/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken'),
-                    },
-                    body: JSON.stringify(data),
-                });
+                let response;
+                if (this.editingComplianceRecord) {
+                    response = await fetch(`/api/ad-compliance/${this.editingComplianceRecord.id}/`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                        body: JSON.stringify(data),
+                    });
+                } else {
+                    data.ad = this.selectedAd.id;
+                    response = await fetch(`/api/aircraft/${this.aircraftId}/compliance/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                        body: JSON.stringify(data),
+                    });
+                }
 
                 if (response.ok) {
-                    showNotification('Compliance recorded', 'success');
+                    showNotification(this.editingComplianceRecord ? 'Compliance updated' : 'Compliance recorded', 'success');
+                    const wasEditing = !!this.editingComplianceRecord;
                     this.closeComplianceModal();
                     this.adsLoaded = false;
                     await this.loadAds();
                     await this.loadData();
+                    if (wasEditing && this.complianceHistoryOpen && this.selectedAdForHistory) {
+                        await this.openComplianceHistory(this.selectedAdForHistory);
+                    }
                 } else {
                     const errorData = await response.json();
                     const msg = typeof errorData === 'object'
                         ? Object.values(errorData).flat().join(', ')
-                        : 'Failed to record compliance';
+                        : 'Failed to save compliance record';
                     showNotification(msg, 'danger');
                 }
             } catch (error) {
-                console.error('Error recording compliance:', error);
-                showNotification('Error recording compliance', 'danger');
+                console.error('Error saving compliance:', error);
+                showNotification('Error saving compliance', 'danger');
             } finally {
                 this.complianceSubmitting = false;
+            }
+        },
+
+        async deleteComplianceRecord(record) {
+            if (!confirm('Delete this compliance record? This cannot be undone.')) return;
+            try {
+                const response = await fetch(`/api/ad-compliance/${record.id}/`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                });
+                if (response.ok || response.status === 204) {
+                    showNotification('Compliance record deleted', 'success');
+                    this.adsLoaded = false;
+                    await this.loadAds();
+                    await this.loadData();
+                    if (this.selectedAdForHistory) {
+                        await this.openComplianceHistory(this.selectedAdForHistory);
+                    }
+                } else {
+                    showNotification('Failed to delete compliance record', 'danger');
+                }
+            } catch (error) {
+                console.error('Error deleting compliance record:', error);
+                showNotification('Error deleting compliance record', 'danger');
             }
         },
 

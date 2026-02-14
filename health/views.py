@@ -53,6 +53,8 @@ class ComponentViewSet(viewsets.ModelViewSet):
 class DocumentCollectionViewSet(viewsets.ModelViewSet):
     queryset = DocumentCollection.objects.all()
     serializer_class = DocumentCollectionSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['aircraft']
 
 class DocumentViewSet(viewsets.ModelViewSet):
     queryset = Document.objects.all()
@@ -101,8 +103,10 @@ class InspectionRecordViewSet(viewsets.ModelViewSet):
     serializer_class = InspectionRecordSerializer
 
 class ADComplianceViewSet(viewsets.ModelViewSet):
-    queryset = ADCompliance.objects.all()
+    queryset = ADCompliance.objects.all().order_by('-date_complied')
     serializer_class = ADComplianceSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['ad', 'aircraft']
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:

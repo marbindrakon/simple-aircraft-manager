@@ -64,6 +64,7 @@ class ComponentSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class DocumentImageSerializer(serializers.HyperlinkedModelSerializer):
+    id = serializers.UUIDField(read_only=True)
     ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.pdf', '.txt'}
     ALLOWED_CONTENT_TYPES = {
         'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff',
@@ -73,7 +74,6 @@ class DocumentImageSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = DocumentImage
         fields = '__all__'
-        read_only_fields = ['id']
 
     def validate_image(self, value):
         import os
@@ -149,6 +149,9 @@ class DocumentCollectionSerializer(serializers.HyperlinkedModelSerializer):
         read_only_fields = ['documents']
 
 class DocumentSerializer(serializers.HyperlinkedModelSerializer):
+    images = DocumentImageNestedSerializer(many=True, read_only=True)
+    doc_type_display = serializers.CharField(source='get_doc_type_display', read_only=True)
+
     class Meta:
         model = Document
         fields = [
@@ -160,18 +163,23 @@ class DocumentSerializer(serializers.HyperlinkedModelSerializer):
                 'name',
                 'description',
                 'doc_type',
+                'doc_type_display',
                 'related_logs',
                 'log_entry',
                 'images',
                 ]
-        read_only_fields = ['images', 'related_logs', 'log_entry']
+        read_only_fields = ['images', 'related_logs', 'log_entry', 'doc_type_display']
 
 class LogbookEntrySerializer(serializers.HyperlinkedModelSerializer):
+    id = serializers.UUIDField(read_only=True)
+
     class Meta:
         model = LogbookEntry
         fields = '__all__'
 
 class SquawkSerializer(serializers.HyperlinkedModelSerializer):
+    id = serializers.UUIDField(read_only=True)
+
     class Meta:
         model = Squawk
         fields = '__all__'
@@ -244,6 +252,8 @@ class SquawkCreateUpdateSerializer(serializers.ModelSerializer):
         return value
 
 class InspectionTypeSerializer(serializers.HyperlinkedModelSerializer):
+    id = serializers.UUIDField(read_only=True)
+
     class Meta:
         model = InspectionType
         fields = '__all__'
@@ -276,7 +286,8 @@ class ADComplianceNestedSerializer(serializers.ModelSerializer):
         model = ADCompliance
         fields = [
             'id', 'ad', 'date_complied', 'compliance_notes',
-            'permanent', 'next_due_at_time', 'aircraft', 'component',
+            'permanent', 'next_due_at_time', 'aircraft_hours_at_compliance',
+            'aircraft', 'component', 'logbook_entry',
         ]
 
 
@@ -286,21 +297,28 @@ class ADComplianceCreateUpdateSerializer(serializers.ModelSerializer):
         model = ADCompliance
         fields = [
             'id', 'ad', 'date_complied', 'compliance_notes',
-            'permanent', 'next_due_at_time', 'aircraft', 'component',
+            'permanent', 'next_due_at_time', 'aircraft_hours_at_compliance',
+            'aircraft', 'component', 'logbook_entry',
         ]
         read_only_fields = ['id']
 
 class STCApplicationSerializer(serializers.HyperlinkedModelSerializer):
+    id = serializers.UUIDField(read_only=True)
+
     class Meta:
         model = STCApplication
         fields = '__all__'
 
 class InspectionRecordSerializer(serializers.HyperlinkedModelSerializer):
+    id = serializers.UUIDField(read_only=True)
+
     class Meta:
         model = InspectionRecord
         fields = '__all__'
 
 class ADComplianceSerializer(serializers.HyperlinkedModelSerializer):
+    id = serializers.UUIDField(read_only=True)
+
     class Meta:
         model = ADCompliance
         fields = '__all__'

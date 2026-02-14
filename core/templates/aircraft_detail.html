@@ -341,42 +341,86 @@
 
         <!-- Logbook Tab -->
         <div x-show="activeTab === 'logbook'" class="pf-v5-c-page__main-section">
-            <template x-if="recentLogs.length === 0">
-                <div class="pf-v5-c-empty-state">
-                    <div class="pf-v5-c-empty-state__content">
-                        <h2 class="pf-v5-c-title pf-m-lg">No logbook entries</h2>
-                    </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>Maintenance Logbook</h2>
+                <button class="pf-v5-c-button pf-m-primary" @click="openLogbookModal()">
+                    <i class="fas fa-plus"></i> New Entry
+                </button>
+            </div>
+
+            <!-- Loading -->
+            <div x-show="!logbookLoaded" class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
+                    <h2 class="pf-v5-c-title pf-m-lg">Loading logbook...</h2>
                 </div>
-            </template>
-            <template x-if="recentLogs.length > 0">
-                <div class="pf-v5-l-stack pf-m-gutter">
-                    <template x-for="log in recentLogs" :key="log.id">
-                        <div class="pf-v5-c-card">
-                            <div class="pf-v5-c-card__title">
-                                <div style="display: flex; justify-content: space-between;">
-                                    <h3 x-text="formatDate(log.date)"></h3>
-                                    <span class="pf-v5-c-label pf-m-blue" x-text="log.entry_type || log.log_type"></span>
-                                </div>
-                            </div>
-                            <div class="pf-v5-c-card__body">
-                                <p x-text="log.text"></p>
-                                <template x-if="log.aircraft_hours_at_entry">
-                                    <p style="margin-top: 0.5rem;">
-                                        <strong>Aircraft Hours:</strong>
-                                        <span x-text="formatHours(log.aircraft_hours_at_entry)"></span>
-                                    </p>
-                                </template>
-                                <template x-if="log.signoff_person">
-                                    <p style="margin-top: 0.5rem;">
-                                        <strong>Signed by:</strong>
-                                        <span x-text="log.signoff_person"></span>
-                                    </p>
-                                </template>
+            </div>
+
+            <div x-show="logbookLoaded" x-cloak>
+                <template x-if="logbookEntries.length === 0">
+                    <div class="pf-v5-c-empty-state">
+                        <div class="pf-v5-c-empty-state__content">
+                            <i class="fas fa-book" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                            <h2 class="pf-v5-c-title pf-m-lg">No logbook entries</h2>
+                            <div class="pf-v5-c-empty-state__body">
+                                No maintenance entries have been recorded yet.
                             </div>
                         </div>
-                    </template>
-                </div>
-            </template>
+                    </div>
+                </template>
+                <template x-if="logbookEntries.length > 0">
+                    <div class="pf-v5-l-stack pf-m-gutter">
+                        <template x-for="log in logbookEntries" :key="log.id">
+                            <div class="pf-v5-c-card" :id="`log-entry-${log.id}`">
+                                <div class="pf-v5-c-card__header">
+                                    <div class="pf-v5-c-card__header-main">
+                                        <div class="pf-v5-c-card__title">
+                                            <span x-text="formatDate(log.date)" style="font-weight: 600;"></span>
+                                            <span class="pf-v5-c-label pf-m-blue" style="margin-left: 0.5rem;" x-text="log.entry_type || log.log_type"></span>
+                                        </div>
+                                    </div>
+                                    <div class="pf-v5-c-card__actions">
+                                        <button class="pf-v5-c-button pf-m-plain" @click="editLogEntry(log)" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="pf-v5-c-button pf-m-plain pf-m-danger" @click="deleteLogEntry(log)" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="pf-v5-c-card__body">
+                                    <p x-text="log.text"></p>
+                                    <template x-if="log.aircraft_hours_at_entry">
+                                        <p style="margin-top: 0.5rem;">
+                                            <strong>Aircraft Hours:</strong>
+                                            <span x-text="formatHours(log.aircraft_hours_at_entry)"></span>
+                                        </p>
+                                    </template>
+                                    <template x-if="log.signoff_person">
+                                        <p style="margin-top: 0.5rem;">
+                                            <strong>Signed by:</strong>
+                                            <span x-text="log.signoff_person"></span>
+                                            <template x-if="log.signoff_location">
+                                                <span> at <span x-text="log.signoff_location"></span></span>
+                                            </template>
+                                        </p>
+                                    </template>
+                                    <template x-if="log.log_image">
+                                        <p style="margin-top: 0.5rem;">
+                                            <i class="fas fa-paperclip" style="color: var(--pf-v5-global--Color--200);"></i>
+                                            <button class="pf-v5-c-button pf-m-link pf-m-inline"
+                                                    @click="viewLogEntryDocument(log)"
+                                                    style="font-size: inherit;">
+                                                View attached document
+                                            </button>
+                                        </p>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
         </div>
 
         <!-- Squawks Tab -->
@@ -551,6 +595,11 @@
                                                     @click="openComplianceModal(ad)"
                                                     title="Record Compliance">
                                                 <i class="fas fa-check"></i>
+                                            </button>
+                                            <button class="pf-v5-c-button pf-m-plain"
+                                                    @click="openComplianceHistory(ad)"
+                                                    title="View Compliance History">
+                                                <i class="fas fa-history"></i>
                                             </button>
                                             <button class="pf-v5-c-button pf-m-plain pf-m-danger"
                                                     @click="removeAd(ad)"
@@ -874,6 +923,362 @@
                         </div>
                     </template>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logbook Entry Modal -->
+    <div class="pf-v5-c-backdrop" x-show="logbookModalOpen" x-cloak @click.self="closeLogbookModal()" style="z-index: 1100;">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-lg" @click.stop style="max-height: 90vh; overflow-y: auto;">
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeLogbookModal()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title" x-text="editingLogEntry ? 'Edit Logbook Entry' : 'New Logbook Entry'"></h1>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <form @submit.prevent="submitLogEntry" class="pf-v5-c-form">
+                        <!-- Date / Hours row -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="log-date">
+                                    <span class="pf-v5-c-form__label-text">Date</span>
+                                    <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input id="log-date" class="pf-v5-c-form-control" type="date" x-model="logbookForm.date" required>
+                                </div>
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="log-hours">
+                                    <span class="pf-v5-c-form__label-text">Aircraft Hours</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input id="log-hours" class="pf-v5-c-form-control" type="number" step="0.1" min="0" x-model="logbookForm.aircraft_hours_at_entry" placeholder="e.g. 1234.5">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Entry Type / Log Type row -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="log-entry-type">
+                                    <span class="pf-v5-c-form__label-text">Entry Type</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <select id="log-entry-type" class="pf-v5-c-form-control" x-model="logbookForm.entry_type">
+                                        <option value="MAINTENANCE">Maintenance</option>
+                                        <option value="INSPECTION">Inspection</option>
+                                        <option value="FLIGHT">Flight</option>
+                                        <option value="HOURS_UPDATE">Hours Update</option>
+                                        <option value="OTHER">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="log-type">
+                                    <span class="pf-v5-c-form__label-text">Log Book</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <select id="log-type" class="pf-v5-c-form-control" x-model="logbookForm.log_type">
+                                        <option value="AC">Airframe</option>
+                                        <option value="ENG">Engine</option>
+                                        <option value="PROP">Propeller</option>
+                                        <option value="OTHER">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Entry Text -->
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="log-text">
+                                <span class="pf-v5-c-form__label-text">Entry Description</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <textarea id="log-text" class="pf-v5-c-form-control" rows="4" x-model="logbookForm.text" required placeholder="Describe the maintenance performed, inspection completed, etc."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Signoff row -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="log-signoff-person">
+                                    <span class="pf-v5-c-form__label-text">Signed Off By</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input id="log-signoff-person" class="pf-v5-c-form-control" type="text" x-model="logbookForm.signoff_person" placeholder="Mechanic name / certificate #">
+                                </div>
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="log-signoff-location">
+                                    <span class="pf-v5-c-form__label-text">Location</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input id="log-signoff-location" class="pf-v5-c-form-control" type="text" x-model="logbookForm.signoff_location" placeholder="Airport / facility">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Attach Images (new entries only) -->
+                        <template x-if="!editingLogEntry">
+                            <div>
+                                <div class="pf-v5-c-form__group">
+                                    <label class="pf-v5-c-form__label" for="log-images">
+                                        <span class="pf-v5-c-form__label-text">Attach Images / Documents</span>
+                                    </label>
+                                    <div class="pf-v5-c-form__group-control">
+                                        <input id="log-images" class="pf-v5-c-form-control" type="file" multiple
+                                               accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.pdf,.txt"
+                                               @change="onLogbookFilesSelected($event)">
+                                        <p style="font-size: 0.8em; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;">
+                                            Files are uploaded as a new document linked to this entry. Accepted: images, PDF, TXT.
+                                        </p>
+                                        <template x-if="logbookImageFiles.length > 0">
+                                            <p style="font-size: 0.85em; margin-top: 0.25rem;">
+                                                <i class="fas fa-paperclip"></i>
+                                                <span x-text="logbookImageFiles.length"></span> file(s) selected
+                                            </p>
+                                        </template>
+                                    </div>
+                                </div>
+                                <template x-if="logbookImageFiles.length > 0">
+                                    <div class="pf-v5-c-form__group">
+                                        <label class="pf-v5-c-form__label" for="log-collection">
+                                            <span class="pf-v5-c-form__label-text">Document Collection</span>
+                                        </label>
+                                        <div class="pf-v5-c-form__group-control">
+                                            <select id="log-collection" class="pf-v5-c-form-control" x-model="logbookForm.document_collection">
+                                                <option value="">— No collection (uncollected) —</option>
+                                                <template x-for="col in aircraftCollections" :key="col.id">
+                                                    <option :value="col.id" x-text="col.name"></option>
+                                                </template>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+
+                        <!-- Link to AD compliance (new entries only) -->
+                        <template x-if="!editingLogEntry && applicableAds.length > 0">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="log-link-ad">
+                                    <span class="pf-v5-c-form__label-text">Record AD Compliance</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <select id="log-link-ad" class="pf-v5-c-form-control" x-model="logbookForm.link_ad_id">
+                                        <option value="">— None —</option>
+                                        <template x-for="ad in applicableAds" :key="ad.id">
+                                            <option :value="ad.id" x-text="ad.name + ' – ' + ad.short_description"></option>
+                                        </template>
+                                    </select>
+                                    <p style="font-size: 0.8em; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;">
+                                        Selecting an AD will create a compliance record linked to this logbook entry.
+                                    </p>
+                                </div>
+                            </div>
+                        </template>
+                    </form>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" type="button" @click="submitLogEntry()" :disabled="logbookSubmitting">
+                        <span x-show="!logbookSubmitting" x-text="editingLogEntry ? 'Save Changes' : 'Create Entry'"></span>
+                        <span x-show="logbookSubmitting">Saving...</span>
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" type="button" @click="closeLogbookModal()">Cancel</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compliance History Modal -->
+    <div class="pf-v5-c-backdrop" x-show="complianceHistoryOpen" x-cloak @click.self="closeComplianceHistory()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-lg" @click.stop style="max-height: 90vh; overflow-y: auto;">
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeComplianceHistory()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">
+                        Compliance History
+                        <template x-if="selectedAdForHistory">
+                            <span style="font-weight: normal; font-size: 0.9em;"> — <span x-text="selectedAdForHistory.name"></span></span>
+                        </template>
+                    </h1>
+                    <template x-if="selectedAdForHistory?.short_description">
+                        <div class="pf-v5-c-modal-box__description" x-text="selectedAdForHistory.short_description"></div>
+                    </template>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <!-- Loading -->
+                    <div x-show="complianceHistoryLoading" style="text-align: center; padding: 2rem;">
+                        <div class="loading-spinner" style="width: 2rem; height: 2rem; margin: 0 auto;"></div>
+                        <p style="margin-top: 0.5rem; color: var(--pf-v5-global--Color--200);">Loading history...</p>
+                    </div>
+
+                    <!-- Empty -->
+                    <template x-if="!complianceHistoryLoading && complianceHistory.length === 0">
+                        <div class="pf-v5-c-empty-state">
+                            <div class="pf-v5-c-empty-state__content">
+                                <i class="fas fa-clipboard" style="font-size: 2.5rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                                <h2 class="pf-v5-c-title pf-m-md">No compliance records</h2>
+                                <div class="pf-v5-c-empty-state__body">
+                                    No compliance has been recorded for this AD on this aircraft.
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Compliance records table -->
+                    <template x-if="!complianceHistoryLoading && complianceHistory.length > 0">
+                        <table class="pf-v5-c-table pf-m-grid-md">
+                            <thead>
+                                <tr>
+                                    <th>Date Complied</th>
+                                    <th>Aircraft Hours</th>
+                                    <th>Notes</th>
+                                    <th>Permanent</th>
+                                    <th>Next Due (hrs)</th>
+                                    <th>Logbook Entry</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="record in complianceHistory" :key="record.id">
+                                    <tr>
+                                        <td x-text="formatDate(record.date_complied)"></td>
+                                        <td>
+                                            <template x-if="record.aircraft_hours_at_compliance">
+                                                <span x-text="formatHours(record.aircraft_hours_at_compliance)"></span>
+                                            </template>
+                                            <template x-if="!record.aircraft_hours_at_compliance">
+                                                <span>—</span>
+                                            </template>
+                                        </td>
+                                        <td x-text="record.compliance_notes || '—'"></td>
+                                        <td>
+                                            <template x-if="record.permanent">
+                                                <span class="pf-v5-c-label pf-m-green pf-m-compact">Yes</span>
+                                            </template>
+                                            <template x-if="!record.permanent">
+                                                <span>No</span>
+                                            </template>
+                                        </td>
+                                        <td>
+                                            <template x-if="record.next_due_at_time && record.next_due_at_time > 0">
+                                                <span x-text="formatHours(record.next_due_at_time) + ' hrs'"></span>
+                                            </template>
+                                            <template x-if="!record.next_due_at_time || record.next_due_at_time == 0">
+                                                <span>—</span>
+                                            </template>
+                                        </td>
+                                        <td>
+                                            <template x-if="record.logbook_entry">
+                                                <button class="pf-v5-c-button pf-m-link pf-m-inline"
+                                                        @click="viewLogEntryFromCompliance(record.logbook_entry)">
+                                                    <i class="fas fa-book-open"></i> View
+                                                </button>
+                                            </template>
+                                            <template x-if="!record.logbook_entry">
+                                                <span style="color: var(--pf-v5-global--Color--200);">—</span>
+                                            </template>
+                                        </td>
+                                        <td style="white-space: nowrap;">
+                                            <button class="pf-v5-c-button pf-m-plain" title="Edit" @click="openEditComplianceModal(record)">
+                                                <i class="fas fa-pencil-alt"></i>
+                                            </button>
+                                            <button class="pf-v5-c-button pf-m-plain" title="Delete" style="color: var(--pf-v5-global--danger-color--100);" @click="deleteComplianceRecord(record)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </template>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" type="button" @click="openComplianceModal(selectedAdForHistory); closeComplianceHistory()">
+                        <i class="fas fa-plus"></i> Record New Compliance
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" type="button" @click="closeComplianceHistory()">Close</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logbook Entry Detail Modal (from compliance history) -->
+    <div class="pf-v5-c-backdrop" x-show="logEntryDetailOpen" x-cloak @click.self="closeLogEntryDetail()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-md" @click.stop style="max-height: 80vh; overflow-y: auto;">
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeLogEntryDetail()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">Logbook Entry</h1>
+                    <template x-if="logEntryDetail">
+                        <div class="pf-v5-c-modal-box__description">
+                            <span x-text="formatDate(logEntryDetail.date)"></span>
+                            <span class="pf-v5-c-label pf-m-blue pf-m-compact" style="margin-left: 0.5rem;" x-text="logEntryDetail.entry_type || logEntryDetail.log_type"></span>
+                        </div>
+                    </template>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <div x-show="logEntryDetailLoading" style="text-align: center; padding: 2rem;">
+                        <div class="loading-spinner" style="width: 2rem; height: 2rem; margin: 0 auto;"></div>
+                    </div>
+
+                    <template x-if="!logEntryDetailLoading && logEntryDetail">
+                        <dl class="pf-v5-c-description-list">
+                            <div class="pf-v5-c-description-list__group">
+                                <dt class="pf-v5-c-description-list__term">Description</dt>
+                                <dd class="pf-v5-c-description-list__description" x-text="logEntryDetail.text"></dd>
+                            </div>
+                            <template x-if="logEntryDetail.aircraft_hours_at_entry">
+                                <div class="pf-v5-c-description-list__group">
+                                    <dt class="pf-v5-c-description-list__term">Aircraft Hours</dt>
+                                    <dd class="pf-v5-c-description-list__description" x-text="formatHours(logEntryDetail.aircraft_hours_at_entry)"></dd>
+                                </div>
+                            </template>
+                            <template x-if="logEntryDetail.signoff_person">
+                                <div class="pf-v5-c-description-list__group">
+                                    <dt class="pf-v5-c-description-list__term">Signed By</dt>
+                                    <dd class="pf-v5-c-description-list__description">
+                                        <span x-text="logEntryDetail.signoff_person"></span>
+                                        <template x-if="logEntryDetail.signoff_location">
+                                            <span> at <span x-text="logEntryDetail.signoff_location"></span></span>
+                                        </template>
+                                    </dd>
+                                </div>
+                            </template>
+                            <template x-if="logEntryDetail.log_image">
+                                <div class="pf-v5-c-description-list__group">
+                                    <dt class="pf-v5-c-description-list__term">Attached Document</dt>
+                                    <dd class="pf-v5-c-description-list__description">
+                                        <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewLogEntryDocument(logEntryDetail)">
+                                            <i class="fas fa-images"></i> View images
+                                        </button>
+                                    </dd>
+                                </div>
+                            </template>
+                        </dl>
+                    </template>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-link" type="button" @click="closeLogEntryDetail()">Close</button>
+                </footer>
             </div>
         </div>
     </div>
@@ -1624,27 +2029,37 @@
     <!-- Record Compliance Modal -->
     <div class="pf-v5-c-backdrop" x-show="complianceModalOpen" x-cloak @click.self="closeComplianceModal()">
         <div class="pf-v5-l-bullseye">
-            <div class="pf-v5-c-modal-box pf-m-md" @click.stop>
+            <div class="pf-v5-c-modal-box pf-m-md" @click.stop style="max-height: 90vh; overflow-y: auto;">
                 <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeComplianceModal()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
                     <i class="fas fa-times"></i>
                 </button>
 
                 <header class="pf-v5-c-modal-box__header">
-                    <h1 class="pf-v5-c-modal-box__title">Record AD Compliance</h1>
+                    <h1 class="pf-v5-c-modal-box__title" x-text="editingComplianceRecord ? 'Edit Compliance Record' : 'Record AD Compliance'"></h1>
                     <template x-if="selectedAd">
-                        <div class="pf-v5-c-modal-box__description" x-text="selectedAd.name + ' - ' + selectedAd.short_description"></div>
+                        <div class="pf-v5-c-modal-box__description" x-text="selectedAd.name + ' — ' + selectedAd.short_description"></div>
                     </template>
                 </header>
 
                 <div class="pf-v5-c-modal-box__body">
                     <form @submit.prevent="submitCompliance" class="pf-v5-c-form">
-                        <div class="pf-v5-c-form__group">
-                            <label class="pf-v5-c-form__label" for="compliance-date">
-                                <span class="pf-v5-c-form__label-text">Date Complied</span>
-                                <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
-                            </label>
-                            <div class="pf-v5-c-form__group-control">
-                                <input type="date" id="compliance-date" class="pf-v5-c-form-control" x-model="complianceForm.date_complied" required>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="compliance-date">
+                                    <span class="pf-v5-c-form__label-text">Date Complied</span>
+                                    <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input type="date" id="compliance-date" class="pf-v5-c-form-control" x-model="complianceForm.date_complied" required>
+                                </div>
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="compliance-aircraft-hours">
+                                    <span class="pf-v5-c-form__label-text">Aircraft Hours</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input type="number" step="0.1" min="0" id="compliance-aircraft-hours" class="pf-v5-c-form-control" x-model="complianceForm.aircraft_hours" placeholder="e.g. 1234.5">
+                                </div>
                             </div>
                         </div>
                         <div class="pf-v5-c-form__group">
@@ -1673,12 +2088,29 @@
                                 </div>
                             </div>
                         </template>
+
+                        <!-- Logbook entry section (edit only) -->
+                        <template x-if="editingComplianceRecord">
+                            <div class="pf-v5-c-form__group" style="border-top: 1px solid var(--pf-v5-global--BorderColor--100); padding-top: 1rem; margin-top: 0.5rem;">
+                                <label class="pf-v5-c-form__label" for="compliance-logbook-entry">
+                                    <span class="pf-v5-c-form__label-text">Logbook Entry</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <select id="compliance-logbook-entry" class="pf-v5-c-form-control" x-model="complianceForm.logbook_entry_id">
+                                        <option value="">— None —</option>
+                                        <template x-for="entry in logbookEntries" :key="entry.id">
+                                            <option :value="entry.id" x-text="logbookEntryLabel(entry)"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+                        </template>
                     </form>
                 </div>
 
                 <footer class="pf-v5-c-modal-box__footer">
                     <button class="pf-v5-c-button pf-m-primary" @click="submitCompliance" :disabled="complianceSubmitting">
-                        <span x-show="!complianceSubmitting">Record Compliance</span>
+                        <span x-show="!complianceSubmitting" x-text="editingComplianceRecord ? 'Save Changes' : 'Record Compliance'"></span>
                         <span x-show="complianceSubmitting">Saving...</span>
                     </button>
                     <button class="pf-v5-c-button pf-m-link" @click="closeComplianceModal()">Cancel</button>

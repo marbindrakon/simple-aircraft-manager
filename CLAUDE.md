@@ -281,9 +281,17 @@ DJANGO_SECRET_KEY=test DJANGO_ALLOWED_HOSTS=localhost python manage.py check --s
 
 The Containerfile passes dummy values for `collectstatic` at build time since it doesn't need real secrets.
 
-### 2. Component ID in Serializer
+### 2. HyperlinkedModelSerializer Always Needs Explicit `id`
 
-The `ComponentSerializer` needs `'id'` explicitly listed in fields (it's not included by default with HyperlinkedModelSerializer).
+`HyperlinkedModelSerializer` with `fields = '__all__'` does **not** include the UUID primary key (`id`) in API responses — it's replaced by `url` as the resource identifier. This affects every serializer using `__all__` or any field list that doesn't explicitly name `'id'`.
+
+**Rule**: Every `HyperlinkedModelSerializer` must either:
+- Include `'id'` in its explicit field list, **or**
+- Declare `id = serializers.UUIDField(read_only=True)` as a class attribute
+
+**Why it matters for the frontend**: Alpine.js `x-for` uses `:key` to track elements. If `:key="record.id"` resolves to `undefined` for all items (because `id` is missing from the API response), Alpine v3 silently renders **zero rows** — not even one. This is an easy bug to miss because the data is present in the Alpine state; only rendering breaks.
+
+**All serializers in this codebase have been fixed** to expose `id`. When adding a new `HyperlinkedModelSerializer`, always include `id` from the start.
 
 ### 3. CSRF for API Calls
 
@@ -321,6 +329,12 @@ CSP blocks inline `<script>` tags. All JS must be in external files under `core/
 ### 8. TLS Termination
 
 TLS is terminated at the nginx sidecar (port 8443), not at the OpenShift router. The route uses `passthrough` termination. The cert is managed by cert-manager (`certificate.yaml` in gitops). Django receives `X-Forwarded-Proto: https` from nginx and has `SECURE_PROXY_SSL_HEADER` configured to trust it.
+
+### 9. Stacking Modals (PatternFly Backdrop z-index)
+
+PatternFly 5's `.pf-v5-c-backdrop` sets `z-index: 1000` via CSS custom property. When a second modal must appear **on top of** a first modal (e.g. logbook modal opening from the compliance modal), the second modal's backdrop needs `style="z-index: 1100;"` (or higher). Setting it to anything ≤ 1000 has no effect — it will render behind the other modal regardless of DOM order.
+
+The logbook entry modal (`logbookModalOpen`) currently has `z-index: 1100` for this reason.
 
 ## File Locations
 
