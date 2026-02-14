@@ -11,6 +11,7 @@ class AirworthinessMixin:
 
 class AircraftSerializer(AirworthinessMixin, serializers.HyperlinkedModelSerializer):
     airworthiness = serializers.SerializerMethodField()
+    events = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
         model = Aircraft
@@ -101,6 +102,8 @@ class AircraftNoteCreateUpdateSerializer(serializers.ModelSerializer):
 
 
 class AircraftEventSerializer(serializers.HyperlinkedModelSerializer):
+    user_display = serializers.SerializerMethodField()
+
     class Meta:
         model = AircraftEvent
         fields = [
@@ -111,5 +114,37 @@ class AircraftEventSerializer(serializers.HyperlinkedModelSerializer):
                 'category',
                 'event_name',
                 'notes',
+                'user',
+                'user_display',
                 ]
+
+    def get_user_display(self, obj):
+        if not obj.user:
+            return None
+        full = obj.user.get_full_name()
+        return full if full else obj.user.username
+
+
+class AircraftEventNestedSerializer(serializers.ModelSerializer):
+    """Nested serializer for events with display fields."""
+    user_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AircraftEvent
+        fields = [
+            'id',
+            'aircraft',
+            'timestamp',
+            'category',
+            'event_name',
+            'notes',
+            'user',
+            'user_display',
+        ]
+
+    def get_user_display(self, obj):
+        if not obj.user:
+            return None
+        full = obj.user.get_full_name()
+        return full if full else obj.user.username
 

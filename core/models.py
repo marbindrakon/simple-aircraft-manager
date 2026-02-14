@@ -47,13 +47,31 @@ class AircraftNote(models.Model):
     def __str__(self):
         return f"{self.aircraft.tail_number} - {self.text}"
 
+EVENT_CATEGORIES = (
+    ('hours', 'Hours Update'),
+    ('component', 'Component'),
+    ('squawk', 'Squawk'),
+    ('note', 'Note'),
+    ('oil', 'Oil'),
+    ('fuel', 'Fuel'),
+    ('logbook', 'Logbook'),
+    ('ad', 'Airworthiness Directive'),
+    ('inspection', 'Inspection'),
+    ('document', 'Document'),
+    ('aircraft', 'Aircraft'),
+)
+
 class AircraftEvent(models.Model):
     id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
     aircraft = models.ForeignKey(Aircraft, related_name='events', on_delete=models.CASCADE, blank=False)
     timestamp = models.DateTimeField(auto_now_add=True, editable=False)
-    category = models.CharField(max_length=254, blank=False)
+    category = models.CharField(max_length=50, blank=False, choices=EVENT_CATEGORIES)
     event_name = models.CharField(max_length=254, blank=False)
     notes = models.TextField(blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+
+    class Meta:
+        ordering = ['-timestamp']
 
     def __str__(self):
         return f"{self.aircraft.tail_number} - {self.event_name}"

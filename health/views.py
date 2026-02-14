@@ -4,6 +4,8 @@ from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from core.events import log_event
+from core.mixins import EventLoggingMixin
 from health.models import (
     ComponentType, Component, DocumentCollection, Document, DocumentImage,
     LogbookEntry, Squawk, InspectionType, AD, STCApplication,
@@ -22,9 +24,10 @@ class ComponentTypeViewSet(viewsets.ModelViewSet):
     queryset = ComponentType.objects.all()
     serializer_class = ComponentTypeSerializer
 
-class ComponentViewSet(viewsets.ModelViewSet):
+class ComponentViewSet(EventLoggingMixin, viewsets.ModelViewSet):
     queryset = Component.objects.all()
     serializer_class = ComponentSerializer
+    event_category = 'component'
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['aircraft', 'component_type', 'status']
 
@@ -52,6 +55,13 @@ class ComponentViewSet(viewsets.ModelViewSet):
         component.date_in_service = timezone.now().date()
         component.save()
 
+        log_event(
+            component.aircraft, 'component',
+            f"Service reset: {component.component_type.name}",
+            user=request.user,
+            notes=f"Previous hours: {old_hours}",
+        )
+
         return Response({
             'success': True,
             'component_id': str(component.id),
@@ -61,33 +71,39 @@ class ComponentViewSet(viewsets.ModelViewSet):
             'date_in_service': str(component.date_in_service),
         })
 
-class DocumentCollectionViewSet(viewsets.ModelViewSet):
+class DocumentCollectionViewSet(EventLoggingMixin, viewsets.ModelViewSet):
     queryset = DocumentCollection.objects.all()
     serializer_class = DocumentCollectionSerializer
+    event_category = 'document'
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['aircraft']
 
-class DocumentViewSet(viewsets.ModelViewSet):
+class DocumentViewSet(EventLoggingMixin, viewsets.ModelViewSet):
     queryset = Document.objects.all()
     serializer_class = DocumentSerializer
+    event_category = 'document'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['aircraft', 'doc_type', 'collection']
     search_fields = ['name', 'description']
 
-class DocumentImageViewSet(viewsets.ModelViewSet):
+class DocumentImageViewSet(EventLoggingMixin, viewsets.ModelViewSet):
     queryset = DocumentImage.objects.all()
     serializer_class = DocumentImageSerializer
+    event_category = 'document'
+    aircraft_field = 'document.aircraft'
 
-class LogbookEntryViewSet(viewsets.ModelViewSet):
+class LogbookEntryViewSet(EventLoggingMixin, viewsets.ModelViewSet):
     queryset = LogbookEntry.objects.all().order_by('-date')
     serializer_class = LogbookEntrySerializer
+    event_category = 'logbook'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['aircraft', 'log_type', 'entry_type']
     search_fields = ['text', 'signoff_person']
 
-class SquawkViewSet(viewsets.ModelViewSet):
+class SquawkViewSet(EventLoggingMixin, viewsets.ModelViewSet):
     queryset = Squawk.objects.all().order_by('-created_at')
     serializer_class = SquawkSerializer
+    event_category = 'squawk'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['aircraft', 'component', 'priority', 'resolved']
     search_fields = ['issue_reported', 'notes']
@@ -109,9 +125,10 @@ class STCApplicationViewSet(viewsets.ModelViewSet):
     queryset = STCApplication.objects.all()
     serializer_class = STCApplicationSerializer
 
-class InspectionRecordViewSet(viewsets.ModelViewSet):
+class InspectionRecordViewSet(EventLoggingMixin, viewsets.ModelViewSet):
     queryset = InspectionRecord.objects.all().order_by('-date')
     serializer_class = InspectionRecordSerializer
+    event_category = 'inspection'
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['inspection_type', 'aircraft']
 
@@ -120,9 +137,13 @@ class InspectionRecordViewSet(viewsets.ModelViewSet):
             return InspectionRecordNestedSerializer
         return InspectionRecordSerializer
 
-class ADComplianceViewSet(viewsets.ModelViewSet):
+class ADComplianceViewSet(EventLoggingMixin, viewsets.ModelViewSet):
     queryset = ADCompliance.objects.all().order_by('-date_complied')
     serializer_class = ADComplianceSerializer
+    event_category = 'ad'
+    event_name_created = 'AD compliance created'
+    event_name_updated = 'AD compliance updated'
+    event_name_deleted = 'AD compliance deleted'
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['ad', 'aircraft']
 

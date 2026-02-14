@@ -14,11 +14,13 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from core.events import log_event
+from core.mixins import EventLoggingMixin
 from core.models import Aircraft, AircraftNote, AircraftEvent
 from core.serializers import (
     AircraftSerializer, AircraftListSerializer, AircraftNoteSerializer,
     AircraftNoteNestedSerializer, AircraftNoteCreateUpdateSerializer,
-    AircraftEventSerializer,
+    AircraftEventSerializer, AircraftEventNestedSerializer,
 )
 from health.models import (
     Component, LogbookEntry, Squawk, Document, DocumentCollection,
@@ -95,6 +97,13 @@ class AircraftViewSet(viewsets.ModelViewSet):
             component.hours_since_overhaul += hours_delta
             component.save()
             updated_components.append(str(component.id))
+
+        log_event(
+            aircraft, 'hours',
+            f"Hours updated to {new_hours}",
+            user=request.user,
+            notes=f"Previous: {old_hours}, delta: +{hours_delta}",
+        )
 
         return Response({
             'success': True,
@@ -209,6 +218,11 @@ class AircraftViewSet(viewsets.ModelViewSet):
             serializer = SquawkCreateUpdateSerializer(data=data)
             if serializer.is_valid():
                 squawk = serializer.save()
+                log_event(
+                    aircraft, 'squawk',
+                    f"Squawk reported: {squawk.get_priority_display()}",
+                    user=request.user,
+                )
                 return Response(
                     SquawkNestedSerializer(squawk, context={'request': request}).data,
                     status=status.HTTP_201_CREATED
@@ -246,6 +260,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 note = serializer.save(
                     added_by=request.user if request.user.is_authenticated else None
                 )
+                log_event(aircraft, 'note', "Note added", user=request.user)
                 return Response(
                     AircraftNoteNestedSerializer(note, context={'request': request}).data,
                     status=status.HTTP_201_CREATED
@@ -276,6 +291,11 @@ class AircraftViewSet(viewsets.ModelViewSet):
             serializer = OilRecordCreateSerializer(data=data)
             if serializer.is_valid():
                 record = serializer.save()
+                log_event(
+                    aircraft, 'oil',
+                    f"Oil added: {record.quantity_added} qt",
+                    user=request.user,
+                )
                 return Response(
                     OilRecordNestedSerializer(record).data,
                     status=status.HTTP_201_CREATED
@@ -306,12 +326,16 @@ class AircraftViewSet(viewsets.ModelViewSet):
             serializer = FuelRecordCreateSerializer(data=data)
             if serializer.is_valid():
                 record = serializer.save()
+                log_event(
+                    aircraft, 'fuel',
+                    f"Fuel added: {record.quantity_added} gal",
+                    user=request.user,
+                )
                 return Response(
                     FuelRecordNestedSerializer(record).data,
                     status=status.HTTP_201_CREATED
                 )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
     @action(detail=True, methods=['post'])
     def components(self, request, pk=None):
@@ -327,12 +351,16 @@ class AircraftViewSet(viewsets.ModelViewSet):
         serializer = ComponentCreateUpdateSerializer(data=data)
         if serializer.is_valid():
             component = serializer.save(aircraft=aircraft)
+            log_event(
+                aircraft, 'component',
+                f"Component added: {component.component_type.name}",
+                user=request.user,
+            )
             return Response(
                 ComponentSerializer(component, context={'request': request}).data,
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
     @action(detail=True, methods=['get', 'post'])
     def ads(self, request, pk=None):
@@ -397,6 +425,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 except AD.DoesNotExist:
                     return Response({'error': 'AD not found'}, status=status.HTTP_404_NOT_FOUND)
                 ad.applicable_aircraft.add(aircraft)
+                log_event(aircraft, 'ad', f"AD linked: {ad.name}", user=request.user)
                 return Response(ADNestedSerializer(ad).data, status=status.HTTP_200_OK)
             else:
                 # Create a new AD and add to this aircraft
@@ -404,6 +433,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 if serializer.is_valid():
                     ad = serializer.save()
                     ad.applicable_aircraft.add(aircraft)
+                    log_event(aircraft, 'ad', f"AD created: {ad.name}", user=request.user)
                     return Response(ADNestedSerializer(ad).data, status=status.HTTP_201_CREATED)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -440,12 +470,17 @@ class AircraftViewSet(viewsets.ModelViewSet):
         serializer = ADComplianceNestedSerializer(data=data)
         if serializer.is_valid():
             record = serializer.save()
+            ad_name = record.ad.name if record.ad else "Unknown"
+            log_event(
+                aircraft, 'ad',
+                f"AD compliance recorded: {ad_name}",
+                user=request.user,
+            )
             return Response(
                 ADComplianceNestedSerializer(record).data,
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
     @action(detail=True, methods=['get', 'post'])
     def inspections(self, request, pk=None):
@@ -500,6 +535,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 except InspectionType.DoesNotExist:
                     return Response({'error': 'InspectionType not found'}, status=status.HTTP_404_NOT_FOUND)
                 insp_type.applicable_aircraft.add(aircraft)
+                log_event(aircraft, 'inspection', f"Inspection type linked: {insp_type.name}", user=request.user)
                 return Response(InspectionTypeNestedSerializer(insp_type).data, status=status.HTTP_200_OK)
 
             # Case 2: Create new InspectionType and add to aircraft
@@ -509,6 +545,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 if serializer.is_valid():
                     insp_type = serializer.save()
                     insp_type.applicable_aircraft.add(aircraft)
+                    log_event(aircraft, 'inspection', f"Inspection type created: {insp_type.name}", user=request.user)
                     return Response(InspectionTypeNestedSerializer(insp_type).data, status=status.HTTP_201_CREATED)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -519,11 +556,43 @@ class AircraftViewSet(viewsets.ModelViewSet):
             serializer = InspectionRecordNestedSerializer(data=data)
             if serializer.is_valid():
                 record = serializer.save()
+                type_name = record.inspection_type.name if record.inspection_type else "Unknown"
+                log_event(
+                    aircraft, 'inspection',
+                    f"Inspection completed: {type_name}",
+                    user=request.user,
+                )
                 return Response(
                     InspectionRecordNestedSerializer(record).data,
                     status=status.HTTP_201_CREATED
                 )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get'])
+    def events(self, request, pk=None):
+        """
+        Get events/activity log for an aircraft.
+        GET /api/aircraft/{id}/events/?limit=50&category=hours
+        """
+        aircraft = self.get_object()
+        qs = AircraftEvent.objects.filter(aircraft=aircraft).select_related('user')
+
+        category = request.query_params.get('category')
+        if category:
+            qs = qs.filter(category=category)
+
+        total = qs.count()
+
+        try:
+            limit = min(int(request.query_params.get('limit', 50)), 200)
+        except (ValueError, TypeError):
+            limit = 50
+
+        events = qs[:limit]
+        return Response({
+            'events': AircraftEventNestedSerializer(events, many=True).data,
+            'total': total,
+        })
 
     @action(detail=True, methods=['post'], url_path='remove_inspection_type')
     def remove_inspection_type(self, request, pk=None):
@@ -546,9 +615,12 @@ class AircraftViewSet(viewsets.ModelViewSet):
         return Response({'success': True})
 
 
-class AircraftNoteViewSet(viewsets.ModelViewSet):
+class AircraftNoteViewSet(EventLoggingMixin, viewsets.ModelViewSet):
     queryset = AircraftNote.objects.all().order_by('-added_timestamp')
     serializer_class = AircraftNoteSerializer
+    event_category = 'note'
+    event_name_created = 'Note added'
+    event_name_deleted = 'Note deleted'
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -557,7 +629,10 @@ class AircraftNoteViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         """Set edited_timestamp when note is updated"""
-        serializer.save(edited_timestamp=timezone.now())
+        instance = serializer.save(edited_timestamp=timezone.now())
+        aircraft = instance.aircraft
+        user = self.request.user if hasattr(self, 'request') else None
+        log_event(aircraft, 'note', "Note updated", user=user)
 
 
 class AircraftEventViewSet(viewsets.ReadOnlyModelViewSet):

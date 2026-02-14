@@ -10,6 +10,7 @@ function aircraftDetail(aircraftId) {
         adsMixin(),
         inspectionsMixin(),
         documentsMixin(),
+        eventsMixin(),
 
         // Core state and methods (last so they win on any key collision)
         {
@@ -58,6 +59,9 @@ function aircraftDetail(aircraftId) {
                     this.recentLogs = data.recent_logs;
                     this.activeSquawks = data.active_squawks;
                     this.aircraftNotes = data.notes || [];
+
+                    // Refresh recent events (non-blocking)
+                    this.loadRecentEvents();
                 } catch (error) {
                     console.error('Error loading aircraft data:', error);
                     showNotification('Failed to load aircraft data', 'danger');

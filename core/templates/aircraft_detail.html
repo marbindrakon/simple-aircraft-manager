@@ -33,6 +33,11 @@
                         </span>
                         <span class="status-text" x-text="getAirworthinessText()"></span>
                     </div>
+                    <!-- Current Hours -->
+                    <div x-show="aircraft" x-cloak style="display: flex; align-items: baseline; gap: 0.4rem; margin-left: 0.5rem; color: var(--pf-v5-global--Color--200);">
+                        <span style="font-size: 0.85rem;">Current Hours</span>
+                        <span class="hours-display" style="font-size: 1.25rem;" x-text="formatHours(aircraft?.flight_time)"></span>
+                    </div>
                 </div>
                 <div x-show="aircraft" x-cloak style="display: flex; gap: 0.5rem;">
                     <button class="pf-v5-c-button pf-m-primary"
@@ -158,19 +163,6 @@
                     </div>
                 </div>
 
-                <!-- Hours Card -->
-                <div class="pf-v5-c-card">
-                    <div class="pf-v5-c-card__title">
-                        <h2>Flight Hours</h2>
-                    </div>
-                    <div class="pf-v5-c-card__body">
-                        <div style="text-align: center;">
-                            <div class="hours-display" x-text="formatHours(aircraft?.flight_time)"></div>
-                            <p>Total Hours</p>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Notes Card -->
                 <div class="pf-v5-c-card">
                     <div class="pf-v5-c-card__header">
@@ -211,6 +203,51 @@
                                             View all <span x-text="aircraftNotes.length"></span> notes
                                         </a>
                                     </p>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Recent Activity Card -->
+                <div class="pf-v5-c-card">
+                    <div class="pf-v5-c-card__header">
+                        <div class="pf-v5-c-card__header-main">
+                            <div class="pf-v5-c-card__title">
+                                <h2>Recent Activity</h2>
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-card__actions">
+                            <button class="pf-v5-c-button pf-m-link pf-m-small" @click="openEventsHistory()">
+                                View full history
+                            </button>
+                        </div>
+                    </div>
+                    <div class="pf-v5-c-card__body">
+                        <template x-if="!eventsLoaded">
+                            <div style="text-align: center; padding: 1rem;">
+                                <span class="pf-v5-c-spinner pf-m-md" role="progressbar">
+                                    <span class="pf-v5-c-spinner__clipper"></span>
+                                    <span class="pf-v5-c-spinner__lead-ball"></span>
+                                    <span class="pf-v5-c-spinner__tail-ball"></span>
+                                </span>
+                            </div>
+                        </template>
+                        <template x-if="eventsLoaded && recentEvents.length === 0">
+                            <p style="color: var(--pf-v5-global--Color--200); text-align: center; padding: 1rem;">
+                                No activity recorded yet.
+                            </p>
+                        </template>
+                        <template x-if="eventsLoaded && recentEvents.length > 0">
+                            <div>
+                                <template x-for="event in recentEvents" :key="event.id">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid var(--pf-v5-global--BorderColor--100); font-size: 0.85em;">
+                                        <span class="pf-v5-c-label pf-m-compact" :class="eventCategoryClass(event.category)">
+                                            <span class="pf-v5-c-label__content" x-text="eventCategoryLabel(event.category)"></span>
+                                        </span>
+                                        <span x-text="event.event_name" style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                                        <span style="color: var(--pf-v5-global--Color--200); white-space: nowrap;" x-text="formatEventTime(event.timestamp)"></span>
+                                    </div>
                                 </template>
                             </div>
                         </template>
@@ -264,7 +301,86 @@
                     </div>
                 </div>
             </template>
+
         </div>
+
+        <!-- Events History Modal -->
+        <template x-if="eventsHistoryOpen">
+            <div class="pf-v5-c-backdrop">
+                <div class="pf-v5-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-label="Activity History">
+                    <div class="pf-v5-c-modal-box__close">
+                        <button class="pf-v5-c-button pf-m-plain" @click="closeEventsHistory()" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <header class="pf-v5-c-modal-box__header">
+                        <h1 class="pf-v5-c-modal-box__title">Activity History</h1>
+                    </header>
+                    <div class="pf-v5-c-modal-box__body" style="max-height: 60vh; overflow-y: auto;">
+                        <div style="margin-bottom: 1rem;">
+                            <select class="pf-v5-c-form-control"
+                                    x-model="eventsHistoryCategory"
+                                    @change="loadEventsHistory()"
+                                    style="max-width: 200px;">
+                                <option value="">All Categories</option>
+                                <option value="hours">Hours</option>
+                                <option value="component">Component</option>
+                                <option value="squawk">Squawk</option>
+                                <option value="note">Note</option>
+                                <option value="oil">Oil</option>
+                                <option value="fuel">Fuel</option>
+                                <option value="logbook">Logbook</option>
+                                <option value="ad">AD</option>
+                                <option value="inspection">Inspection</option>
+                                <option value="document">Document</option>
+                            </select>
+                            <span style="margin-left: 0.75rem; color: var(--pf-v5-global--Color--200);">
+                                <span x-text="eventsHistoryTotal"></span> total events
+                            </span>
+                        </div>
+
+                        <template x-if="eventsHistoryLoading">
+                            <div style="text-align: center; padding: 2rem;">
+                                <span class="pf-v5-c-spinner pf-m-lg" role="progressbar">
+                                    <span class="pf-v5-c-spinner__clipper"></span>
+                                    <span class="pf-v5-c-spinner__lead-ball"></span>
+                                    <span class="pf-v5-c-spinner__tail-ball"></span>
+                                </span>
+                            </div>
+                        </template>
+                        <template x-if="!eventsHistoryLoading && eventsHistoryAll.length === 0">
+                            <p style="text-align: center; padding: 2rem; color: var(--pf-v5-global--Color--200);">
+                                No events found.
+                            </p>
+                        </template>
+                        <template x-if="!eventsHistoryLoading && eventsHistoryAll.length > 0">
+                            <div class="pf-v5-c-data-list" role="list">
+                                <template x-for="event in eventsHistoryAll" :key="event.id">
+                                    <div class="pf-v5-c-data-list__item" role="listitem">
+                                        <div class="pf-v5-c-data-list__item-row" style="padding: 0.5rem 0;">
+                                            <div class="pf-v5-c-data-list__item-content" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                                                <span class="pf-v5-c-label pf-m-compact" :class="eventCategoryClass(event.category)">
+                                                    <span class="pf-v5-c-label__content" x-text="eventCategoryLabel(event.category)"></span>
+                                                </span>
+                                                <span x-text="event.event_name" style="flex: 1;"></span>
+                                                <span x-show="event.user_display" style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;" x-text="event.user_display"></span>
+                                                <span style="color: var(--pf-v5-global--Color--200); font-size: 0.85em; white-space: nowrap;" x-text="formatEventTime(event.timestamp)"></span>
+                                            </div>
+                                            <template x-if="event.notes">
+                                                <div style="padding-left: 5.5rem; color: var(--pf-v5-global--Color--200); font-size: 0.85em;" x-text="event.notes"></div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                    <footer class="pf-v5-c-modal-box__footer">
+                        <button class="pf-v5-c-button pf-m-link" @click="closeEventsHistory()">Close</button>
+                    </footer>
+                </div>
+            </div>
+        </template>
 
         <!-- Components Tab -->
         <div x-show="activeTab === 'components'" class="pf-v5-c-page__main-section">
@@ -2770,6 +2886,7 @@
 <script src="{% static 'js/aircraft-detail-ads.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-inspections.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-documents.js' %}"></script>
+<script src="{% static 'js/aircraft-detail-events.js' %}"></script>
 <script src="{% static 'js/aircraft-detail.js' %}"></script>
 <script src="{% static 'js/aircraft-modal.js' %}"></script>
 {% endblock %}
