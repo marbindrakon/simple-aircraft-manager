@@ -3,6 +3,7 @@ from django.core.validators import FileExtensionValidator
 from django.db import models
 
 from core import models as core_models
+from core.models import make_upload_path
 
 import uuid
 
@@ -39,15 +40,9 @@ COMPONENT_STATUSES = (
         ('DISPOSED', 'Disposed'),
 )
 
-def random_document_filename(instance, filename):
-    randname = uuid.uuid4().hex
-    ext = filename.split('.')[-1]
-    return f"health/documents/{randname}.{ext}"
-
-def random_squawk_filename(instance, filename):
-    randname = uuid.uuid4().hex
-    ext = filename.split('.')[-1]
-    return f"health/squawks/{randname}.{ext}"
+# Aliases retained for existing migrations that reference them by name
+random_document_filename = make_upload_path("health/documents")
+random_squawk_filename = make_upload_path("health/squawks")
 
 class ComponentType(models.Model):
     id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)

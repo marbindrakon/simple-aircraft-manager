@@ -12,10 +12,13 @@ AIRCRAFT_STATUSES = (
         ('UNAVAILABLE', 'Unavailable'),
 )
 
-def random_picture_filename(instance, filename):
-    randname = uuid.uuid4().hex
-    ext = filename.split('.')[-1]
-    return f"aircraft_pictures/{randname}.{ext}"
+def make_upload_path(subdir):
+    def upload_to(instance, filename):
+        ext = filename.rsplit('.', 1)[-1]
+        return f"{subdir}/{uuid.uuid4().hex}.{ext}"
+    return upload_to
+
+random_picture_filename = make_upload_path("aircraft_pictures")
 
 class Aircraft(models.Model):
     id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
