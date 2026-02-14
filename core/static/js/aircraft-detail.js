@@ -422,7 +422,7 @@ function aircraftDetail(aircraftId) {
             }
 
             try {
-                const response = await fetch(`/api/component/${component.id}/reset_service/`, {
+                const response = await fetch(`/api/components/${component.id}/reset_service/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -447,7 +447,7 @@ function aircraftDetail(aircraftId) {
         async loadComponentTypes() {
             if (this.componentTypesLoaded) return;
             try {
-                const response = await fetch('/api/component-type/');
+                const response = await fetch('/api/component-types/');
                 const data = await response.json();
                 this.componentTypes = data.results || data;
                 this.componentTypesLoaded = true;
@@ -557,7 +557,7 @@ function aircraftDetail(aircraftId) {
 
                 let response;
                 if (this.editingComponent) {
-                    response = await fetch(`/api/component/${this.editingComponent.id}/`, {
+                    response = await fetch(`/api/components/${this.editingComponent.id}/`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
@@ -605,7 +605,7 @@ function aircraftDetail(aircraftId) {
             }
 
             try {
-                const response = await fetch(`/api/component/${component.id}/`, {
+                const response = await fetch(`/api/components/${component.id}/`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRFToken': getCookie('csrftoken'),
@@ -1206,7 +1206,7 @@ function aircraftDetail(aircraftId) {
         async loadCollectionsForModal() {
             if (this.collectionsLoaded) return;
             try {
-                const response = await fetch(`/api/document-collection/?aircraft=${this.aircraftId}`);
+                const response = await fetch(`/api/document-collections/?aircraft=${this.aircraftId}`);
                 const data = await response.json();
                 this.aircraftCollections = data.results || data;
                 this.collectionsLoaded = true;
@@ -1218,7 +1218,7 @@ function aircraftDetail(aircraftId) {
         // Logbook management methods
         async loadLogbookEntries() {
             try {
-                const response = await fetch(`/api/logbook/?aircraft=${this.aircraftId}`);
+                const response = await fetch(`/api/logbook-entries/?aircraft=${this.aircraftId}`);
                 const data = await response.json();
                 this.logbookEntries = data.results || data;
                 this.logbookLoaded = true;
@@ -1294,9 +1294,9 @@ function aircraftDetail(aircraftId) {
                         components: [],
                     };
                     if (this.logbookForm.document_collection) {
-                        docPayload.collection = `/api/document-collection/${this.logbookForm.document_collection}/`;
+                        docPayload.collection = `/api/document-collections/${this.logbookForm.document_collection}/`;
                     }
-                    const docResp = await fetch('/api/document/', {
+                    const docResp = await fetch('/api/documents/', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1306,13 +1306,13 @@ function aircraftDetail(aircraftId) {
                     });
                     if (docResp.ok) {
                         const docData = await docResp.json();
-                        logImageUrl = `/api/document/${docData.id}/`;
+                        logImageUrl = `/api/documents/${docData.id}/`;
                         for (const file of this.logbookImageFiles) {
                             const formData = new FormData();
                             formData.append('document', logImageUrl);
                             formData.append('image', file);
                             formData.append('notes', '');
-                            await fetch('/api/document-image/', {
+                            await fetch('/api/document-images/', {
                                 method: 'POST',
                                 headers: { 'X-CSRFToken': getCookie('csrftoken') },
                                 body: formData,
@@ -1339,7 +1339,7 @@ function aircraftDetail(aircraftId) {
 
                 let response;
                 if (this.editingLogEntry) {
-                    response = await fetch(`/api/logbook/${this.editingLogEntry.id}/`, {
+                    response = await fetch(`/api/logbook-entries/${this.editingLogEntry.id}/`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1349,7 +1349,7 @@ function aircraftDetail(aircraftId) {
                     });
                 } else {
                     data.aircraft = `/api/aircraft/${this.aircraftId}/`;
-                    response = await fetch('/api/logbook/', {
+                    response = await fetch('/api/logbook-entries/', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1415,7 +1415,7 @@ function aircraftDetail(aircraftId) {
             if (!confirm('Delete this logbook entry? This cannot be undone.')) return;
 
             try {
-                const response = await fetch(`/api/logbook/${entry.id}/`, {
+                const response = await fetch(`/api/logbook-entries/${entry.id}/`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRFToken': getCookie('csrftoken'),
@@ -1444,7 +1444,7 @@ function aircraftDetail(aircraftId) {
             this.complianceHistoryOpen = true;
 
             try {
-                const response = await fetch(`/api/ad-compliance/?ad=${ad.id}&aircraft=${this.aircraftId}`);
+                const response = await fetch(`/api/ad-compliances/?ad=${ad.id}&aircraft=${this.aircraftId}`);
                 const data = await response.json();
                 this.complianceHistory = data.results || data;
             } catch (error) {
@@ -1484,7 +1484,7 @@ function aircraftDetail(aircraftId) {
             this.logEntryDetailOpen = true;
 
             try {
-                const response = await fetch(`/api/logbook/${entryId}/`);
+                const response = await fetch(`/api/logbook-entries/${entryId}/`);
                 if (response.ok) {
                     this.logEntryDetail = await response.json();
                 } else {
@@ -1509,7 +1509,7 @@ function aircraftDetail(aircraftId) {
             const docId = this.extractIdFromUrl(log.log_image);
             if (!docId) return;
             try {
-                const resp = await fetch(`/api/document/${docId}/`);
+                const resp = await fetch(`/api/documents/${docId}/`);
                 if (resp.ok) {
                     const doc = await resp.json();
                     this.openDocumentViewer(doc, 'Logbook Document');
@@ -1540,7 +1540,7 @@ function aircraftDetail(aircraftId) {
 
         async loadAllAds() {
             try {
-                const response = await fetch('/api/ad/');
+                const response = await fetch('/api/ads/');
                 const data = await response.json();
                 const all = data.results || data;
                 // Filter out ADs already applicable to this aircraft
@@ -1691,7 +1691,7 @@ function aircraftDetail(aircraftId) {
                     recurring_days: this.adForm.recurring ? parseInt(this.adForm.recurring_days) || 0 : 0,
                 };
 
-                const response = await fetch(`/api/ad/${this.editingAd.id}/`, {
+                const response = await fetch(`/api/ads/${this.editingAd.id}/`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1802,7 +1802,7 @@ function aircraftDetail(aircraftId) {
 
                 let response;
                 if (this.editingComplianceRecord) {
-                    response = await fetch(`/api/ad-compliance/${this.editingComplianceRecord.id}/`, {
+                    response = await fetch(`/api/ad-compliances/${this.editingComplianceRecord.id}/`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
                         body: JSON.stringify(data),
@@ -1844,7 +1844,7 @@ function aircraftDetail(aircraftId) {
         async deleteComplianceRecord(record) {
             if (!confirm('Delete this compliance record? This cannot be undone.')) return;
             try {
-                const response = await fetch(`/api/ad-compliance/${record.id}/`, {
+                const response = await fetch(`/api/ad-compliances/${record.id}/`, {
                     method: 'DELETE',
                     headers: { 'X-CSRFToken': getCookie('csrftoken') },
                 });
@@ -1920,7 +1920,7 @@ function aircraftDetail(aircraftId) {
 
         async loadAllInspectionTypes() {
             try {
-                const response = await fetch('/api/inspection-type/');
+                const response = await fetch('/api/inspection-types/');
                 const data = await response.json();
                 this.allInspectionTypes = data.results || data;
             } catch (error) {
@@ -2013,7 +2013,7 @@ function aircraftDetail(aircraftId) {
 
                 let response;
                 if (this.editingInspectionType) {
-                    response = await fetch(`/api/inspection-type/${this.editingInspectionType.id}/`, {
+                    response = await fetch(`/api/inspection-types/${this.editingInspectionType.id}/`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
@@ -2125,7 +2125,7 @@ function aircraftDetail(aircraftId) {
 
                 let response;
                 if (this.editingInspectionRecord) {
-                    response = await fetch(`/api/inspection/${this.editingInspectionRecord.id}/`, {
+                    response = await fetch(`/api/inspections/${this.editingInspectionRecord.id}/`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
                         body: JSON.stringify(data),
@@ -2172,7 +2172,7 @@ function aircraftDetail(aircraftId) {
             this.inspectionHistoryOpen = true;
 
             try {
-                const response = await fetch(`/api/inspection/?inspection_type=${insp.id}&aircraft=${this.aircraftId}`);
+                const response = await fetch(`/api/inspections/?inspection_type=${insp.id}&aircraft=${this.aircraftId}`);
                 const data = await response.json();
                 this.inspectionHistory = data.results || data;
             } catch (error) {
@@ -2192,7 +2192,7 @@ function aircraftDetail(aircraftId) {
         async deleteInspectionRecord(record) {
             if (!confirm('Delete this inspection record? This cannot be undone.')) return;
             try {
-                const response = await fetch(`/api/inspection/${record.id}/`, {
+                const response = await fetch(`/api/inspections/${record.id}/`, {
                     method: 'DELETE',
                     headers: { 'X-CSRFToken': getCookie('csrftoken') },
                 });
@@ -2270,7 +2270,7 @@ function aircraftDetail(aircraftId) {
 
                 let response;
                 if (this.editingCollection) {
-                    response = await fetch(`/api/document-collection/${this.editingCollection.id}/`, {
+                    response = await fetch(`/api/document-collections/${this.editingCollection.id}/`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
@@ -2281,7 +2281,7 @@ function aircraftDetail(aircraftId) {
                 } else {
                     data.aircraft = `/api/aircraft/${this.aircraftId}/`;
                     data.components = [];
-                    response = await fetch('/api/document-collection/', {
+                    response = await fetch('/api/document-collections/', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -2320,7 +2320,7 @@ function aircraftDetail(aircraftId) {
             }
 
             try {
-                const response = await fetch(`/api/document-collection/${collection.id}/`, {
+                const response = await fetch(`/api/document-collections/${collection.id}/`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRFToken': getCookie('csrftoken'),
@@ -2394,11 +2394,11 @@ function aircraftDetail(aircraftId) {
                 let response;
                 if (this.editingDocument) {
                     if (this.documentForm.collection) {
-                        data.collection = `/api/document-collection/${this.documentForm.collection}/`;
+                        data.collection = `/api/document-collections/${this.documentForm.collection}/`;
                     } else {
                         data.collection = null;
                     }
-                    response = await fetch(`/api/document/${this.editingDocument.id}/`, {
+                    response = await fetch(`/api/documents/${this.editingDocument.id}/`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
@@ -2409,12 +2409,12 @@ function aircraftDetail(aircraftId) {
                 } else {
                     data.aircraft = `/api/aircraft/${this.aircraftId}/`;
                     if (this.documentForm.collection) {
-                        data.collection = `/api/document-collection/${this.documentForm.collection}/`;
+                        data.collection = `/api/document-collections/${this.documentForm.collection}/`;
                     } else {
                         data.collection = null;
                     }
                     data.components = [];
-                    response = await fetch('/api/document/', {
+                    response = await fetch('/api/documents/', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -2432,10 +2432,10 @@ function aircraftDetail(aircraftId) {
                     let uploadFailed = false;
                     for (const file of this.documentImageFiles) {
                         const formData = new FormData();
-                        formData.append('document', `/api/document/${docId}/`);
+                        formData.append('document', `/api/documents/${docId}/`);
                         formData.append('image', file);
                         formData.append('notes', '');
-                        const imgResponse = await fetch('/api/document-image/', {
+                        const imgResponse = await fetch('/api/document-images/', {
                             method: 'POST',
                             headers: {
                                 'X-CSRFToken': getCookie('csrftoken'),
@@ -2480,7 +2480,7 @@ function aircraftDetail(aircraftId) {
             }
 
             try {
-                const response = await fetch(`/api/document/${doc.id}/`, {
+                const response = await fetch(`/api/documents/${doc.id}/`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRFToken': getCookie('csrftoken'),
@@ -2504,7 +2504,7 @@ function aircraftDetail(aircraftId) {
             if (!confirm('Delete this image?')) return;
 
             try {
-                const response = await fetch(`/api/document-image/${imageId}/`, {
+                const response = await fetch(`/api/document-images/${imageId}/`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRFToken': getCookie('csrftoken'),
