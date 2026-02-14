@@ -1,14 +1,29 @@
+from datetime import date as date_cls, timedelta as td
+from decimal import Decimal
+
 from django.conf import settings
 from django.contrib.auth import logout
+from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import redirect
+from django.utils import timezone
+from django.views.decorators.http import require_GET
+from django.views.generic import TemplateView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
 from core.models import Aircraft, AircraftNote, AircraftEvent
 from core.serializers import (
     AircraftSerializer, AircraftListSerializer, AircraftNoteSerializer,
     AircraftNoteNestedSerializer, AircraftNoteCreateUpdateSerializer,
     AircraftEventSerializer,
 )
-from django.utils import timezone
-from health.models import Component, LogbookEntry, Squawk, Document, DocumentCollection, OilRecord, FuelRecord, AD, ADCompliance, InspectionType, InspectionRecord
+from health.models import (
+    Component, LogbookEntry, Squawk, Document, DocumentCollection,
+    OilRecord, FuelRecord, AD, ADCompliance, InspectionType, InspectionRecord,
+)
 from health.serializers import (
     ComponentSerializer, ComponentCreateUpdateSerializer,
     LogbookEntrySerializer, SquawkSerializer,
@@ -21,16 +36,7 @@ from health.serializers import (
     InspectionTypeSerializer, InspectionTypeNestedSerializer,
     InspectionRecordNestedSerializer, InspectionRecordCreateUpdateSerializer,
 )
-
-from django.http import JsonResponse
-from django.views.decorators.http import require_GET
-from django.views.generic import TemplateView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from rest_framework import viewsets
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework import status
-from decimal import Decimal
+from health.services import _end_of_month_after
 
 
 class AircraftViewSet(viewsets.ModelViewSet):
@@ -335,7 +341,6 @@ class AircraftViewSet(viewsets.ModelViewSet):
         aircraft = self.get_object()
 
         if request.method == 'GET':
-            from django.db.models import Q
             # Get ADs applicable to this aircraft (direct or via components)
             component_ids = aircraft.components.values_list('id', flat=True)
             aircraft_ads = AD.objects.filter(applicable_aircraft=aircraft)
@@ -372,8 +377,6 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 elif compliance.permanent:
                     ad_dict['compliance_status'] = 'compliant'
                 else:
-                    from health.services import _end_of_month_after
-                    from datetime import date as date_cls, timedelta as td
                     today = date_cls.today()
                     status_rank = 0  # 0=compliant, 1=due_soon, 2=overdue
 
@@ -469,11 +472,6 @@ class AircraftViewSet(viewsets.ModelViewSet):
         aircraft = self.get_object()
 
         if request.method == 'GET':
-            from django.db.models import Q
-            from datetime import date as date_cls, timedelta as td
-            from health.services import _end_of_month_after
-            from decimal import Decimal
-
             component_ids = aircraft.components.values_list('id', flat=True)
             aircraft_inspections = InspectionType.objects.filter(applicable_aircraft=aircraft)
             component_inspections = InspectionType.objects.filter(applicable_component__in=component_ids)

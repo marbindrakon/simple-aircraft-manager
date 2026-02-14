@@ -1,3 +1,5 @@
+import os
+
 from rest_framework import serializers
 
 from .models import ComponentType, Component, DocumentCollection, Document, DocumentImage, LogbookEntry, Squawk, InspectionType, AD, STCApplication, InspectionRecord, ADCompliance, OilRecord, FuelRecord
@@ -76,7 +78,6 @@ class DocumentImageSerializer(serializers.HyperlinkedModelSerializer):
         fields = '__all__'
 
     def validate_image(self, value):
-        import os
         ext = os.path.splitext(value.name)[1].lower()
         if ext not in self.ALLOWED_EXTENSIONS:
             raise serializers.ValidationError(
@@ -239,7 +240,6 @@ class SquawkCreateUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
     def validate_attachment(self, value):
-        import os
         ext = os.path.splitext(value.name)[1].lower()
         if ext not in self.ALLOWED_ATTACHMENT_EXTENSIONS:
             raise serializers.ValidationError(
