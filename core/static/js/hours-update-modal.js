@@ -46,34 +46,23 @@ function hoursUpdateModal() {
             this.errorMessage = '';
 
             try {
-                const response = await fetch(
+                const { ok, data } = await apiRequest(
                     `/api/aircraft/${this.aircraft.id}/update_hours/`,
                     {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCookie('csrftoken')
-                        },
-                        body: JSON.stringify({
-                            new_hours: this.newHours
-                        })
+                        body: JSON.stringify({ new_hours: this.newHours }),
                     }
                 );
 
-                const data = await response.json();
-
-                if (data.success) {
+                if (ok && data.success) {
                     showNotification(
                         `Hours updated to ${data.aircraft_hours} (+${data.hours_added} hours, ${data.components_updated} components updated)`,
                         'success'
                     );
-
-                    // Notify other components to refresh
                     window.dispatchEvent(new CustomEvent('aircraft-updated'));
-
                     this.close();
                 } else {
-                    this.errorMessage = data.error || 'Update failed';
+                    this.errorMessage = data?.error || 'Update failed';
                 }
             } catch (error) {
                 console.error('Error updating hours:', error);

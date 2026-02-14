@@ -10,9 +10,12 @@ function aircraftDashboard() {
         async loadAircraft() {
             this.loading = true;
             try {
-                const response = await fetch('/api/aircraft/');
-                const data = await response.json();
-                this.aircraftList = data.results || data;
+                const { ok, data } = await apiRequest('/api/aircraft/');
+                if (ok) {
+                    this.aircraftList = data.results || data;
+                } else {
+                    showNotification('Failed to load aircraft', 'danger');
+                }
             } catch (error) {
                 console.error('Error loading aircraft:', error);
                 showNotification('Failed to load aircraft', 'danger');
@@ -22,64 +25,31 @@ function aircraftDashboard() {
         },
 
         openHoursModal(aircraft) {
-            // Trigger hours update modal
             window.dispatchEvent(new CustomEvent('open-hours-modal', {
                 detail: { aircraft }
             }));
         },
 
-        formatHours(hours) {
-            return parseFloat(hours || 0).toFixed(1);
-        },
+        formatHours(hours) { return formatHours(hours); },
 
-        // Airworthiness status helpers
         getAirworthinessClass(aircraft) {
-            const status = aircraft.airworthiness?.status || 'GREEN';
-            switch (status) {
-                case 'RED':
-                    return 'airworthiness-red';
-                case 'ORANGE':
-                    return 'airworthiness-orange';
-                default:
-                    return 'airworthiness-green';
-            }
+            return getAirworthinessClass(aircraft.airworthiness?.status || 'GREEN');
         },
 
         getAirworthinessText(aircraft) {
-            const status = aircraft.airworthiness?.status || 'GREEN';
-            switch (status) {
-                case 'RED':
-                    return 'Grounded';
-                case 'ORANGE':
-                    return 'Caution';
-                default:
-                    return 'Airworthy';
-            }
+            return getAirworthinessText(aircraft.airworthiness?.status || 'GREEN');
         },
 
         getAirworthinessTooltip(aircraft) {
-            const aw = aircraft.airworthiness;
-            if (!aw || aw.status === 'GREEN') {
-                return 'Aircraft is airworthy';
-            }
-
-            const issues = aw.issues || [];
-            if (issues.length === 0) {
-                return aw.status === 'RED' ? 'Aircraft is grounded' : 'Maintenance due soon';
-            }
-
-            return issues.map(i => `${i.category}: ${i.title}`).join('\n');
+            return getAirworthinessTooltip(aircraft.airworthiness);
         },
 
         getCardBorderClass(aircraft) {
             const status = aircraft.airworthiness?.status || 'GREEN';
             switch (status) {
-                case 'RED':
-                    return 'card-border-red';
-                case 'ORANGE':
-                    return 'card-border-orange';
-                default:
-                    return '';
+                case 'RED': return 'card-border-red';
+                case 'ORANGE': return 'card-border-orange';
+                default: return '';
             }
         }
     }

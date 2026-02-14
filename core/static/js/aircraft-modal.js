@@ -167,10 +167,7 @@ function aircraftModal() {
                     }
                 } else {
                     const errorData = await response.json();
-                    const msg = typeof errorData === 'object'
-                        ? Object.values(errorData).flat().join(', ')
-                        : 'Failed to save aircraft';
-                    showNotification(msg, 'danger');
+                    showNotification(formatApiError(errorData, 'Failed to save aircraft'), 'danger');
                 }
             } catch (error) {
                 console.error('Error saving aircraft:', error);

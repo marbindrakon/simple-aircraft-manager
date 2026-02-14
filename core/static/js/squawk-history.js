@@ -12,19 +12,16 @@ function squawkHistory(aircraftId) {
         async loadData() {
             this.loading = true;
             try {
-                // Load aircraft info and resolved squawks in parallel
                 const [aircraftRes, squawksRes] = await Promise.all([
-                    fetch(`/api/aircraft/${this.aircraftId}/`),
-                    fetch(`/api/aircraft/${this.aircraftId}/squawks/?resolved=true`)
+                    apiRequest(`/api/aircraft/${this.aircraftId}/`),
+                    apiRequest(`/api/aircraft/${this.aircraftId}/squawks/?resolved=true`)
                 ]);
 
                 if (aircraftRes.ok) {
-                    this.aircraft = await aircraftRes.json();
+                    this.aircraft = aircraftRes.data;
                 }
-
                 if (squawksRes.ok) {
-                    const data = await squawksRes.json();
-                    this.resolvedSquawks = data.squawks || [];
+                    this.resolvedSquawks = squawksRes.data.squawks || [];
                 }
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -38,16 +35,12 @@ function squawkHistory(aircraftId) {
             if (!confirm('Reopen this squawk?')) return;
 
             try {
-                const response = await fetch(`/api/squawks/${squawk.id}/`, {
+                const { ok } = await apiRequest(`/api/squawks/${squawk.id}/`, {
                     method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken'),
-                    },
                     body: JSON.stringify({ resolved: false }),
                 });
 
-                if (response.ok) {
+                if (ok) {
                     showNotification('Squawk reopened', 'success');
                     await this.loadData();
                 } else {
@@ -59,21 +52,10 @@ function squawkHistory(aircraftId) {
             }
         },
 
-        formatDate(dateString) {
-            return new Date(dateString).toLocaleDateString();
-        },
+        formatDate(dateString) { return formatDate(dateString); },
 
         getPriorityClass(squawk) {
-            switch (squawk.priority) {
-                case 0:
-                    return 'pf-m-red';
-                case 1:
-                    return 'pf-m-orange';
-                case 2:
-                    return 'pf-m-blue';
-                default:
-                    return 'pf-m-grey';
-            }
+            return getSquawkPriorityClass(squawk.priority);
         }
     };
 }

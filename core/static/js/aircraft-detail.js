@@ -344,13 +344,9 @@ function aircraftDetail(aircraftId) {
             }
         },
 
-        formatHours(hours) {
-            return parseFloat(hours || 0).toFixed(1);
-        },
+        formatHours(hours) { return formatHours(hours); },
 
-        formatDate(dateString) {
-            return new Date(dateString).toLocaleDateString();
-        },
+        formatDate(dateString) { return formatDate(dateString); },
 
         getComponentTypeName(component) {
             return component.component_type_name || 'Unknown';
@@ -700,43 +696,16 @@ function aircraftDetail(aircraftId) {
             return 'pf-m-grey';
         },
 
-        // Airworthiness status helpers
         getAirworthinessClass() {
-            const status = this.aircraft?.airworthiness?.status || 'GREEN';
-            switch (status) {
-                case 'RED':
-                    return 'airworthiness-red';
-                case 'ORANGE':
-                    return 'airworthiness-orange';
-                default:
-                    return 'airworthiness-green';
-            }
+            return getAirworthinessClass(this.aircraft?.airworthiness?.status || 'GREEN');
         },
 
         getAirworthinessText() {
-            const status = this.aircraft?.airworthiness?.status || 'GREEN';
-            switch (status) {
-                case 'RED':
-                    return 'Grounded';
-                case 'ORANGE':
-                    return 'Caution';
-                default:
-                    return 'Airworthy';
-            }
+            return getAirworthinessText(this.aircraft?.airworthiness?.status || 'GREEN');
         },
 
         getAirworthinessTooltip() {
-            const aw = this.aircraft?.airworthiness;
-            if (!aw || aw.status === 'GREEN') {
-                return 'Aircraft is airworthy';
-            }
-
-            const issues = aw.issues || [];
-            if (issues.length === 0) {
-                return aw.status === 'RED' ? 'Aircraft is grounded' : 'Maintenance due soon';
-            }
-
-            return issues.map(i => `${i.category}: ${i.title}`).join('\n');
+            return getAirworthinessTooltip(this.aircraft?.airworthiness);
         },
 
         // Squawk management methods
@@ -857,16 +826,7 @@ function aircraftDetail(aircraftId) {
         },
 
         getSquawkPriorityClass(squawk) {
-            switch (squawk.priority) {
-                case 0:
-                    return 'pf-m-red';
-                case 1:
-                    return 'pf-m-orange';
-                case 2:
-                    return 'pf-m-blue';
-                default:
-                    return 'pf-m-grey';
-            }
+            return getSquawkPriorityClass(squawk.priority);
         },
 
         getSquawkCardClass(squawk) {
