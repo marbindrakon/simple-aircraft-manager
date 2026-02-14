@@ -368,11 +368,3 @@ When contributing to this project:
 4. Register new models in admin.py for admin interface access
 5. Follow the UUID primary key pattern for new models
 6. Test with production settings: `python manage.py check --settings=simple_aircraft_manager.settings_prod`
-
-## License
-
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use this project except in compliance with the License. You may obtain a copy of the License at:
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
