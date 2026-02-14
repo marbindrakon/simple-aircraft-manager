@@ -15,11 +15,10 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.conf.urls.static import static
 from django.conf import settings
 from django.urls import path, include
-from django.views.generic import TemplateView, RedirectView
+from django.views.generic import RedirectView
 
 from rest_framework import routers
 
@@ -44,14 +43,10 @@ router.register(r'inspection', health_views.InspectionRecordViewSet)
 router.register(r'ad-compliance', health_views.ADComplianceViewSet)
 
 
-class DashboardView(LoginRequiredMixin, TemplateView):
-    template_name = "dashboard.html"
-
-
 urlpatterns = [
     path('healthz/', core_views.healthz, name='healthz'),
     path('', RedirectView.as_view(url='/dashboard/', permanent=False), name='home'),
-    path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    path('dashboard/', core_views.DashboardView.as_view(), name='dashboard'),
     path('aircraft/<uuid:pk>/', core_views.AircraftDetailView.as_view(), name='aircraft-detail'),
     path('aircraft/<uuid:pk>/squawks/history/', core_views.SquawkHistoryView.as_view(), name='squawk-history'),
     path('api/', include(router.urls)),

@@ -619,6 +619,10 @@ def healthz(request):
     return JsonResponse({"status": "ok"})
 
 
+class DashboardView(LoginRequiredMixin, TemplateView):
+    template_name = "dashboard.html"
+
+
 class AircraftDetailView(LoginRequiredMixin, TemplateView):
     template_name = 'aircraft_detail.html'
 
