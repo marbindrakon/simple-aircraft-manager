@@ -4,7 +4,12 @@ from .models import Aircraft, AircraftNote, AircraftEvent
 from health.services import calculate_airworthiness
 
 
-class AircraftSerializer(serializers.HyperlinkedModelSerializer):
+class AirworthinessMixin:
+    def get_airworthiness(self, obj):
+        return calculate_airworthiness(obj).to_dict()
+
+
+class AircraftSerializer(AirworthinessMixin, serializers.HyperlinkedModelSerializer):
     airworthiness = serializers.SerializerMethodField()
 
     class Meta:
@@ -37,14 +42,8 @@ class AircraftSerializer(serializers.HyperlinkedModelSerializer):
                 ]
         depth = 1
 
-    def get_airworthiness(self, obj):
-        """Calculate and return airworthiness status."""
-        status = calculate_airworthiness(obj)
-        return status.to_dict()
 
-
-class AircraftListSerializer(serializers.HyperlinkedModelSerializer):
-    """Lightweight serializer for aircraft listing with airworthiness status."""
+class AircraftListSerializer(AirworthinessMixin, serializers.HyperlinkedModelSerializer):
     airworthiness = serializers.SerializerMethodField()
 
     class Meta:
@@ -60,11 +59,6 @@ class AircraftListSerializer(serializers.HyperlinkedModelSerializer):
             'picture',
             'airworthiness',
         ]
-
-    def get_airworthiness(self, obj):
-        """Calculate and return airworthiness status."""
-        status = calculate_airworthiness(obj)
-        return status.to_dict()
 
 
 class AircraftNoteSerializer(serializers.HyperlinkedModelSerializer):
