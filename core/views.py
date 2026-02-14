@@ -31,10 +31,10 @@ from health.serializers import (
     DocumentCollectionNestedSerializer, DocumentNestedSerializer,
     OilRecordNestedSerializer, OilRecordCreateSerializer,
     FuelRecordNestedSerializer, FuelRecordCreateSerializer,
-    ADNestedSerializer, ADComplianceNestedSerializer, ADComplianceCreateUpdateSerializer,
+    ADNestedSerializer, ADComplianceNestedSerializer,
     ADSerializer,
     InspectionTypeSerializer, InspectionTypeNestedSerializer,
-    InspectionRecordNestedSerializer, InspectionRecordCreateUpdateSerializer,
+    InspectionRecordNestedSerializer,
 )
 from health.services import _end_of_month_after
 
@@ -452,7 +452,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
         data = request.data.copy()
         data['aircraft'] = aircraft.id
 
-        serializer = ADComplianceCreateUpdateSerializer(data=data)
+        serializer = ADComplianceNestedSerializer(data=data)
         if serializer.is_valid():
             record = serializer.save()
             return Response(
@@ -566,7 +566,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
             data = request.data.copy()
             data['aircraft'] = aircraft.id
 
-            serializer = InspectionRecordCreateUpdateSerializer(data=data)
+            serializer = InspectionRecordNestedSerializer(data=data)
             if serializer.is_valid():
                 record = serializer.save()
                 return Response(

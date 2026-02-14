@@ -258,16 +258,6 @@ class InspectionTypeNestedSerializer(serializers.ModelSerializer):
 
 
 class InspectionRecordNestedSerializer(serializers.ModelSerializer):
-    """Nested serializer for InspectionRecord, used in aircraft detail."""
-    class Meta:
-        model = InspectionRecord
-        fields = [
-            'id', 'date', 'aircraft_hours', 'inspection_type', 'aircraft', 'logbook_entry',
-        ]
-
-
-class InspectionRecordCreateUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for creating/updating InspectionRecord."""
     class Meta:
         model = InspectionRecord
         fields = [
@@ -298,18 +288,6 @@ class ADNestedSerializer(serializers.ModelSerializer):
 
 
 class ADComplianceNestedSerializer(serializers.ModelSerializer):
-    """Nested serializer for AD compliance records."""
-    class Meta:
-        model = ADCompliance
-        fields = [
-            'id', 'ad', 'date_complied', 'compliance_notes',
-            'permanent', 'next_due_at_time', 'aircraft_hours_at_compliance',
-            'aircraft', 'component', 'logbook_entry',
-        ]
-
-
-class ADComplianceCreateUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for creating/updating AD compliance records."""
     class Meta:
         model = ADCompliance
         fields = [

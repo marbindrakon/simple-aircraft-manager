@@ -14,8 +14,8 @@ from health.serializers import (
     DocumentCollectionSerializer, DocumentSerializer, DocumentImageSerializer,
     LogbookEntrySerializer, SquawkSerializer, SquawkCreateUpdateSerializer,
     InspectionTypeSerializer, ADSerializer, STCApplicationSerializer,
-    InspectionRecordSerializer, InspectionRecordCreateUpdateSerializer,
-    ADComplianceSerializer, ADComplianceCreateUpdateSerializer,
+    InspectionRecordSerializer, InspectionRecordNestedSerializer,
+    ADComplianceSerializer, ADComplianceNestedSerializer,
 )
 
 class ComponentTypeViewSet(viewsets.ModelViewSet):
@@ -117,7 +117,7 @@ class InspectionRecordViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
-            return InspectionRecordCreateUpdateSerializer
+            return InspectionRecordNestedSerializer
         return InspectionRecordSerializer
 
 class ADComplianceViewSet(viewsets.ModelViewSet):
@@ -128,5 +128,5 @@ class ADComplianceViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
-            return ADComplianceCreateUpdateSerializer
+            return ADComplianceNestedSerializer
         return ADComplianceSerializer
