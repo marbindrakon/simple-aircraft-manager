@@ -614,7 +614,7 @@ class AircraftNoteViewSet(viewsets.ModelViewSet):
 
 class AircraftEventViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AircraftEvent.objects.all()
-    serializer_class = AircraftSerializer
+    serializer_class = AircraftEventSerializer
 
 @require_GET
 def healthz(request):
