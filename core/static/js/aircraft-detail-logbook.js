@@ -15,13 +15,52 @@ function logbookMixin() {
             aircraft_hours_at_entry: '',
             signoff_person: '',
             signoff_location: '',
-            link_ad_id: '',
             document_collection: '',
         },
+        logbookAssociations: { ads: [], inspections: [], squawks: [] },
 
         // Document collections (loaded on demand for modals)
         aircraftCollections: [],
         collectionsLoaded: false,
+
+        get availableAdsForLogbook() {
+            const selectedIds = this.logbookAssociations.ads.map(a => a.ad_id);
+            return (this.applicableAds || []).filter(ad => !selectedIds.includes(ad.id));
+        },
+
+        get availableInspectionsForLogbook() {
+            const selectedIds = this.logbookAssociations.inspections.map(i => i.inspection_type_id);
+            return (this.inspectionTypes || []).filter(it => !selectedIds.includes(it.id));
+        },
+
+        get availableSquawksForLogbook() {
+            const selectedIds = this.logbookAssociations.squawks.map(s => s.squawk_id);
+            return (this.activeSquawks || []).filter(sq => !selectedIds.includes(sq.id));
+        },
+
+        addAdAssociation() {
+            this.logbookAssociations.ads.push({ ad_id: '', permanent: false, next_due_at_time: '' });
+        },
+
+        removeAdAssociation(idx) {
+            this.logbookAssociations.ads.splice(idx, 1);
+        },
+
+        addInspectionAssociation() {
+            this.logbookAssociations.inspections.push({ inspection_type_id: '' });
+        },
+
+        removeInspectionAssociation(idx) {
+            this.logbookAssociations.inspections.splice(idx, 1);
+        },
+
+        addSquawkAssociation() {
+            this.logbookAssociations.squawks.push({ squawk_id: '', resolve: true });
+        },
+
+        removeSquawkAssociation(idx) {
+            this.logbookAssociations.squawks.splice(idx, 1);
+        },
 
         async loadLogbookEntries() {
             try {
@@ -47,7 +86,7 @@ function logbookMixin() {
             }
         },
 
-        openLogbookModal(linkAdId) {
+        openLogbookModal() {
             this.editingLogEntry = null;
             this.logbookImageFiles = [];
             this.logbookForm = {
@@ -58,10 +97,14 @@ function logbookMixin() {
                 aircraft_hours_at_entry: this.aircraft ? parseFloat(this.aircraft.flight_time || 0).toFixed(1) : '',
                 signoff_person: '',
                 signoff_location: '',
-                link_ad_id: linkAdId || '',
                 document_collection: '',
             };
+            this.logbookAssociations = { ads: [], inspections: [], squawks: [] };
             this.loadCollectionsForModal();
+            // Ensure inspection types are loaded for the associations section
+            if (!this.inspectionsLoaded) {
+                this.loadInspections();
+            }
             this.logbookModalOpen = true;
         },
 
@@ -76,9 +119,9 @@ function logbookMixin() {
                 aircraft_hours_at_entry: entry.aircraft_hours_at_entry || '',
                 signoff_person: entry.signoff_person || '',
                 signoff_location: entry.signoff_location || '',
-                link_ad_id: '',
                 document_collection: '',
             };
+            this.logbookAssociations = { ads: [], inspections: [], squawks: [] };
             this.loadCollectionsForModal();
             this.logbookModalOpen = true;
         },
@@ -87,6 +130,7 @@ function logbookMixin() {
             this.logbookModalOpen = false;
             this.editingLogEntry = null;
             this.logbookImageFiles = [];
+            this.logbookAssociations = { ads: [], inspections: [], squawks: [] };
         },
 
         onLogbookFilesSelected(event) {
@@ -180,26 +224,79 @@ function logbookMixin() {
                 if (response.ok) {
                     const entryData = await response.json();
 
-                    // Step 3: If an AD was selected, record compliance linked to this entry
-                    if (!this.editingLogEntry && this.logbookForm.link_ad_id) {
-                        const complianceData = {
-                            ad: this.logbookForm.link_ad_id,
-                            date_complied: this.logbookForm.date,
-                            compliance_notes: this.logbookForm.text,
-                            permanent: false,
-                            next_due_at_time: 0,
-                            logbook_entry: entryData.id,
-                        };
-                        await fetch(`/api/aircraft/${this.aircraftId}/compliance/`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': getCookie('csrftoken'),
-                            },
-                            body: JSON.stringify(complianceData),
-                        });
-                        this.adsLoaded = false;
-                        await this.loadAds();
+                    // Step 3: Create associations in parallel (new entries only)
+                    if (!this.editingLogEntry) {
+                        const associationPromises = [];
+                        let hasInspections = false;
+
+                        for (const assoc of this.logbookAssociations.ads) {
+                            if (!assoc.ad_id) continue;
+                            const complianceData = {
+                                ad: assoc.ad_id,
+                                date_complied: this.logbookForm.date,
+                                compliance_notes: this.logbookForm.text,
+                                permanent: assoc.permanent || false,
+                                next_due_at_time: assoc.next_due_at_time ? parseFloat(assoc.next_due_at_time) : 0,
+                                logbook_entry: entryData.id,
+                            };
+                            associationPromises.push(
+                                apiRequest(`/api/aircraft/${this.aircraftId}/compliance/`, {
+                                    method: 'POST',
+                                    body: JSON.stringify(complianceData),
+                                })
+                            );
+                        }
+
+                        for (const assoc of this.logbookAssociations.inspections) {
+                            if (!assoc.inspection_type_id) continue;
+                            hasInspections = true;
+                            const inspData = {
+                                inspection_type: assoc.inspection_type_id,
+                                date: this.logbookForm.date,
+                                notes: this.logbookForm.text,
+                                logbook_entry: entryData.id,
+                            };
+                            if (this.logbookForm.aircraft_hours_at_entry) {
+                                inspData.aircraft_hours = parseFloat(this.logbookForm.aircraft_hours_at_entry);
+                            }
+                            associationPromises.push(
+                                apiRequest(`/api/aircraft/${this.aircraftId}/inspections/`, {
+                                    method: 'POST',
+                                    body: JSON.stringify(inspData),
+                                })
+                            );
+                        }
+
+                        for (const assoc of this.logbookAssociations.squawks) {
+                            if (!assoc.squawk_id) continue;
+                            associationPromises.push(
+                                apiRequest(`/api/squawks/${assoc.squawk_id}/link_logbook/`, {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                        logbook_entry_id: entryData.id,
+                                        resolve: assoc.resolve,
+                                    }),
+                                })
+                            );
+                        }
+
+                        if (associationPromises.length > 0) {
+                            const results = await Promise.allSettled(associationPromises);
+                            const failed = results.filter(r => r.status === 'rejected' || (r.value && !r.value.ok));
+                            if (failed.length > 0) {
+                                showNotification(`${failed.length} association(s) failed to save`, 'warning');
+                            }
+                        }
+
+                        // Refresh affected tabs
+                        if (this.logbookAssociations.ads.some(a => a.ad_id)) {
+                            this.adsLoaded = false;
+                            await this.loadAds();
+                        }
+                        if (hasInspections) {
+                            this.inspectionsLoaded = false;
+                            await this.loadInspections();
+                        }
                     }
 
                     showNotification(
@@ -216,9 +313,7 @@ function logbookMixin() {
                     }
                 } else {
                     const errorData = await response.json();
-                    const msg = typeof errorData === 'object'
-                        ? Object.values(errorData).flat().join(', ')
-                        : 'Failed to save log entry';
+                    const msg = formatApiError(errorData, 'Failed to save log entry');
                     showNotification(msg, 'danger');
                 }
             } catch (error) {

@@ -1303,23 +1303,88 @@
                             </div>
                         </template>
 
-                        <!-- Link to AD compliance (new entries only) -->
-                        <template x-if="!editingLogEntry && applicableAds.length > 0">
-                            <div class="pf-v5-c-form__group">
-                                <label class="pf-v5-c-form__label" for="log-link-ad">
-                                    <span class="pf-v5-c-form__label-text">Record AD Compliance</span>
-                                </label>
-                                <div class="pf-v5-c-form__group-control">
-                                    <select id="log-link-ad" class="pf-v5-c-form-control" x-model="logbookForm.link_ad_id">
-                                        <option value="">— None —</option>
-                                        <template x-for="ad in applicableAds" :key="ad.id">
-                                            <option :value="ad.id" x-text="ad.name + ' – ' + ad.short_description"></option>
+                        <!-- Associations (new entries only) -->
+                        <template x-if="!editingLogEntry && (applicableAds.length > 0 || inspectionTypes.length > 0 || activeSquawks.length > 0)">
+                            <div style="border-top: 1px solid var(--pf-v5-global--BorderColor--100); margin-top: 1rem; padding-top: 1rem;">
+                                <p style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--pf-v5-global--Color--100);">
+                                    Associations <span style="font-weight: 400; color: var(--pf-v5-global--Color--200);">(optional)</span>
+                                </p>
+
+                                <!-- AD Compliance rows -->
+                                <template x-if="applicableAds.length > 0">
+                                    <div class="pf-v5-c-form__group" style="margin-bottom: 0.75rem;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                                            <span style="font-size: 0.8rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.04em;">AD Compliance</span>
+                                            <button type="button" class="pf-v5-c-button pf-m-link pf-m-inline" @click="addAdAssociation()" :disabled="availableAdsForLogbook.length === 0" style="font-size: 0.8rem;">+ Add AD</button>
+                                        </div>
+                                        <template x-for="(adAssoc, idx) in logbookAssociations.ads" :key="idx">
+                                            <div style="display: flex; gap: 0.5rem; align-items: center; padding: 0.5rem; background: var(--pf-v5-global--BackgroundColor--200); border-radius: 4px; margin-bottom: 0.35rem;">
+                                                <select class="pf-v5-c-form-control" x-model="adAssoc.ad_id" style="flex: 2; min-width: 0;">
+                                                    <option value="">— Select AD —</option>
+                                                    <template x-for="ad in applicableAds" :key="ad.id">
+                                                        <option :value="ad.id" :disabled="logbookAssociations.ads.some((a, i) => i !== idx && a.ad_id === ad.id)" x-text="ad.name + ' – ' + ad.short_description"></option>
+                                                    </template>
+                                                </select>
+                                                <input type="number" class="pf-v5-c-form-control" x-model="adAssoc.next_due_at_time" placeholder="Next due hrs" style="flex: 1; min-width: 80px;" min="0" step="0.1">
+                                                <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; white-space: nowrap; cursor: pointer;">
+                                                    <input type="checkbox" x-model="adAssoc.permanent"> Permanent
+                                                </label>
+                                                <button type="button" class="pf-v5-c-button pf-m-plain" @click="removeAdAssociation(idx)" style="color: var(--pf-v5-global--danger-color--100); padding: 0.25rem;">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
                                         </template>
-                                    </select>
-                                    <p style="font-size: 0.8em; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;">
-                                        Selecting an AD will create a compliance record linked to this logbook entry.
-                                    </p>
-                                </div>
+                                    </div>
+                                </template>
+
+                                <!-- Inspections rows -->
+                                <template x-if="inspectionTypes.length > 0">
+                                    <div class="pf-v5-c-form__group" style="margin-bottom: 0.75rem;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                                            <span style="font-size: 0.8rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.04em;">Inspections Performed</span>
+                                            <button type="button" class="pf-v5-c-button pf-m-link pf-m-inline" @click="addInspectionAssociation()" :disabled="availableInspectionsForLogbook.length === 0" style="font-size: 0.8rem;">+ Add Inspection</button>
+                                        </div>
+                                        <template x-for="(inspAssoc, idx) in logbookAssociations.inspections" :key="idx">
+                                            <div style="display: flex; gap: 0.5rem; align-items: center; padding: 0.5rem; background: var(--pf-v5-global--BackgroundColor--200); border-radius: 4px; margin-bottom: 0.35rem;">
+                                                <select class="pf-v5-c-form-control" x-model="inspAssoc.inspection_type_id" style="flex: 1; min-width: 0;">
+                                                    <option value="">— Select Inspection —</option>
+                                                    <template x-for="it in inspectionTypes" :key="it.id">
+                                                        <option :value="it.id" :disabled="logbookAssociations.inspections.some((a, i) => i !== idx && a.inspection_type_id === it.id)" x-text="it.name"></option>
+                                                    </template>
+                                                </select>
+                                                <button type="button" class="pf-v5-c-button pf-m-plain" @click="removeInspectionAssociation(idx)" style="color: var(--pf-v5-global--danger-color--100); padding: 0.25rem;">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+
+                                <!-- Squawks rows -->
+                                <template x-if="activeSquawks.length > 0">
+                                    <div class="pf-v5-c-form__group">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                                            <span style="font-size: 0.8rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.04em;">Squawks Addressed</span>
+                                            <button type="button" class="pf-v5-c-button pf-m-link pf-m-inline" @click="addSquawkAssociation()" :disabled="availableSquawksForLogbook.length === 0" style="font-size: 0.8rem;">+ Add Squawk</button>
+                                        </div>
+                                        <template x-for="(sqAssoc, idx) in logbookAssociations.squawks" :key="idx">
+                                            <div style="display: flex; gap: 0.5rem; align-items: center; padding: 0.5rem; background: var(--pf-v5-global--BackgroundColor--200); border-radius: 4px; margin-bottom: 0.35rem;">
+                                                <select class="pf-v5-c-form-control" x-model="sqAssoc.squawk_id" style="flex: 1; min-width: 0;">
+                                                    <option value="">— Select Squawk —</option>
+                                                    <template x-for="sq in activeSquawks" :key="sq.id">
+                                                        <option :value="sq.id" :disabled="logbookAssociations.squawks.some((a, i) => i !== idx && a.squawk_id === sq.id)" x-text="(sq.component_name ? sq.component_name + ': ' : '') + (sq.issue_reported || '').slice(0, 60)"></option>
+                                                    </template>
+                                                </select>
+                                                <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; white-space: nowrap; cursor: pointer;">
+                                                    <input type="checkbox" x-model="sqAssoc.resolve"> Resolve
+                                                </label>
+                                                <button type="button" class="pf-v5-c-button pf-m-plain" @click="removeSquawkAssociation(idx)" style="color: var(--pf-v5-global--danger-color--100); padding: 0.25rem;">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
                             </div>
                         </template>
                     </form>

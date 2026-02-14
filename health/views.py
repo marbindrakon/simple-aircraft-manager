@@ -113,6 +113,20 @@ class SquawkViewSet(EventLoggingMixin, viewsets.ModelViewSet):
             return SquawkCreateUpdateSerializer
         return SquawkSerializer
 
+    @action(detail=True, methods=['post'], url_path='link_logbook')
+    def link_logbook(self, request, pk=None):
+        from django.shortcuts import get_object_or_404
+        squawk = self.get_object()
+        entry_id = request.data.get('logbook_entry_id')
+        resolve = request.data.get('resolve', False)
+        if entry_id:
+            entry = get_object_or_404(LogbookEntry, id=entry_id)
+            squawk.logbook_entries.add(entry)
+        if resolve:
+            squawk.resolved = True
+            squawk.save()
+        return Response({'success': True})
+
 class InspectionTypeViewSet(viewsets.ModelViewSet):
     queryset = InspectionType.objects.all()
     serializer_class = InspectionTypeSerializer
