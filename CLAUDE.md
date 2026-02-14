@@ -86,6 +86,7 @@ The aircraft detail page is composed from feature-specific mixin files, each ret
 | `aircraft-detail-ads.js` | `adsMixin()` | AD CRUD, compliance records, history |
 | `aircraft-detail-inspections.js` | `inspectionsMixin()` | Inspection CRUD, history |
 | `aircraft-detail-documents.js` | `documentsMixin()` | Document/collection CRUD, viewer |
+| `aircraft-detail-events.js` | `eventsMixin()` | Recent activity card, history modal |
 
 The composer (`aircraft-detail.js`) merges all mixins using `mergeMixins()` from `utils.js`. **Do not use the spread operator (`...`) for this** — spread eagerly evaluates `get` properties, breaking cross-mixin `this` references. `mergeMixins()` copies property descriptors intact so getters resolve lazily against the final merged object.
 
@@ -166,6 +167,43 @@ Individual status checks are also available as shared functions for use outside 
 - `ad_compliance_status(ad, compliance, current_hours, today)` → `(rank, extras_dict)`
 - `inspection_compliance_status(insp_type, last_record, current_hours, today)` → `(rank, extras_dict)`
 - Status constants: `STATUS_COMPLIANT`, `STATUS_DUE_SOON`, `STATUS_OVERDUE`, `STATUS_LABELS`
+
+### Event/Activity Log
+
+All write operations are automatically logged as `AircraftEvent` records, providing an audit trail per aircraft.
+
+#### How It Works
+
+- **`log_event(aircraft, category, event_name, user=None, notes="")`** (`core/events.py`) — single function to create an event record. Called explicitly from views (not via Django signals) so we have access to `request.user` and full context.
+- **`EventLoggingMixin`** (`core/mixins.py`) — ViewSet mixin that auto-logs `perform_create`/`perform_update`/`perform_destroy`. Set `event_category` on the viewset class. For models where the Aircraft FK is indirect (e.g., `DocumentImage.document.aircraft`), set `aircraft_field = 'document.aircraft'`.
+- **Manual `log_event()` calls** — Used in `AircraftViewSet` custom actions (`update_hours`, `squawks`, `notes`, `oil_records`, `fuel_records`, `components`, `ads`, `compliance`, `inspections`) where the mixin pattern doesn't apply.
+
+#### Categories
+
+Categories are defined in `EVENT_CATEGORIES` in `core/models.py`: `hours`, `component`, `squawk`, `note`, `oil`, `fuel`, `logbook`, `ad`, `inspection`, `document`, `aircraft`.
+
+#### Event Name Conventions
+
+- Mixin auto-generates names from `model._meta.verbose_name`: "Component created", "Squawk updated", etc.
+- **Acronyms like "AD" get lowercased** by `verbose_name.capitalize()` → "Ad compliance created". Override with `event_name_created`/`event_name_updated`/`event_name_deleted` class attributes on the viewset.
+- Manual calls in custom actions include context: "Hours updated to 1234.5", "Squawk reported: Fix Soon", "AD linked: 2024-01-01".
+
+#### API
+
+- `GET /api/aircraft/{id}/events/?limit=50&category=hours` — Returns `{ events: [...], total: N }`. Max limit 200.
+
+#### Frontend
+
+The `eventsMixin()` displays:
+- **Recent Activity card** on the Overview tab (last 10 events, auto-refreshes after any write via `loadData()`)
+- **History modal** with category filter dropdown (up to 200 events)
+
+#### Adding Event Logging to New ViewSets
+
+1. Add `EventLoggingMixin` as the **first** parent class (before `viewsets.ModelViewSet`)
+2. Set `event_category = 'your_category'`
+3. If the model's Aircraft FK is not a direct `aircraft` field, set `aircraft_field` (dot-notation)
+4. If `verbose_name` produces wrong casing, set `event_name_created`/`event_name_updated`/`event_name_deleted`
 
 ### Authentication: OIDC and Django Hybrid
 
@@ -377,6 +415,10 @@ PatternFly 5's `.pf-v5-c-backdrop` sets `z-index: 1000` via CSS custom property.
 
 The logbook entry modal (`logbookModalOpen`) currently has `z-index: 1100` for this reason.
 
+### 11. AircraftSerializer depth=1 and User FKs
+
+`AircraftSerializer` uses `depth = 1`, which auto-expands all FKs on related models. If a related model (like `AircraftEvent`) has a `User` FK, DRF tries to generate a `user-detail` hyperlink — but there's no User API endpoint, causing a 500 error. Fix: explicitly declare the relation field on `AircraftSerializer` (e.g., `events = PrimaryKeyRelatedField(many=True, read_only=True)`) to prevent auto-depth expansion. This applies to any new model with a User FK that's reachable from Aircraft via reverse relations.
+
 ## File Locations
 
 | Purpose | Location |
@@ -387,6 +429,8 @@ The logbook entry modal (`logbookModalOpen`) currently has `z-index: 1100` for t
 | Airworthiness + status logic | `health/services.py` |
 | Upload validation | `health/serializers.py` (`validate_uploaded_file`) |
 | Shared upload path factory | `core/models.py` (`make_upload_path`) |
+| Event logging utility | `core/events.py` (`log_event`) |
+| Event logging mixin | `core/mixins.py` (`EventLoggingMixin`) |
 | OIDC backend | `core/oidc.py` |
 | Context processors | `core/context_processors.py` |
 | JS shared utilities | `core/static/js/utils.js` |
