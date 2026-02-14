@@ -68,13 +68,107 @@ class AirworthinessStatus:
         }
 
 
-def _end_of_month_after(start_date: date, months: int) -> date:
+def end_of_month_after(start_date: date, months: int) -> date:
     """Return the last day of the month that is ``months`` after ``start_date``."""
     total_months = (start_date.year * 12 + start_date.month - 1) + months
     year = total_months // 12
     month = total_months % 12 + 1
     last_day = calendar.monthrange(year, month)[1]
     return date(year, month, last_day)
+
+
+# ── Shared status helpers used by both airworthiness checks and API views ──
+
+# Status rank: 0=compliant, 1=due_soon, 2=overdue
+STATUS_COMPLIANT = 0
+STATUS_DUE_SOON = 1
+STATUS_OVERDUE = 2
+STATUS_LABELS = ['compliant', 'due_soon', 'overdue']
+
+
+def ad_compliance_status(ad, compliance, current_hours: Decimal, today: date) -> Tuple[int, dict]:
+    """
+    Compute the compliance status rank for a single AD given its latest compliance record.
+    Returns (status_rank, extra_fields_dict) where extra_fields_dict may contain
+    'next_due_date' and 'next_due_date_display' keys.
+    """
+    extras = {}
+
+    if ad.compliance_type == 'conditional':
+        return (STATUS_COMPLIANT if compliance else STATUS_COMPLIANT), extras
+
+    if not compliance:
+        return STATUS_OVERDUE, extras
+
+    if compliance.permanent:
+        return STATUS_COMPLIANT, extras
+
+    rank = STATUS_COMPLIANT
+
+    # Hours-based due
+    if compliance.next_due_at_time > 0:
+        if current_hours >= compliance.next_due_at_time:
+            rank = max(rank, STATUS_OVERDUE)
+        elif current_hours + HOURS_WARNING_THRESHOLD >= compliance.next_due_at_time:
+            rank = max(rank, STATUS_DUE_SOON)
+
+    # Calendar-based due (month recurrence)
+    if ad.recurring and ad.recurring_months > 0:
+        next_due_date = end_of_month_after(compliance.date_complied, ad.recurring_months)
+        extras['next_due_date'] = next_due_date.isoformat()
+        extras['next_due_date_display'] = next_due_date.strftime('%B %Y')
+        if today > next_due_date:
+            rank = max(rank, STATUS_OVERDUE)
+        elif today + timedelta(days=DAYS_WARNING_THRESHOLD) >= next_due_date:
+            rank = max(rank, STATUS_DUE_SOON)
+
+    return rank, extras
+
+
+def inspection_compliance_status(insp_type, last_record, current_hours: Decimal, today: date) -> Tuple[int, dict]:
+    """
+    Compute the compliance status rank for a single inspection type given its
+    latest inspection record.  Returns (status_rank, extra_fields_dict) where
+    extra_fields_dict may contain 'next_due_date' and 'next_due_hours' keys.
+    """
+    extras = {}
+
+    if not last_record:
+        return STATUS_OVERDUE, extras
+
+    if not insp_type.recurring:
+        return STATUS_COMPLIANT, extras
+
+    rank = STATUS_COMPLIANT
+
+    # Calendar-based check
+    if insp_type.recurring_months > 0 or insp_type.recurring_days > 0:
+        nd = last_record.date
+        if insp_type.recurring_months > 0:
+            nd = end_of_month_after(nd, insp_type.recurring_months)
+        if insp_type.recurring_days > 0:
+            nd = nd + timedelta(days=insp_type.recurring_days)
+        extras['next_due_date'] = nd.isoformat()
+        if today > nd:
+            rank = max(rank, STATUS_OVERDUE)
+        elif today + timedelta(days=DAYS_WARNING_THRESHOLD) >= nd:
+            rank = max(rank, STATUS_DUE_SOON)
+
+    # Hours-based check
+    if insp_type.recurring_hours > 0:
+        recurring_hrs = Decimal(str(insp_type.recurring_hours))
+        hours_at = last_record.aircraft_hours
+        if hours_at is None and last_record.logbook_entry:
+            hours_at = last_record.logbook_entry.aircraft_hours_at_entry
+        if hours_at is not None:
+            hours_since = current_hours - hours_at
+            extras['next_due_hours'] = float(hours_at + recurring_hrs)
+            if hours_since >= recurring_hrs:
+                rank = max(rank, STATUS_OVERDUE)
+            elif hours_since + HOURS_WARNING_THRESHOLD >= recurring_hrs:
+                rank = max(rank, STATUS_DUE_SOON)
+
+    return rank, extras
 
 
 def calculate_airworthiness(aircraft) -> AirworthinessStatus:
@@ -107,82 +201,44 @@ def calculate_airworthiness(aircraft) -> AirworthinessStatus:
 
 
 def _check_ad_compliance(aircraft, current_hours: Decimal, today: date, result: AirworthinessStatus):
-    """
-    Check AD compliance status.
-
-    RED if:
-    - AD applies and has no compliance entry
-    - AD applies and compliance is not permanent and next_due_at_time <= current_hours
-
-    ORANGE if:
-    - AD applies and compliance is not permanent and next_due_at_time <= current_hours + 10
-    """
-    # Get all ADs applicable to this aircraft
+    """Check AD compliance status."""
     aircraft_ads = AD.objects.filter(applicable_aircraft=aircraft)
-
-    # Get all ADs applicable to aircraft components
     component_ids = aircraft.components.values_list('id', flat=True)
     component_ads = AD.objects.filter(applicable_component__in=component_ids)
-
-    # Combine all applicable ADs
     all_ads = (aircraft_ads | component_ads).distinct()
 
     for ad in all_ads:
-        # Conditional ADs are informational only — they never affect airworthiness
         if ad.compliance_type == 'conditional':
             continue
 
-        # Get compliance records for this AD related to this aircraft
         compliance = ADCompliance.objects.filter(
             ad=ad
         ).filter(
             Q(aircraft=aircraft) | Q(component__aircraft=aircraft)
         ).order_by('-date_complied').first()
 
-        if not compliance:
-            # No compliance record - RED
+        rank, _ = ad_compliance_status(ad, compliance, current_hours, today)
+
+        if rank == STATUS_OVERDUE:
+            if not compliance:
+                desc = f'{ad.short_description}. No compliance record found.'
+            else:
+                desc = f'{ad.short_description}. Compliance overdue.'
             result.issues.append(AirworthinessIssue(
                 category='AD',
                 severity=STATUS_RED,
-                title=f'AD {ad.name} - No Compliance',
-                description=f'{ad.short_description}. No compliance record found.',
+                title=f'AD {ad.name} - Overdue',
+                description=desc,
                 item_id=str(ad.id),
             ))
-        elif not compliance.permanent:
-            severity = None  # None / STATUS_ORANGE / STATUS_RED
-            parts = []
-
-            # Check if due based on hours
-            if compliance.next_due_at_time > 0:
-                if current_hours >= compliance.next_due_at_time:
-                    severity = STATUS_RED
-                    parts.append(f'Due at {compliance.next_due_at_time} hrs, current: {current_hours} hrs.')
-                elif current_hours + HOURS_WARNING_THRESHOLD >= compliance.next_due_at_time:
-                    severity = STATUS_ORANGE
-                    hours_remaining = compliance.next_due_at_time - current_hours
-                    parts.append(f'Due in {hours_remaining} hrs.')
-
-            # Check if due based on calendar months
-            if ad.recurring and ad.recurring_months > 0:
-                next_due_date = _end_of_month_after(compliance.date_complied, ad.recurring_months)
-                if today > next_due_date:
-                    severity = STATUS_RED
-                    parts.append(f'Due by end of {next_due_date.strftime("%B %Y")}. Last complied {compliance.date_complied}.')
-                elif today + timedelta(days=DAYS_WARNING_THRESHOLD) >= next_due_date:
-                    if severity is None:
-                        severity = STATUS_ORANGE
-                    remaining = (next_due_date - today).days
-                    parts.append(f'Due by end of {next_due_date.strftime("%B %Y")}. {remaining} days remaining.')
-
-            if severity and parts:
-                title_suffix = 'Overdue' if severity == STATUS_RED else 'Due Soon'
-                result.issues.append(AirworthinessIssue(
-                    category='AD',
-                    severity=severity,
-                    title=f'AD {ad.name} - {title_suffix}',
-                    description=f'{ad.short_description}. {" ".join(parts)}',
-                    item_id=str(ad.id),
-                ))
+        elif rank == STATUS_DUE_SOON:
+            result.issues.append(AirworthinessIssue(
+                category='AD',
+                severity=STATUS_ORANGE,
+                title=f'AD {ad.name} - Due Soon',
+                description=f'{ad.short_description}. Compliance due soon.',
+                item_id=str(ad.id),
+            ))
 
 
 def _check_grounding_squawks(aircraft, result: AirworthinessStatus):
@@ -209,106 +265,45 @@ def _check_grounding_squawks(aircraft, result: AirworthinessStatus):
 
 
 def _check_inspection_recurrency(aircraft, current_hours: Decimal, today: date, result: AirworthinessStatus):
-    """
-    Check inspection recurrency.
-
-    RED if:
-    - Required inspection type applies and no record exists within recurring period
-
-    ORANGE if:
-    - Inspection coming due within 10 hours or 30 days
-    """
-    # Get inspection types applicable to this aircraft
+    """Check inspection recurrency for required inspection types."""
     aircraft_inspections = InspectionType.objects.filter(
-        applicable_aircraft=aircraft,
-        required=True
+        applicable_aircraft=aircraft, required=True
     )
-
-    # Get inspection types applicable to aircraft components
     component_ids = aircraft.components.values_list('id', flat=True)
     component_inspections = InspectionType.objects.filter(
-        applicable_component__in=component_ids,
-        required=True
+        applicable_component__in=component_ids, required=True
     )
-
     all_inspections = (aircraft_inspections | component_inspections).distinct()
 
     for insp_type in all_inspections:
-        # Get most recent inspection record
         last_inspection = InspectionRecord.objects.filter(
             inspection_type=insp_type
         ).filter(
             Q(aircraft=aircraft) | Q(component__aircraft=aircraft)
         ).order_by('-date').first()
 
-        if not last_inspection:
-            # No inspection record ever - RED
+        rank, _ = inspection_compliance_status(insp_type, last_inspection, current_hours, today)
+
+        if rank == STATUS_OVERDUE:
+            if not last_inspection:
+                desc = 'Required inspection has no completion record.'
+                title = f'{insp_type.name} - Never Completed'
+            else:
+                desc = 'Inspection overdue.'
+                title = f'{insp_type.name} - Overdue'
             result.issues.append(AirworthinessIssue(
                 category='INSPECTION',
                 severity=STATUS_RED,
-                title=f'{insp_type.name} - Never Completed',
-                description=f'Required inspection has no completion record.',
+                title=title,
+                description=desc,
                 item_id=str(insp_type.id),
             ))
-            continue
-
-        if not insp_type.recurring:
-            # Non-recurring inspection completed - OK
-            continue
-
-        # Check recurring inspection due dates
-        severity = None  # None / STATUS_ORANGE / STATUS_RED
-        parts = []
-
-        # Check hours-based recurrency
-        if insp_type.recurring_hours > 0:
-            next_due_hours = Decimal(str(insp_type.recurring_hours))
-
-            # Prefer aircraft_hours on the record; fall back to linked logbook entry
-            hours_at_inspection = last_inspection.aircraft_hours
-            if hours_at_inspection is None and last_inspection.logbook_entry:
-                hours_at_inspection = last_inspection.logbook_entry.aircraft_hours_at_entry
-
-            if hours_at_inspection is not None:
-                hours_since_inspection = current_hours - hours_at_inspection
-
-                if hours_since_inspection >= next_due_hours:
-                    severity = STATUS_RED
-                    parts.append(f'Due every {next_due_hours} hrs. Last done at {hours_at_inspection} hrs.')
-                elif hours_since_inspection + HOURS_WARNING_THRESHOLD >= next_due_hours:
-                    severity = STATUS_ORANGE
-                    remaining = next_due_hours - hours_since_inspection
-                    parts.append(f'Due in {remaining} hrs.')
-
-        # Check calendar-based recurrency
-        if insp_type.recurring_days > 0 or insp_type.recurring_months > 0:
-            next_due_date = last_inspection.date
-            if insp_type.recurring_months > 0:
-                next_due_date = _end_of_month_after(next_due_date, insp_type.recurring_months)
-            if insp_type.recurring_days > 0:
-                next_due_date = next_due_date + timedelta(days=insp_type.recurring_days)
-
-            if insp_type.recurring_months > 0 and insp_type.recurring_days == 0:
-                due_label = f'Due by end of {next_due_date.strftime("%B %Y")}.'
-            else:
-                due_label = f'Due by {next_due_date.strftime("%b %d, %Y")}.'
-
-            if today > next_due_date:
-                severity = STATUS_RED
-                parts.append(f'{due_label} Last done {last_inspection.date}.')
-            elif today + timedelta(days=DAYS_WARNING_THRESHOLD) >= next_due_date:
-                if severity is None:
-                    severity = STATUS_ORANGE
-                remaining = (next_due_date - today).days
-                parts.append(f'{due_label} {remaining} days remaining.')
-
-        if severity and parts:
-            title_suffix = 'Overdue' if severity == STATUS_RED else 'Due Soon'
+        elif rank == STATUS_DUE_SOON:
             result.issues.append(AirworthinessIssue(
                 category='INSPECTION',
-                severity=severity,
-                title=f'{insp_type.name} - {title_suffix}',
-                description=' '.join(parts),
+                severity=STATUS_ORANGE,
+                title=f'{insp_type.name} - Due Soon',
+                description='Inspection due soon.',
                 item_id=str(insp_type.id),
             ))
 

@@ -36,7 +36,10 @@ from health.serializers import (
     InspectionTypeSerializer, InspectionTypeNestedSerializer,
     InspectionRecordNestedSerializer,
 )
-from health.services import _end_of_month_after
+from health.services import (
+    end_of_month_after, ad_compliance_status, inspection_compliance_status,
+    STATUS_LABELS,
+)
 
 
 class AircraftViewSet(viewsets.ModelViewSet):
@@ -371,33 +374,15 @@ class AircraftViewSet(viewsets.ModelViewSet):
                     ads_data.append(ad_dict)
                     continue
 
-                # Compute compliance status (worst of hours and calendar wins)
                 if not compliance:
                     ad_dict['compliance_status'] = 'no_compliance'
                 elif compliance.permanent:
                     ad_dict['compliance_status'] = 'compliant'
                 else:
                     today = date_cls.today()
-                    status_rank = 0  # 0=compliant, 1=due_soon, 2=overdue
-
-                    # Check hours-based due
-                    if compliance.next_due_at_time > 0:
-                        if current_hours >= compliance.next_due_at_time:
-                            status_rank = max(status_rank, 2)
-                        elif current_hours + Decimal('10.0') >= compliance.next_due_at_time:
-                            status_rank = max(status_rank, 1)
-
-                    # Check calendar-based due (month recurrence)
-                    if ad.recurring and ad.recurring_months > 0:
-                        next_due_date = _end_of_month_after(compliance.date_complied, ad.recurring_months)
-                        ad_dict['next_due_date'] = next_due_date.isoformat()
-                        ad_dict['next_due_date_display'] = next_due_date.strftime('%B %Y')
-                        if today > next_due_date:
-                            status_rank = max(status_rank, 2)
-                        elif today + td(days=30) >= next_due_date:
-                            status_rank = max(status_rank, 1)
-
-                    ad_dict['compliance_status'] = ['compliant', 'due_soon', 'overdue'][status_rank]
+                    rank, extras = ad_compliance_status(ad, compliance, current_hours, today)
+                    ad_dict.update(extras)
+                    ad_dict['compliance_status'] = STATUS_LABELS[rank]
 
                 ads_data.append(ad_dict)
 
@@ -495,47 +480,12 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 else:
                     type_dict['latest_record'] = None
 
-                # Compute compliance status
                 if not last_record:
                     type_dict['compliance_status'] = 'never_completed'
-                elif not insp_type.recurring:
-                    type_dict['compliance_status'] = 'compliant'
                 else:
-                    status_rank = 0  # 0=compliant, 1=due_soon, 2=overdue
-                    next_due_date = None
-
-                    # Calendar-based check
-                    if insp_type.recurring_months > 0 or insp_type.recurring_days > 0:
-                        nd = last_record.date
-                        if insp_type.recurring_months > 0:
-                            nd = _end_of_month_after(nd, insp_type.recurring_months)
-                        if insp_type.recurring_days > 0:
-                            nd = nd + td(days=insp_type.recurring_days)
-                        next_due_date = nd
-                        if today > nd:
-                            status_rank = max(status_rank, 2)
-                        elif today + td(days=30) >= nd:
-                            status_rank = max(status_rank, 1)
-
-                    # Hours-based check
-                    if insp_type.recurring_hours > 0:
-                        recurring_hrs = Decimal(str(insp_type.recurring_hours))
-                        hours_at = last_record.aircraft_hours
-                        if hours_at is None and last_record.logbook_entry:
-                            hours_at = last_record.logbook_entry.aircraft_hours_at_entry
-                        if hours_at is not None:
-                            hours_since = current_hours - hours_at
-                            next_due_hours = hours_at + recurring_hrs
-                            type_dict['next_due_hours'] = float(next_due_hours)
-                            if hours_since >= recurring_hrs:
-                                status_rank = max(status_rank, 2)
-                            elif hours_since + Decimal('10.0') >= recurring_hrs:
-                                status_rank = max(status_rank, 1)
-
-                    if next_due_date:
-                        type_dict['next_due_date'] = next_due_date.isoformat()
-
-                    type_dict['compliance_status'] = ['compliant', 'due_soon', 'overdue'][status_rank]
+                    rank, extras = inspection_compliance_status(insp_type, last_record, current_hours, today)
+                    type_dict.update(extras)
+                    type_dict['compliance_status'] = STATUS_LABELS[rank]
 
                 result.append(type_dict)
 
