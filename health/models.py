@@ -278,6 +278,10 @@ class STCApplication(models.Model):
 class InspectionRecord(models.Model):
     id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
     date = models.DateField()
+    aircraft_hours = models.DecimalField(
+        max_digits=8, decimal_places=1, blank=True, null=True,
+        help_text="Aircraft total hours at time of inspection"
+    )
     inspection_type = models.ForeignKey(InspectionType, on_delete=models.CASCADE)
     logbook_entry = models.ForeignKey(LogbookEntry, related_name='inspections', blank=True, null=True, on_delete=models.CASCADE)
     documents = models.ManyToManyField(Document, related_name='inspections', blank=True)

@@ -8,7 +8,7 @@ from core.serializers import (
     AircraftEventSerializer,
 )
 from django.utils import timezone
-from health.models import Component, LogbookEntry, Squawk, Document, DocumentCollection, OilRecord, FuelRecord, AD, ADCompliance
+from health.models import Component, LogbookEntry, Squawk, Document, DocumentCollection, OilRecord, FuelRecord, AD, ADCompliance, InspectionType, InspectionRecord
 from health.serializers import (
     ComponentSerializer, ComponentCreateUpdateSerializer,
     LogbookEntrySerializer, SquawkSerializer,
@@ -18,6 +18,8 @@ from health.serializers import (
     FuelRecordNestedSerializer, FuelRecordCreateSerializer,
     ADNestedSerializer, ADComplianceNestedSerializer, ADComplianceCreateUpdateSerializer,
     ADSerializer,
+    InspectionTypeSerializer, InspectionTypeNestedSerializer,
+    InspectionRecordNestedSerializer, InspectionRecordCreateUpdateSerializer,
 )
 
 from django.http import JsonResponse
@@ -455,6 +457,145 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    @action(detail=True, methods=['get', 'post'])
+    def inspections(self, request, pk=None):
+        """
+        Get applicable InspectionTypes with status, or create a new InspectionRecord.
+        GET /api/aircraft/{id}/inspections/ - Get all applicable inspection types with last record and status
+        POST /api/aircraft/{id}/inspections/ - Create a new InspectionRecord for the aircraft
+        """
+        aircraft = self.get_object()
+
+        if request.method == 'GET':
+            from django.db.models import Q
+            from datetime import date as date_cls, timedelta as td
+            from health.services import _end_of_month_after
+            from decimal import Decimal
+
+            component_ids = aircraft.components.values_list('id', flat=True)
+            aircraft_inspections = InspectionType.objects.filter(applicable_aircraft=aircraft)
+            component_inspections = InspectionType.objects.filter(applicable_component__in=component_ids)
+            all_types = (aircraft_inspections | component_inspections).distinct()
+
+            current_hours = aircraft.flight_time
+            today = date_cls.today()
+
+            result = []
+            for insp_type in all_types:
+                type_dict = InspectionTypeNestedSerializer(insp_type).data
+
+                last_record = InspectionRecord.objects.filter(
+                    inspection_type=insp_type
+                ).filter(
+                    Q(aircraft=aircraft) | Q(component__aircraft=aircraft)
+                ).order_by('-date').first()
+
+                if last_record:
+                    type_dict['latest_record'] = InspectionRecordNestedSerializer(last_record).data
+                else:
+                    type_dict['latest_record'] = None
+
+                # Compute compliance status
+                if not last_record:
+                    type_dict['compliance_status'] = 'never_completed'
+                elif not insp_type.recurring:
+                    type_dict['compliance_status'] = 'compliant'
+                else:
+                    status_rank = 0  # 0=compliant, 1=due_soon, 2=overdue
+                    next_due_date = None
+
+                    # Calendar-based check
+                    if insp_type.recurring_months > 0 or insp_type.recurring_days > 0:
+                        nd = last_record.date
+                        if insp_type.recurring_months > 0:
+                            nd = _end_of_month_after(nd, insp_type.recurring_months)
+                        if insp_type.recurring_days > 0:
+                            nd = nd + td(days=insp_type.recurring_days)
+                        next_due_date = nd
+                        if today > nd:
+                            status_rank = max(status_rank, 2)
+                        elif today + td(days=30) >= nd:
+                            status_rank = max(status_rank, 1)
+
+                    # Hours-based check
+                    if insp_type.recurring_hours > 0:
+                        recurring_hrs = Decimal(str(insp_type.recurring_hours))
+                        hours_at = last_record.aircraft_hours
+                        if hours_at is None and last_record.logbook_entry:
+                            hours_at = last_record.logbook_entry.aircraft_hours_at_entry
+                        if hours_at is not None:
+                            hours_since = current_hours - hours_at
+                            next_due_hours = hours_at + recurring_hrs
+                            type_dict['next_due_hours'] = float(next_due_hours)
+                            if hours_since >= recurring_hrs:
+                                status_rank = max(status_rank, 2)
+                            elif hours_since + Decimal('10.0') >= recurring_hrs:
+                                status_rank = max(status_rank, 1)
+
+                    if next_due_date:
+                        type_dict['next_due_date'] = next_due_date.isoformat()
+
+                    type_dict['compliance_status'] = ['compliant', 'due_soon', 'overdue'][status_rank]
+
+                result.append(type_dict)
+
+            return Response({'inspection_types': result})
+
+        elif request.method == 'POST':
+            # Case 1: Add existing InspectionType to aircraft
+            type_id = request.data.get('inspection_type_id')
+            if type_id:
+                try:
+                    insp_type = InspectionType.objects.get(id=type_id)
+                except InspectionType.DoesNotExist:
+                    return Response({'error': 'InspectionType not found'}, status=status.HTTP_404_NOT_FOUND)
+                insp_type.applicable_aircraft.add(aircraft)
+                return Response(InspectionTypeNestedSerializer(insp_type).data, status=status.HTTP_200_OK)
+
+            # Case 2: Create new InspectionType and add to aircraft
+            if request.data.get('create_type'):
+                create_data = {k: v for k, v in request.data.items() if k != 'create_type'}
+                serializer = InspectionTypeSerializer(data=create_data, context={'request': request})
+                if serializer.is_valid():
+                    insp_type = serializer.save()
+                    insp_type.applicable_aircraft.add(aircraft)
+                    return Response(InspectionTypeNestedSerializer(insp_type).data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            # Case 3: Create a new InspectionRecord for the aircraft
+            data = request.data.copy()
+            data['aircraft'] = aircraft.id
+
+            serializer = InspectionRecordCreateUpdateSerializer(data=data)
+            if serializer.is_valid():
+                record = serializer.save()
+                return Response(
+                    InspectionRecordNestedSerializer(record).data,
+                    status=status.HTTP_201_CREATED
+                )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], url_path='remove_inspection_type')
+    def remove_inspection_type(self, request, pk=None):
+        """
+        Remove an InspectionType from this aircraft's applicable_aircraft M2M.
+        POST /api/aircraft/{id}/remove_inspection_type/
+        Body: {"inspection_type_id": "<uuid>"}
+        """
+        aircraft = self.get_object()
+        type_id = request.data.get('inspection_type_id')
+        if not type_id:
+            return Response({'error': 'inspection_type_id required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            insp_type = InspectionType.objects.get(id=type_id)
+        except InspectionType.DoesNotExist:
+            return Response({'error': 'InspectionType not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        insp_type.applicable_aircraft.remove(aircraft)
+        return Response({'success': True})
 
 
 class AircraftNoteViewSet(viewsets.ModelViewSet):

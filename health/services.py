@@ -264,9 +264,12 @@ def _check_inspection_recurrency(aircraft, current_hours: Decimal, today: date, 
         if insp_type.recurring_hours > 0:
             next_due_hours = Decimal(str(insp_type.recurring_hours))
 
-            # Check if we have logbook entry with hours
-            if last_inspection.logbook_entry and last_inspection.logbook_entry.aircraft_hours_at_entry:
+            # Prefer aircraft_hours on the record; fall back to linked logbook entry
+            hours_at_inspection = last_inspection.aircraft_hours
+            if hours_at_inspection is None and last_inspection.logbook_entry:
                 hours_at_inspection = last_inspection.logbook_entry.aircraft_hours_at_entry
+
+            if hours_at_inspection is not None:
                 hours_since_inspection = current_hours - hours_at_inspection
 
                 if hours_since_inspection >= next_due_hours:

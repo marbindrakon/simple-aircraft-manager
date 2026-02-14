@@ -99,8 +99,15 @@ class STCApplicationViewSet(viewsets.ModelViewSet):
     serializer_class = STCApplicationSerializer
 
 class InspectionRecordViewSet(viewsets.ModelViewSet):
-    queryset = InspectionRecord.objects.all()
+    queryset = InspectionRecord.objects.all().order_by('-date')
     serializer_class = InspectionRecordSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['inspection_type', 'aircraft']
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return InspectionRecordCreateUpdateSerializer
+        return InspectionRecordSerializer
 
 class ADComplianceViewSet(viewsets.ModelViewSet):
     queryset = ADCompliance.objects.all().order_by('-date_complied')

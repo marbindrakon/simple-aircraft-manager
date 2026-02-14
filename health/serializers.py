@@ -258,6 +258,35 @@ class InspectionTypeSerializer(serializers.HyperlinkedModelSerializer):
         model = InspectionType
         fields = '__all__'
 
+
+class InspectionTypeNestedSerializer(serializers.ModelSerializer):
+    """Nested serializer for InspectionTypes without hyperlinks, used in aircraft detail."""
+    class Meta:
+        model = InspectionType
+        fields = [
+            'id', 'name', 'recurring', 'required',
+            'recurring_hours', 'recurring_days', 'recurring_months',
+        ]
+
+
+class InspectionRecordNestedSerializer(serializers.ModelSerializer):
+    """Nested serializer for InspectionRecord, used in aircraft detail."""
+    class Meta:
+        model = InspectionRecord
+        fields = [
+            'id', 'date', 'aircraft_hours', 'inspection_type', 'aircraft', 'logbook_entry',
+        ]
+
+
+class InspectionRecordCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating/updating InspectionRecord."""
+    class Meta:
+        model = InspectionRecord
+        fields = [
+            'id', 'date', 'aircraft_hours', 'inspection_type', 'aircraft', 'logbook_entry',
+        ]
+        read_only_fields = ['id']
+
 class ADSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = AD

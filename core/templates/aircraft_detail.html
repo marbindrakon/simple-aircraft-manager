@@ -98,6 +98,14 @@
                         </template>
                     </button>
                 </li>
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'inspections' }">
+                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'inspections'">
+                        <span class="pf-v5-c-tabs__item-text">Inspections</span>
+                        <template x-if="inspectionIssueCount > 0">
+                            <span class="pf-v5-c-badge pf-m-unread" style="margin-left: 0.5rem;" x-text="inspectionIssueCount"></span>
+                        </template>
+                    </button>
+                </li>
                 <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'oil' }">
                     <button class="pf-v5-c-tabs__link" @click="activeTab = 'oil'">
                         <span class="pf-v5-c-tabs__item-text">Oil</span>
@@ -616,6 +624,121 @@
             </div>
         </div>
 
+        <!-- Inspections Tab -->
+        <div x-show="activeTab === 'inspections'" class="pf-v5-c-page__main-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>Inspections</h2>
+                <button class="pf-v5-c-button pf-m-primary" @click="openInspectionTypeModal()">
+                    <i class="fas fa-plus"></i> Add Inspection Type
+                </button>
+            </div>
+
+            <!-- Loading -->
+            <div x-show="!inspectionsLoaded" class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
+                    <h2 class="pf-v5-c-title pf-m-lg">Loading inspections...</h2>
+                </div>
+            </div>
+
+            <div x-show="inspectionsLoaded" x-cloak>
+                <!-- Empty State -->
+                <template x-if="inspectionTypes.length === 0">
+                    <div class="pf-v5-c-empty-state">
+                        <div class="pf-v5-c-empty-state__content">
+                            <i class="fas fa-clipboard-check" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                            <h2 class="pf-v5-c-title pf-m-lg">No Applicable Inspections</h2>
+                            <div class="pf-v5-c-empty-state__body">
+                                No inspection types are currently tracked for this aircraft.
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Inspection Types Table -->
+                <template x-if="inspectionTypes.length > 0">
+                    <table class="pf-v5-c-table pf-m-grid-md">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Recurring</th>
+                                <th>Status</th>
+                                <th>Last Completed</th>
+                                <th>Next Due</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="insp in inspectionTypes" :key="insp.id">
+                                <tr>
+                                    <td x-text="insp.name"></td>
+                                    <td>
+                                        <template x-if="insp.recurring">
+                                            <span>
+                                                Yes
+                                                <template x-if="insp.recurring_hours > 0">
+                                                    <span x-text="'(' + insp.recurring_hours + ' hrs)'"></span>
+                                                </template>
+                                                <template x-if="insp.recurring_months > 0">
+                                                    <span x-text="'(' + insp.recurring_months + ' mo)'"></span>
+                                                </template>
+                                                <template x-if="insp.recurring_days > 0 && insp.recurring_months === 0">
+                                                    <span x-text="'(' + insp.recurring_days + ' days)'"></span>
+                                                </template>
+                                            </span>
+                                        </template>
+                                        <template x-if="!insp.recurring">
+                                            <span>No</span>
+                                        </template>
+                                    </td>
+                                    <td>
+                                        <span class="pf-v5-c-label" :class="getInspectionStatusClass(insp)" x-text="getInspectionStatusText(insp)"></span>
+                                    </td>
+                                    <td x-text="insp.latest_record ? formatDate(insp.latest_record.date) : '-'"></td>
+                                    <td>
+                                        <template x-if="!insp.recurring || !insp.latest_record">
+                                            <span>-</span>
+                                        </template>
+                                        <template x-if="insp.recurring && insp.latest_record && insp.next_due_date">
+                                            <span x-text="formatDate(insp.next_due_date)"></span>
+                                        </template>
+                                        <template x-if="insp.recurring && insp.latest_record && insp.next_due_hours && !insp.next_due_date">
+                                            <span x-text="formatHours(insp.next_due_hours) + ' hrs'"></span>
+                                        </template>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.25rem;">
+                                            <button class="pf-v5-c-button pf-m-plain"
+                                                    @click="editInspectionType(insp)"
+                                                    title="Edit Inspection Type"
+                                                    aria-label="Edit Inspection Type">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="pf-v5-c-button pf-m-plain"
+                                                    @click="openInspectionModal(insp)"
+                                                    title="Record Inspection">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button class="pf-v5-c-button pf-m-plain"
+                                                    @click="openInspectionHistory(insp)"
+                                                    title="View Inspection History">
+                                                <i class="fas fa-history"></i>
+                                            </button>
+                                            <button class="pf-v5-c-button pf-m-plain pf-m-danger"
+                                                    @click="removeInspectionType(insp)"
+                                                    title="Remove Inspection Type">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </template>
+            </div>
+        </div>
+
         <!-- Oil Tab -->
         <div x-show="activeTab === 'oil'" class="pf-v5-c-page__main-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
@@ -1098,7 +1221,7 @@
     </div>
 
     <!-- Compliance History Modal -->
-    <div class="pf-v5-c-backdrop" x-show="complianceHistoryOpen" x-cloak @click.self="closeComplianceHistory()">
+    <div class="pf-v5-c-backdrop" x-show="complianceHistoryOpen" x-cloak @click.self="closeComplianceHistory()" style="z-index: 1000;">
         <div class="pf-v5-l-bullseye">
             <div class="pf-v5-c-modal-box pf-m-lg" @click.stop style="max-height: 90vh; overflow-y: auto;">
                 <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeComplianceHistory()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
@@ -1216,8 +1339,8 @@
         </div>
     </div>
 
-    <!-- Logbook Entry Detail Modal (from compliance history) -->
-    <div class="pf-v5-c-backdrop" x-show="logEntryDetailOpen" x-cloak @click.self="closeLogEntryDetail()">
+    <!-- Logbook Entry Detail Modal (from compliance history / inspection history) -->
+    <div class="pf-v5-c-backdrop" x-show="logEntryDetailOpen" x-cloak @click.self="closeLogEntryDetail()" style="z-index: 1200;">
         <div class="pf-v5-l-bullseye">
             <div class="pf-v5-c-modal-box pf-m-md" @click.stop style="max-height: 80vh; overflow-y: auto;">
                 <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeLogEntryDetail()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
@@ -1284,7 +1407,7 @@
     </div>
 
     <!-- Document Viewer Modal -->
-    <div class="pf-v5-c-backdrop" x-show="viewerOpen" x-cloak @click.self="closeDocumentViewer()">
+    <div class="pf-v5-c-backdrop" x-show="viewerOpen" x-cloak @click.self="closeDocumentViewer()" style="z-index: 1300;">
         <div class="pf-v5-l-bullseye">
             <div class="pf-v5-c-modal-box pf-m-lg document-viewer-modal" @click.stop>
                 <div style="position: absolute; top: 1rem; right: 1rem; z-index: 10; display: flex; gap: 0.25rem;">
@@ -2114,6 +2237,289 @@
                         <span x-show="complianceSubmitting">Saving...</span>
                     </button>
                     <button class="pf-v5-c-button pf-m-link" @click="closeComplianceModal()">Cancel</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inspection History Modal -->
+    <div class="pf-v5-c-backdrop" x-show="inspectionHistoryOpen" x-cloak @click.self="closeInspectionHistory()" style="z-index: 1000;">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-lg" @click.stop style="max-height: 90vh; overflow-y: auto;">
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeInspectionHistory()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">
+                        <template x-if="selectedInspectionType">
+                            <span x-text="selectedInspectionType.name + ' — History'"></span>
+                        </template>
+                    </h1>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <!-- Loading -->
+                    <div x-show="inspectionHistoryLoading" style="text-align: center; padding: 2rem;">
+                        <div class="loading-spinner" style="width: 2rem; height: 2rem; margin: 0 auto;"></div>
+                        <p style="margin-top: 0.5rem; color: var(--pf-v5-global--Color--200);">Loading history...</p>
+                    </div>
+
+                    <!-- Empty -->
+                    <template x-if="!inspectionHistoryLoading && inspectionHistory.length === 0">
+                        <div class="pf-v5-c-empty-state">
+                            <div class="pf-v5-c-empty-state__content">
+                                <i class="fas fa-clipboard" style="font-size: 2.5rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                                <h2 class="pf-v5-c-title pf-m-md">No inspection records</h2>
+                                <div class="pf-v5-c-empty-state__body">
+                                    No records have been logged for this inspection type yet.
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Records table -->
+                    <template x-if="!inspectionHistoryLoading && inspectionHistory.length > 0">
+                        <table class="pf-v5-c-table pf-m-grid-md">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Aircraft Hours</th>
+                                    <th>Logbook Entry</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="record in inspectionHistory" :key="record.id">
+                                    <tr>
+                                        <td x-text="formatDate(record.date)"></td>
+                                        <td>
+                                            <template x-if="record.aircraft_hours != null">
+                                                <span x-text="formatHours(record.aircraft_hours)"></span>
+                                            </template>
+                                            <template x-if="record.aircraft_hours == null">
+                                                <span style="color: var(--pf-v5-global--Color--200);">—</span>
+                                            </template>
+                                        </td>
+                                        <td>
+                                            <template x-if="record.logbook_entry">
+                                                <button class="pf-v5-c-button pf-m-link pf-m-inline"
+                                                        @click="viewLogEntryFromCompliance(record.logbook_entry)">
+                                                    <i class="fas fa-book-open"></i> View
+                                                </button>
+                                            </template>
+                                            <template x-if="!record.logbook_entry">
+                                                <span style="color: var(--pf-v5-global--Color--200);">—</span>
+                                            </template>
+                                        </td>
+                                        <td>
+                                            <div style="display: flex; gap: 0.25rem;">
+                                                <button class="pf-v5-c-button pf-m-plain"
+                                                        @click="editInspectionRecord(record)"
+                                                        title="Edit Record">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="pf-v5-c-button pf-m-plain pf-m-danger"
+                                                        @click="deleteInspectionRecord(record)"
+                                                        title="Delete Record">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </template>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" @click="openInspectionModal(selectedInspectionType)">
+                        <i class="fas fa-plus"></i> Record Inspection
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeInspectionHistory()">Close</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Record Inspection Modal -->
+    <div class="pf-v5-c-backdrop" x-show="inspectionModalOpen" x-cloak @click.self="closeInspectionModal()" style="z-index: 1100;">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-md" @click.stop style="max-height: 90vh; overflow-y: auto;">
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeInspectionModal()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">
+                        <template x-if="editingInspectionRecord">Edit Inspection Record</template>
+                        <template x-if="!editingInspectionRecord">
+                            <span>
+                                Record Inspection
+                                <template x-if="selectedInspectionType">
+                                    <span>— <span x-text="selectedInspectionType.name"></span></span>
+                                </template>
+                            </span>
+                        </template>
+                    </h1>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <form @submit.prevent="submitInspection" class="pf-v5-c-form">
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="inspection-date">
+                                <span class="pf-v5-c-form__label-text">Date Completed</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="date" id="inspection-date" class="pf-v5-c-form-control" x-model="inspectionForm.date" required>
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="inspection-aircraft-hours">
+                                <span class="pf-v5-c-form__label-text">Aircraft Hours</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="number" step="0.1" min="0" id="inspection-aircraft-hours" class="pf-v5-c-form-control"
+                                       x-model="inspectionForm.aircraft_hours"
+                                       :placeholder="formatHours(aircraft?.flight_time)">
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="inspection-logbook-entry">
+                                <span class="pf-v5-c-form__label-text">Logbook Entry (optional)</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <select id="inspection-logbook-entry" class="pf-v5-c-form-control" x-model="inspectionForm.logbook_entry_id">
+                                    <option value="">— None —</option>
+                                    <template x-for="entry in logbookEntries" :key="entry.id">
+                                        <option :value="entry.id" x-text="logbookEntryLabel(entry)"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" @click="submitInspection" :disabled="inspectionSubmitting">
+                        <span x-show="!inspectionSubmitting" x-text="editingInspectionRecord ? 'Save Changes' : 'Record Inspection'"></span>
+                        <span x-show="inspectionSubmitting">Saving...</span>
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeInspectionModal()">Cancel</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add / Edit Inspection Type Modal -->
+    <div class="pf-v5-c-backdrop" x-show="inspectionTypeModalOpen" x-cloak @click.self="closeInspectionTypeModal()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-md" @click.stop style="max-height: 90vh; overflow-y: auto;">
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeInspectionTypeModal()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title" x-text="editingInspectionType ? 'Edit Inspection Type' : 'Add Inspection Type'"></h1>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <!-- Add existing or create new (only when creating) -->
+                    <template x-if="!editingInspectionType">
+                        <div style="margin-bottom: 1rem;">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label">
+                                    <span class="pf-v5-c-form__label-text">Add Existing Type</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control" style="display: flex; gap: 0.5rem;">
+                                    <select class="pf-v5-c-form-control" x-model="selectedExistingInspectionTypeId">
+                                        <option value="">— Select existing —</option>
+                                        <template x-for="t in availableInspectionTypes" :key="t.id">
+                                            <option :value="t.id" x-text="t.name"></option>
+                                        </template>
+                                    </select>
+                                    <button class="pf-v5-c-button pf-m-secondary"
+                                            @click="addExistingInspectionType()"
+                                            :disabled="!selectedExistingInspectionTypeId || inspectionTypeSubmitting">
+                                        Add
+                                    </button>
+                                </div>
+                            </div>
+                            <div style="text-align: center; margin: 1rem 0; color: var(--pf-v5-global--Color--200);">— or create new —</div>
+                        </div>
+                    </template>
+
+                    <form @submit.prevent="submitInspectionType" class="pf-v5-c-form">
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="itype-name">
+                                <span class="pf-v5-c-form__label-text">Name</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="text" id="itype-name" class="pf-v5-c-form-control" x-model="inspectionTypeForm.name" required placeholder="e.g. Annual Inspection">
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label">
+                                <span class="pf-v5-c-form__label-text">Required</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <label class="pf-v5-c-check">
+                                    <input type="checkbox" class="pf-v5-c-check__input" x-model="inspectionTypeForm.required">
+                                    <span class="pf-v5-c-check__label">Required for airworthiness</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label">
+                                <span class="pf-v5-c-form__label-text">Recurring</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <label class="pf-v5-c-check">
+                                    <input type="checkbox" class="pf-v5-c-check__input" x-model="inspectionTypeForm.recurring">
+                                    <span class="pf-v5-c-check__label">Repeats on a schedule</span>
+                                </label>
+                            </div>
+                        </div>
+                        <template x-if="inspectionTypeForm.recurring">
+                            <div>
+                                <div class="pf-v5-c-form__group">
+                                    <label class="pf-v5-c-form__label" for="itype-hours">
+                                        <span class="pf-v5-c-form__label-text">Recurring Hours (0 = not used)</span>
+                                    </label>
+                                    <div class="pf-v5-c-form__group-control">
+                                        <input type="number" step="0.1" min="0" id="itype-hours" class="pf-v5-c-form-control" x-model="inspectionTypeForm.recurring_hours">
+                                    </div>
+                                </div>
+                                <div class="pf-v5-c-form__group">
+                                    <label class="pf-v5-c-form__label" for="itype-months">
+                                        <span class="pf-v5-c-form__label-text">Recurring Months (0 = not used)</span>
+                                    </label>
+                                    <div class="pf-v5-c-form__group-control">
+                                        <input type="number" min="0" id="itype-months" class="pf-v5-c-form-control" x-model="inspectionTypeForm.recurring_months">
+                                    </div>
+                                </div>
+                                <div class="pf-v5-c-form__group">
+                                    <label class="pf-v5-c-form__label" for="itype-days">
+                                        <span class="pf-v5-c-form__label-text">Recurring Days (0 = not used)</span>
+                                    </label>
+                                    <div class="pf-v5-c-form__group-control">
+                                        <input type="number" min="0" id="itype-days" class="pf-v5-c-form-control" x-model="inspectionTypeForm.recurring_days">
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </form>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" @click="submitInspectionType" :disabled="inspectionTypeSubmitting">
+                        <span x-show="!inspectionTypeSubmitting" x-text="editingInspectionType ? 'Save Changes' : 'Create & Add'"></span>
+                        <span x-show="inspectionTypeSubmitting">Saving...</span>
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeInspectionTypeModal()">Cancel</button>
                 </footer>
             </div>
         </div>
