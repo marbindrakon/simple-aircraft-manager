@@ -1,3 +1,15 @@
+// Merge multiple objects preserving getter/setter descriptors.
+// The spread operator (...) evaluates getters eagerly, which breaks
+// cross-mixin references. This copies property descriptors intact so
+// getters are evaluated lazily against the final merged object.
+function mergeMixins(...sources) {
+    const result = {};
+    for (const source of sources) {
+        Object.defineProperties(result, Object.getOwnPropertyDescriptors(source));
+    }
+    return result;
+}
+
 // CSRF token helper
 function getCookie(name) {
     let cookieValue = null;
