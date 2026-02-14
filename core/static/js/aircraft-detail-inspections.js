@@ -268,13 +268,12 @@ function inspectionsMixin() {
 
                 if (response.ok) {
                     showNotification(this.editingInspectionRecord ? 'Record updated' : 'Inspection recorded', 'success');
-                    const wasEditing = !!this.editingInspectionRecord;
                     const historyType = this.selectedInspectionType || (this.inspectionHistoryOpen ? this.inspectionTypes.find(t => t.id === this.editingInspectionRecord?.inspection_type) : null);
                     this.closeInspectionModal();
                     this.inspectionsLoaded = false;
                     await this.loadInspections();
                     await this.loadData();
-                    if (wasEditing && this.inspectionHistoryOpen && historyType) {
+                    if (this.inspectionHistoryOpen && historyType) {
                         await this.openInspectionHistory(historyType);
                     }
                 } else {

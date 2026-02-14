@@ -25,8 +25,9 @@ function aircraftDetail(aircraftId) {
             async init() {
                 await this.loadData();
 
-                // Load ADs eagerly so the issue count badge is visible immediately
+                // Load ADs and inspections eagerly so issue count badges are visible immediately
                 this.loadAds();
+                this.loadInspections();
 
                 // Watch for tab changes to load data lazily
                 this.$watch('activeTab', (tab) => {
