@@ -2,7 +2,7 @@ import os
 
 from rest_framework import serializers
 
-from .models import ComponentType, Component, DocumentCollection, Document, DocumentImage, LogbookEntry, Squawk, InspectionType, AD, STCApplication, InspectionRecord, ADCompliance, OilRecord, FuelRecord
+from .models import ComponentType, Component, DocumentCollection, Document, DocumentImage, LogbookEntry, Squawk, InspectionType, AD, STCApplication, InspectionRecord, ADCompliance, ConsumableRecord
 
 ALLOWED_UPLOAD_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.pdf', '.txt'}
 ALLOWED_UPLOAD_CONTENT_TYPES = {
@@ -351,27 +351,14 @@ class ComponentCreateUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
-class OilRecordNestedSerializer(serializers.ModelSerializer):
+class ConsumableRecordNestedSerializer(serializers.ModelSerializer):
     class Meta:
-        model = OilRecord
-        fields = ['id', 'aircraft', 'date', 'quantity_added', 'level_after', 'oil_type', 'flight_hours', 'notes', 'created_at']
+        model = ConsumableRecord
+        fields = ['id', 'record_type', 'aircraft', 'date', 'quantity_added', 'level_after', 'consumable_type', 'flight_hours', 'notes', 'created_at']
 
 
-class OilRecordCreateSerializer(serializers.ModelSerializer):
+class ConsumableRecordCreateSerializer(serializers.ModelSerializer):
     class Meta:
-        model = OilRecord
-        fields = ['id', 'aircraft', 'date', 'quantity_added', 'level_after', 'oil_type', 'flight_hours', 'notes']
-        read_only_fields = ['id']
-
-
-class FuelRecordNestedSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FuelRecord
-        fields = ['id', 'aircraft', 'date', 'quantity_added', 'level_after', 'fuel_type', 'flight_hours', 'notes', 'created_at']
-
-
-class FuelRecordCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FuelRecord
-        fields = ['id', 'aircraft', 'date', 'quantity_added', 'level_after', 'fuel_type', 'flight_hours', 'notes']
+        model = ConsumableRecord
+        fields = ['id', 'record_type', 'aircraft', 'date', 'quantity_added', 'level_after', 'consumable_type', 'flight_hours', 'notes']
         read_only_fields = ['id']

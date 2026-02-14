@@ -313,13 +313,21 @@ class ADCompliance(models.Model):
         return ret_string
 
 
-class OilRecord(models.Model):
+class ConsumableRecord(models.Model):
+    RECORD_TYPE_OIL = 'oil'
+    RECORD_TYPE_FUEL = 'fuel'
+    RECORD_TYPE_CHOICES = [
+        (RECORD_TYPE_OIL, 'Oil'),
+        (RECORD_TYPE_FUEL, 'Fuel'),
+    ]
+
     id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
-    aircraft = models.ForeignKey(core_models.Aircraft, related_name='oil_records', on_delete=models.CASCADE)
+    record_type = models.CharField(max_length=10, choices=RECORD_TYPE_CHOICES)
+    aircraft = models.ForeignKey(core_models.Aircraft, related_name='consumable_records', on_delete=models.CASCADE)
     date = models.DateField()
-    quantity_added = models.DecimalField(max_digits=5, decimal_places=2, help_text="Quarts added")
-    level_after = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True, help_text="Oil level after adding (quarts)")
-    oil_type = models.CharField(max_length=100, blank=True)
+    quantity_added = models.DecimalField(max_digits=6, decimal_places=2)
+    level_after = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
+    consumable_type = models.CharField(max_length=100, blank=True, help_text="e.g. 'Aeroshell W100' for oil or '100LL' for fuel")
     flight_hours = models.DecimalField(max_digits=8, decimal_places=1, help_text="Aircraft hours at time of record")
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -328,23 +336,7 @@ class OilRecord(models.Model):
         ordering = ['-date', '-created_at']
 
     def __str__(self):
-        return f"{self.aircraft.tail_number} - Oil {self.quantity_added}qt @ {self.flight_hours}hrs - {self.date}"
-
-
-class FuelRecord(models.Model):
-    id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
-    aircraft = models.ForeignKey(core_models.Aircraft, related_name='fuel_records', on_delete=models.CASCADE)
-    date = models.DateField()
-    quantity_added = models.DecimalField(max_digits=6, decimal_places=2, help_text="Gallons added")
-    level_after = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, help_text="Fuel level after adding (gallons)")
-    fuel_type = models.CharField(max_length=100, blank=True)
-    flight_hours = models.DecimalField(max_digits=8, decimal_places=1, help_text="Aircraft hours at time of record")
-    notes = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-date', '-created_at']
-
-    def __str__(self):
+        if self.record_type == self.RECORD_TYPE_OIL:
+            return f"{self.aircraft.tail_number} - Oil {self.quantity_added}qt @ {self.flight_hours}hrs - {self.date}"
         return f"{self.aircraft.tail_number} - Fuel {self.quantity_added}gal @ {self.flight_hours}hrs - {self.date}"
 

@@ -24,15 +24,14 @@ from core.serializers import (
 )
 from health.models import (
     Component, LogbookEntry, Squawk, Document, DocumentCollection,
-    OilRecord, FuelRecord, AD, ADCompliance, InspectionType, InspectionRecord,
+    ConsumableRecord, AD, ADCompliance, InspectionType, InspectionRecord,
 )
 from health.serializers import (
     ComponentSerializer, ComponentCreateUpdateSerializer,
     LogbookEntrySerializer, SquawkSerializer,
     SquawkNestedSerializer, SquawkCreateUpdateSerializer,
     DocumentCollectionNestedSerializer, DocumentNestedSerializer,
-    OilRecordNestedSerializer, OilRecordCreateSerializer,
-    FuelRecordNestedSerializer, FuelRecordCreateSerializer,
+    ConsumableRecordNestedSerializer, ConsumableRecordCreateSerializer,
     ADNestedSerializer, ADComplianceNestedSerializer,
     ADSerializer,
     InspectionTypeSerializer, InspectionTypeNestedSerializer,
@@ -267,6 +266,38 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    def _consumable_records_action(self, request, aircraft, record_type):
+        """Shared handler for oil_records and fuel_records actions."""
+        response_key = f"{record_type}_records"
+        log_category = record_type
+        unit = 'qt' if record_type == ConsumableRecord.RECORD_TYPE_OIL else 'gal'
+
+        if request.method == 'GET':
+            records = aircraft.consumable_records.filter(record_type=record_type)
+            return Response({
+                response_key: ConsumableRecordNestedSerializer(records, many=True).data,
+            })
+
+        data = request.data.copy()
+        data['aircraft'] = aircraft.id
+        data['record_type'] = record_type
+        if 'flight_hours' not in data or not data['flight_hours']:
+            data['flight_hours'] = str(aircraft.flight_time)
+
+        serializer = ConsumableRecordCreateSerializer(data=data)
+        if serializer.is_valid():
+            record = serializer.save()
+            log_event(
+                aircraft, log_category,
+                f"{record_type.capitalize()} added: {record.quantity_added} {unit}",
+                user=request.user,
+            )
+            return Response(
+                ConsumableRecordNestedSerializer(record).data,
+                status=status.HTTP_201_CREATED,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     @action(detail=True, methods=['get', 'post'])
     def oil_records(self, request, pk=None):
         """
@@ -274,33 +305,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
         GET /api/aircraft/{id}/oil_records/ - Get all oil records
         POST /api/aircraft/{id}/oil_records/ - Create a new oil record
         """
-        aircraft = self.get_object()
-
-        if request.method == 'GET':
-            records = aircraft.oil_records.all()
-            return Response({
-                'oil_records': OilRecordNestedSerializer(records, many=True).data,
-            })
-
-        elif request.method == 'POST':
-            data = request.data.copy()
-            data['aircraft'] = aircraft.id
-            if 'flight_hours' not in data or not data['flight_hours']:
-                data['flight_hours'] = str(aircraft.flight_time)
-
-            serializer = OilRecordCreateSerializer(data=data)
-            if serializer.is_valid():
-                record = serializer.save()
-                log_event(
-                    aircraft, 'oil',
-                    f"Oil added: {record.quantity_added} qt",
-                    user=request.user,
-                )
-                return Response(
-                    OilRecordNestedSerializer(record).data,
-                    status=status.HTTP_201_CREATED
-                )
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return self._consumable_records_action(request, self.get_object(), ConsumableRecord.RECORD_TYPE_OIL)
 
     @action(detail=True, methods=['get', 'post'])
     def fuel_records(self, request, pk=None):
@@ -309,33 +314,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
         GET /api/aircraft/{id}/fuel_records/ - Get all fuel records
         POST /api/aircraft/{id}/fuel_records/ - Create a new fuel record
         """
-        aircraft = self.get_object()
-
-        if request.method == 'GET':
-            records = aircraft.fuel_records.all()
-            return Response({
-                'fuel_records': FuelRecordNestedSerializer(records, many=True).data,
-            })
-
-        elif request.method == 'POST':
-            data = request.data.copy()
-            data['aircraft'] = aircraft.id
-            if 'flight_hours' not in data or not data['flight_hours']:
-                data['flight_hours'] = str(aircraft.flight_time)
-
-            serializer = FuelRecordCreateSerializer(data=data)
-            if serializer.is_valid():
-                record = serializer.save()
-                log_event(
-                    aircraft, 'fuel',
-                    f"Fuel added: {record.quantity_added} gal",
-                    user=request.user,
-                )
-                return Response(
-                    FuelRecordNestedSerializer(record).data,
-                    status=status.HTTP_201_CREATED
-                )
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return self._consumable_records_action(request, self.get_object(), ConsumableRecord.RECORD_TYPE_FUEL)
 
     @action(detail=True, methods=['post'])
     def components(self, request, pk=None):

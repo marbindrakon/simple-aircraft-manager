@@ -80,8 +80,9 @@ The aircraft detail page is composed from feature-specific mixin files, each ret
 | `aircraft-detail-components.js` | `componentsMixin()` | Component CRUD, tree sorting, status |
 | `aircraft-detail-squawks.js` | `squawksMixin()` | Squawk CRUD, priority helpers |
 | `aircraft-detail-notes.js` | `notesMixin()` | Note CRUD |
-| `aircraft-detail-oil.js` | `oilMixin()` | Oil record CRUD, consumption chart |
-| `aircraft-detail-fuel.js` | `fuelMixin()` | Fuel record CRUD, burn rate chart |
+| `aircraft-detail-consumables.js` | `makeConsumableMixin(cfg)` | Shared factory for oil/fuel mixins |
+| `aircraft-detail-oil.js` | `oilMixin()` | Oil record CRUD, consumption chart (thin wrapper) |
+| `aircraft-detail-fuel.js` | `fuelMixin()` | Fuel record CRUD, burn rate chart (thin wrapper) |
 | `aircraft-detail-logbook.js` | `logbookMixin()` | Logbook CRUD, file uploads |
 | `aircraft-detail-ads.js` | `adsMixin()` | AD CRUD, compliance records, history |
 | `aircraft-detail-inspections.js` | `inspectionsMixin()` | Inspection CRUD, history |

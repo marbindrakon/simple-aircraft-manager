@@ -907,6 +907,7 @@
                                 <th>Level After</th>
                                 <th>Type</th>
                                 <th>Notes</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -916,8 +917,13 @@
                                     <td x-text="formatHours(record.flight_hours)"></td>
                                     <td x-text="record.quantity_added"></td>
                                     <td x-text="record.level_after || '-'"></td>
-                                    <td x-text="record.oil_type || '-'"></td>
+                                    <td x-text="record.consumable_type || '-'"></td>
                                     <td x-text="record.notes || '-'"></td>
+                                    <td>
+                                        <button class="pf-v5-c-button pf-m-plain" @click="editOilRecord(record)" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </td>
                                 </tr>
                             </template>
                         </tbody>
@@ -978,6 +984,7 @@
                                 <th>Level After</th>
                                 <th>Type</th>
                                 <th>Notes</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -987,8 +994,13 @@
                                     <td x-text="formatHours(record.flight_hours)"></td>
                                     <td x-text="record.quantity_added"></td>
                                     <td x-text="record.level_after || '-'"></td>
-                                    <td x-text="record.fuel_type || '-'"></td>
+                                    <td x-text="record.consumable_type || '-'"></td>
                                     <td x-text="record.notes || '-'"></td>
+                                    <td>
+                                        <button class="pf-v5-c-button pf-m-plain" @click="editFuelRecord(record)" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </td>
                                 </tr>
                             </template>
                         </tbody>
@@ -2125,7 +2137,7 @@
                 </button>
 
                 <header class="pf-v5-c-modal-box__header">
-                    <h1 class="pf-v5-c-modal-box__title">Add Oil Record</h1>
+                    <h1 class="pf-v5-c-modal-box__title" x-text="editingOilRecord ? 'Edit Oil Record' : 'Add Oil Record'"></h1>
                 </header>
 
                 <div class="pf-v5-c-modal-box__body">
@@ -2169,7 +2181,7 @@
                                 <span class="pf-v5-c-form__label-text">Oil Type (optional)</span>
                             </label>
                             <div class="pf-v5-c-form__group-control">
-                                <input type="text" id="oil-type" class="pf-v5-c-form-control" x-model="oilForm.oil_type" placeholder="e.g. Aeroshell W100">
+                                <input type="text" id="oil-type" class="pf-v5-c-form-control" x-model="oilForm.consumable_type" placeholder="e.g. Aeroshell W100">
                             </div>
                         </div>
                         <div class="pf-v5-c-form__group">
@@ -2185,9 +2197,12 @@
 
                 <footer class="pf-v5-c-modal-box__footer">
                     <button class="pf-v5-c-button pf-m-primary" @click="submitOilRecord" :disabled="oilSubmitting">
-                        <span x-show="!oilSubmitting">Add Record</span>
+                        <span x-show="!oilSubmitting" x-text="editingOilRecord ? 'Save Changes' : 'Add Record'"></span>
                         <span x-show="oilSubmitting">Saving...</span>
                     </button>
+                    <template x-if="editingOilRecord">
+                        <button class="pf-v5-c-button pf-m-danger" @click="deleteOilRecord" :disabled="oilSubmitting">Delete</button>
+                    </template>
                     <button class="pf-v5-c-button pf-m-link" @click="closeOilModal()">Cancel</button>
                 </footer>
             </div>
@@ -2715,7 +2730,7 @@
                 </button>
 
                 <header class="pf-v5-c-modal-box__header">
-                    <h1 class="pf-v5-c-modal-box__title">Add Fuel Record</h1>
+                    <h1 class="pf-v5-c-modal-box__title" x-text="editingFuelRecord ? 'Edit Fuel Record' : 'Add Fuel Record'"></h1>
                 </header>
 
                 <div class="pf-v5-c-modal-box__body">
@@ -2759,7 +2774,7 @@
                                 <span class="pf-v5-c-form__label-text">Fuel Type (optional)</span>
                             </label>
                             <div class="pf-v5-c-form__group-control">
-                                <input type="text" id="fuel-type" class="pf-v5-c-form-control" x-model="fuelForm.fuel_type" placeholder="e.g. 100LL">
+                                <input type="text" id="fuel-type" class="pf-v5-c-form-control" x-model="fuelForm.consumable_type" placeholder="e.g. 100LL">
                             </div>
                         </div>
                         <div class="pf-v5-c-form__group">
@@ -2775,9 +2790,12 @@
 
                 <footer class="pf-v5-c-modal-box__footer">
                     <button class="pf-v5-c-button pf-m-primary" @click="submitFuelRecord" :disabled="fuelSubmitting">
-                        <span x-show="!fuelSubmitting">Add Record</span>
+                        <span x-show="!fuelSubmitting" x-text="editingFuelRecord ? 'Save Changes' : 'Add Record'"></span>
                         <span x-show="fuelSubmitting">Saving...</span>
                     </button>
+                    <template x-if="editingFuelRecord">
+                        <button class="pf-v5-c-button pf-m-danger" @click="deleteFuelRecord" :disabled="fuelSubmitting">Delete</button>
+                    </template>
                     <button class="pf-v5-c-button pf-m-link" @click="closeFuelModal()">Cancel</button>
                 </footer>
             </div>
@@ -2945,6 +2963,7 @@
 <script src="{% static 'js/aircraft-detail-components.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-squawks.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-notes.js' %}"></script>
+<script src="{% static 'js/aircraft-detail-consumables.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-oil.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-fuel.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-logbook.js' %}"></script>

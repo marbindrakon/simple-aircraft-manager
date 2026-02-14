@@ -41,6 +41,7 @@ router.register(r'ads', health_views.ADViewSet)
 router.register(r'stcs', health_views.STCApplicationViewSet)
 router.register(r'inspections', health_views.InspectionRecordViewSet)
 router.register(r'ad-compliances', health_views.ADComplianceViewSet)
+router.register(r'consumable-records', health_views.ConsumableRecordViewSet)
 
 
 urlpatterns = [

@@ -9,7 +9,7 @@ from core.mixins import EventLoggingMixin
 from health.models import (
     ComponentType, Component, DocumentCollection, Document, DocumentImage,
     LogbookEntry, Squawk, InspectionType, AD, STCApplication,
-    InspectionRecord, ADCompliance,
+    InspectionRecord, ADCompliance, ConsumableRecord,
 )
 from health.serializers import (
     ComponentTypeSerializer, ComponentSerializer, ComponentCreateUpdateSerializer,
@@ -18,6 +18,7 @@ from health.serializers import (
     InspectionTypeSerializer, ADSerializer, STCApplicationSerializer,
     InspectionRecordSerializer, InspectionRecordNestedSerializer,
     ADComplianceSerializer, ADComplianceNestedSerializer,
+    ConsumableRecordNestedSerializer, ConsumableRecordCreateSerializer,
 )
 
 class ComponentTypeViewSet(viewsets.ModelViewSet):
@@ -165,3 +166,33 @@ class ADComplianceViewSet(EventLoggingMixin, viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return ADComplianceNestedSerializer
         return ADComplianceSerializer
+
+
+class ConsumableRecordViewSet(EventLoggingMixin, viewsets.ModelViewSet):
+    queryset = ConsumableRecord.objects.all()
+    serializer_class = ConsumableRecordNestedSerializer
+    event_category = 'oil'  # overridden per-record in perform_update/destroy
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['aircraft', 'record_type']
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return ConsumableRecordCreateSerializer
+        return ConsumableRecordNestedSerializer
+
+    def _event_category(self, instance):
+        return instance.record_type  # 'oil' or 'fuel'
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        aircraft = instance.aircraft
+        user = self.request.user if hasattr(self, 'request') else None
+        label = 'Oil' if instance.record_type == ConsumableRecord.RECORD_TYPE_OIL else 'Fuel'
+        log_event(aircraft, instance.record_type, f"{label} record updated", user=user)
+
+    def perform_destroy(self, instance):
+        aircraft = instance.aircraft
+        user = self.request.user if hasattr(self, 'request') else None
+        label = 'Oil' if instance.record_type == ConsumableRecord.RECORD_TYPE_OIL else 'Fuel'
+        log_event(aircraft, instance.record_type, f"{label} record deleted", user=user)
+        instance.delete()
