@@ -212,6 +212,7 @@ LOGBOOK_IMPORT_DEFAULT_MODEL = os.environ.get(
 
 # Ollama connection (only needed if any model uses provider=ollama)
 OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
+OLLAMA_TIMEOUT = int(os.environ.get('OLLAMA_TIMEOUT', '1200'))
 
 # Security settings for production
 if not DEBUG:

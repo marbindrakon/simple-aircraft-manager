@@ -170,6 +170,7 @@ LOGBOOK_IMPORT_DEFAULT_MODEL = 'claude-sonnet-4-5-20250929'
 
 # Ollama connection (only needed if any model uses provider=ollama)
 OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
+OLLAMA_TIMEOUT = int(os.environ.get('OLLAMA_TIMEOUT', '1200'))
 
 # OIDC Configuration for Development
 # Set OIDC_ENABLED=false by default in dev - enable with environment variable for local testing

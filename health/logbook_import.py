@@ -612,11 +612,13 @@ def _call_ollama(base_url: str, batch_files: List[Path], model: str) -> dict:
         "stream": False,
     }
 
-    # Ollama can be slow for vision models — use a generous timeout
+    from django.conf import settings as django_settings
+    timeout = getattr(django_settings, 'OLLAMA_TIMEOUT', 1200)
+
     resp = requests.post(
         f"{base_url}/api/chat",
         json=payload,
-        timeout=600,
+        timeout=timeout,
     )
     resp.raise_for_status()
     result = resp.json()
