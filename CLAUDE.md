@@ -206,6 +206,66 @@ The `eventsMixin()` displays:
 3. If the model's Aircraft FK is not a direct `aircraft` field, set `aircraft_field` (dot-notation)
 4. If `verbose_name` produces wrong casing, set `event_name_created`/`event_name_updated`/`event_name_deleted`
 
+### Logbook Import: Multi-Provider AI
+
+The logbook import system (`health/logbook_import.py`) supports multiple AI providers for transcribing scanned logbook pages. Available models are defined in `LOGBOOK_IMPORT_MODELS` in Django settings.
+
+#### Model Registry
+
+Each entry in `LOGBOOK_IMPORT_MODELS` is a dict with `id`, `name`, and `provider`:
+
+```python
+LOGBOOK_IMPORT_MODELS = [
+    {'id': 'claude-sonnet-4-5-20250929', 'name': 'Sonnet 4.5 (recommended)', 'provider': 'anthropic'},
+    {'id': 'claude-haiku-4-5-20251001', 'name': 'Haiku 4.5 (faster / cheaper)', 'provider': 'anthropic'},
+    {'id': 'claude-opus-4-6', 'name': 'Opus 4.6 (highest quality)', 'provider': 'anthropic'},
+]
+```
+
+`LOGBOOK_IMPORT_DEFAULT_MODEL` sets the default selection. In production, extra models (e.g., Ollama) can be added at deploy time via the `LOGBOOK_IMPORT_EXTRA_MODELS` JSON env var without rebuilding the image.
+
+#### Supported Providers
+
+| Provider | Client | API key required | Retry logic |
+|----------|--------|-----------------|-------------|
+| `anthropic` | `anthropic.Anthropic` client | Yes (`ANTHROPIC_API_KEY`) | Rate-limit + overload retries with exponential backoff |
+| `ollama` | Base URL string (`OLLAMA_BASE_URL`) | No | No retries (local model) |
+
+#### Provider Architecture
+
+- **`run_import()`** — accepts `provider` parameter, creates the appropriate client (Anthropic SDK client or Ollama base URL string)
+- **`_extract_all_entries()`** — receives `provider` + `provider_client`, handles adaptive batching and truncation splitting for both providers
+- **`_call_model()`** — dispatcher that routes to `_call_anthropic()` or `_call_ollama()`
+- **`_call_anthropic()`** — Anthropic Messages API with structured output (`json_schema`), rate-limit retries
+- **`_call_ollama()`** — Ollama `/api/chat` endpoint with structured output (`format` field), no retries
+
+All provider functions return the same shape: `{'data': dict, 'truncated': bool, 'output_tokens': int}`
+
+#### Settings
+
+| Setting | Default | Env var | Description |
+|---------|---------|---------|-------------|
+| `LOGBOOK_IMPORT_MODELS` | 3 Anthropic models | — | Model registry (list of dicts) |
+| `LOGBOOK_IMPORT_DEFAULT_MODEL` | `claude-sonnet-4-5-20250929` | `LOGBOOK_IMPORT_DEFAULT_MODEL` | Default model selection |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | `OLLAMA_BASE_URL` | Ollama API base URL |
+| `OLLAMA_TIMEOUT` | `1200` | `OLLAMA_TIMEOUT` | Request timeout in seconds for Ollama calls |
+| — | — | `LOGBOOK_IMPORT_EXTRA_MODELS` | JSON array of extra model dicts (prod only, additive) |
+
+#### Adding a New Provider
+
+1. Add a `_call_<provider>()` function in `health/logbook_import.py` returning `{'data', 'truncated', 'output_tokens'}`
+2. Add a case to `_call_model()` dispatcher
+3. Add client creation logic in `run_import()` and the management command's `_dry_run()`
+4. Add any new settings to both `settings.py` and `settings_prod.py`
+
+#### Batch Size Gotcha
+
+`_make_batches()` overlaps batches by 1 page to catch cross-page entries. **Batch size 1 skips overlap** — otherwise the index never advances (infinite loop). This is handled automatically; just be aware that batch_size=1 means no cross-page detection.
+
+#### Frontend
+
+The model `<select>` on the import page (`logbook_import.html`) is rendered from `LOGBOOK_IMPORT_MODELS` via template context — not hardcoded in HTML. The JS component reads the default from the rendered select's value in `init()`.
+
 ### Authentication: OIDC and Django Hybrid
 
 Simple Aircraft Manager supports both OpenID Connect (OIDC) authentication via Keycloak and traditional Django username/password authentication. Both can coexist, allowing flexible authentication options.
@@ -432,6 +492,7 @@ The logbook entry modal (`logbookModalOpen`) currently has `z-index: 1100` for t
 | Shared upload path factory | `core/models.py` (`make_upload_path`) |
 | Event logging utility | `core/events.py` (`log_event`) |
 | Event logging mixin | `core/mixins.py` (`EventLoggingMixin`) |
+| Logbook import (AI providers) | `health/logbook_import.py` |
 | OIDC backend | `core/oidc.py` |
 | Context processors | `core/context_processors.py` |
 | JS shared utilities | `core/static/js/utils.js` |
