@@ -16,6 +16,7 @@ Environment variables:
 
 from pathlib import Path
 
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from core.models import Aircraft
@@ -43,9 +44,9 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--model",
-            default="claude-sonnet-4-5-20250929",
+            default=None,
             metavar="MODEL_ID",
-            help="Anthropic model ID (default: claude-sonnet-4-5-20250929)",
+            help="AI model ID from LOGBOOK_IMPORT_MODELS settings (default: settings.LOGBOOK_IMPORT_DEFAULT_MODEL)",
         )
         parser.add_argument(
             "--collection-name",
@@ -122,9 +123,20 @@ class Command(BaseCommand):
         collection_name = options["collection_name"] or directory.name
         doc_name = options["doc_name"] or directory.name
 
+        # Resolve model and provider from settings registry
+        model_id = options["model"] or settings.LOGBOOK_IMPORT_DEFAULT_MODEL
+        model_registry = {m['id']: m for m in settings.LOGBOOK_IMPORT_MODELS}
+        if model_id not in model_registry:
+            available = [m['id'] for m in settings.LOGBOOK_IMPORT_MODELS]
+            raise CommandError(
+                f"Unknown model '{model_id}'. "
+                f"Available models: {available}"
+            )
+        provider = model_registry[model_id]['provider']
+
         if options["dry_run"]:
             self.stdout.write(self.style.WARNING("\nDRY RUN — no database records will be created\n"))
-            self._dry_run(aircraft, image_files, options)
+            self._dry_run(aircraft, image_files, options, model_id, provider)
             return
 
         # Consume the generator, rendering each event to the terminal
@@ -134,7 +146,8 @@ class Command(BaseCommand):
             collection_name=collection_name,
             doc_name=doc_name,
             doc_type=options["doc_type"],
-            model=options["model"],
+            model=model_id,
+            provider=provider,
             upload_only=options["upload_only"],
             log_type_override=options["log_type"],
             batch_size=options["batch_size"],
@@ -200,28 +213,32 @@ class Command(BaseCommand):
         else:
             self.stdout.write(f"  {message}")
 
-    def _dry_run(self, aircraft, image_files, options):
-        """Extract via Claude and display results without writing to DB."""
+    def _dry_run(self, aircraft, image_files, options, model_id, provider):
+        """Extract via AI and display results without writing to DB."""
         import os
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise CommandError("ANTHROPIC_API_KEY environment variable is not set")
-        try:
-            import anthropic
-        except ImportError:
-            raise CommandError("The 'anthropic' package is not installed")
 
-        from health.logbook_import import (
-            _call_claude, _extract_all_entries, _make_batches,
-        )
+        from health.logbook_import import _extract_all_entries
 
-        client = anthropic.Anthropic(api_key=api_key)
+        if provider == 'anthropic':
+            api_key = os.environ.get("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise CommandError("ANTHROPIC_API_KEY environment variable is not set")
+            try:
+                import anthropic
+            except ImportError:
+                raise CommandError("The 'anthropic' package is not installed")
+            provider_client = anthropic.Anthropic(api_key=api_key)
+        elif provider == 'ollama':
+            provider_client = settings.OLLAMA_BASE_URL
+        else:
+            raise CommandError(f"Unknown provider: {provider}")
+
         all_entries = []
         non_logbook_pages = set()
         unparseable_pages = set()
 
         for event in _extract_all_entries(
-            client, image_files, options["model"], options["batch_size"],
+            provider, provider_client, image_files, model_id, options["batch_size"],
             all_entries, non_logbook_pages, unparseable_pages,
         ):
             self._render_event(event)

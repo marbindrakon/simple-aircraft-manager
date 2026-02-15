@@ -671,7 +671,11 @@ class LogbookImportView(LoginRequiredMixin, View):
         if job_id:
             return self._job_status(request, job_id)
         aircraft_list = Aircraft.objects.all().order_by('tail_number')
-        return render(request, 'logbook_import.html', {'aircraft_list': aircraft_list})
+        return render(request, 'logbook_import.html', {
+            'aircraft_list': aircraft_list,
+            'import_models': settings.LOGBOOK_IMPORT_MODELS,
+            'default_model': settings.LOGBOOK_IMPORT_DEFAULT_MODEL,
+        })
 
     def post(self, request):
         tmpdir = None
@@ -709,6 +713,7 @@ class LogbookImportView(LoginRequiredMixin, View):
                     'doc_name': opts['doc_name'],
                     'doc_type': opts['doc_type'],
                     'model': opts['model'],
+                    'provider': opts['provider'],
                     'upload_only': opts['upload_only'],
                     'log_type_override': opts['log_type_override'] or None,
                     'batch_size': opts['batch_size'],
@@ -876,13 +881,6 @@ class LogbookImportView(LoginRequiredMixin, View):
         os.remove(tmp_archive)
         return None
 
-    _ALLOWED_MODELS = {
-        'claude-haiku-4-5-20251001',
-        'claude-sonnet-4-5-20250929',
-        'claude-opus-4-6',
-    }
-    _DEFAULT_MODEL = 'claude-sonnet-4-5-20250929'
-
     _ALLOWED_BATCH_SIZE_MIN = 1
     _ALLOWED_BATCH_SIZE_MAX = 20
 
@@ -913,10 +911,13 @@ class LogbookImportView(LoginRequiredMixin, View):
         if not doc_name:
             doc_name = collection_name
 
-        # Validate model against server-side allowlist
-        requested_model = request.POST.get('model', LogbookImportView._DEFAULT_MODEL)
-        if requested_model not in LogbookImportView._ALLOWED_MODELS:
-            requested_model = LogbookImportView._DEFAULT_MODEL
+        # Validate model against settings registry
+        model_registry = {m['id']: m for m in settings.LOGBOOK_IMPORT_MODELS}
+        default_model = settings.LOGBOOK_IMPORT_DEFAULT_MODEL
+        requested_model = request.POST.get('model', default_model)
+        if requested_model not in model_registry:
+            requested_model = default_model
+        provider = model_registry.get(requested_model, {}).get('provider', 'anthropic')
 
         # Clamp batch_size to safe range server-side
         batch_size = max(
@@ -932,6 +933,7 @@ class LogbookImportView(LoginRequiredMixin, View):
             'doc_name': doc_name,
             'doc_type': request.POST.get('doc_type', 'LOG'),
             'model': requested_model,
+            'provider': provider,
             'upload_only': upload_only,
             'log_type_override': request.POST.get('log_type_override', ''),
             'batch_size': batch_size,

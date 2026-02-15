@@ -160,6 +160,7 @@ def run_import(
     doc_name: str,
     doc_type: str = 'LOG',
     model: str = 'claude-sonnet-4-5-20250929',
+    provider: str = 'anthropic',
     upload_only: bool = False,
     log_type_override: Optional[str] = None,
     batch_size: int = 10,
@@ -212,27 +213,34 @@ def run_import(
     # ------------------------------------------------------------------
     # Full transcription path
     # ------------------------------------------------------------------
-    api_key = os.environ.get('ANTHROPIC_API_KEY')
-    if not api_key:
-        yield _ev('error', 'ANTHROPIC_API_KEY environment variable is not set')
+    if provider == 'anthropic':
+        api_key = os.environ.get('ANTHROPIC_API_KEY')
+        if not api_key:
+            yield _ev('error', 'ANTHROPIC_API_KEY environment variable is not set')
+            return
+
+        try:
+            import anthropic
+        except ImportError:
+            yield _ev('error', "The 'anthropic' package is not installed (pip install anthropic)")
+            return
+
+        provider_client = anthropic.Anthropic(api_key=api_key)
+    elif provider == 'ollama':
+        from django.conf import settings as django_settings
+        provider_client = getattr(django_settings, 'OLLAMA_BASE_URL', 'http://localhost:11434')
+    else:
+        yield _ev('error', f"Unknown provider: {provider}")
         return
 
-    try:
-        import anthropic
-    except ImportError:
-        yield _ev('error', "The 'anthropic' package is not installed (pip install anthropic)")
-        return
-
-    client = anthropic.Anthropic(api_key=api_key)
-
-    yield _ev('info', f"Extracting entries using model: {model}")
+    yield _ev('info', f"Extracting entries using model: {model} (provider: {provider})")
 
     all_entries: list = []
     non_logbook_pages: Set[int] = set()
     unparseable_pages: Set[int] = set()
 
     yield from _extract_all_entries(
-        client, image_paths, model, batch_size,
+        provider, provider_client, image_paths, model, batch_size,
         all_entries, non_logbook_pages, unparseable_pages,
     )
 
@@ -325,7 +333,7 @@ def _ev(kind: str, message: str) -> dict:
 
 
 def _extract_all_entries(
-    client, image_paths, model, batch_size,
+    provider, provider_client, image_paths, model, batch_size,
     all_entries, non_logbook_pages, unparseable_pages,
 ):
     """Generator: yields progress events while filling all_entries / page sets.
@@ -359,10 +367,10 @@ def _extract_all_entries(
         }
 
         try:
-            result = _call_claude(client, batch_files, model)
+            result = _call_model(provider, provider_client, batch_files, model)
         except Exception:
-            log.exception("Claude API error in batch %d", batch_num)
-            yield _ev('error', f"Claude API error in batch {batch_num}. See server logs for details.")
+            log.exception("AI API error in batch %d (provider: %s)", batch_num, provider)
+            yield _ev('error', f"AI API error in batch {batch_num}. See server logs for details.")
             for j in range(len(batch_files)):
                 unparseable_pages.add(batch_offset + j)
             continue
@@ -461,9 +469,22 @@ def _make_batches(image_paths: List[Path], batch_size: int):
     return batches
 
 
-def _call_claude(client, batch_files: List[Path], model: str) -> dict:
+def _call_model(provider: str, provider_client, batch_files: List[Path], model: str) -> dict:
     """
-    Send a batch of images to Claude; return dict with keys:
+    Dispatch to the correct provider function.
+    Returns dict with keys: 'data', 'truncated', 'output_tokens'.
+    """
+    if provider == 'anthropic':
+        return _call_anthropic(provider_client, batch_files, model)
+    elif provider == 'ollama':
+        return _call_ollama(provider_client, batch_files, model)
+    else:
+        raise ValueError(f"Unknown provider: {provider}")
+
+
+def _call_anthropic(client, batch_files: List[Path], model: str) -> dict:
+    """
+    Send a batch of images to the Anthropic API; return dict with keys:
       'data'          — parsed JSON response
       'truncated'     — True if stop_reason was max_tokens
       'output_tokens' — number of output tokens used
@@ -541,6 +562,74 @@ def _call_claude(client, batch_files: List[Path], model: str) -> dict:
     data = {}
     if not truncated:
         data = json.loads(response.content[0].text)
+
+    return {
+        'data': data,
+        'truncated': truncated,
+        'output_tokens': output_tokens,
+    }
+
+
+def _call_ollama(base_url: str, batch_files: List[Path], model: str) -> dict:
+    """
+    Send a batch of images to a local Ollama instance; return dict with keys:
+      'data'          — parsed JSON response
+      'truncated'     — True if done_reason was 'length'
+      'output_tokens' — number of output tokens used (eval_count)
+    """
+    import requests
+
+    log = logging.getLogger(__name__)
+
+    images = []
+    image_labels = []
+    for local_idx, image_path in enumerate(batch_files):
+        with open(image_path, 'rb') as fh:
+            image_b64 = base64.standard_b64encode(fh.read()).decode('utf-8')
+        images.append(image_b64)
+        image_labels.append(f"Page {local_idx} ({image_path.name})")
+
+    user_text = (
+        f"These are {len(batch_files)} logbook page image(s), "
+        f"indexed 0\u2013{len(batch_files) - 1}. "
+        f"Page labels: {', '.join(image_labels)}. "
+        "Extract all logbook entries and return the JSON as specified."
+    )
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": EXTRACT_SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": user_text,
+                "images": images,
+            },
+        ],
+        "format": EXTRACT_OUTPUT_SCHEMA,
+        "stream": False,
+    }
+
+    # Ollama can be slow for vision models — use a generous timeout
+    resp = requests.post(
+        f"{base_url}/api/chat",
+        json=payload,
+        timeout=600,
+    )
+    resp.raise_for_status()
+    result = resp.json()
+
+    truncated = result.get('done_reason') == 'length'
+    output_tokens = result.get('eval_count', 0)
+
+    data = {}
+    if not truncated:
+        raw_content = result.get('message', {}).get('content', '{}')
+        try:
+            data = json.loads(raw_content)
+        except json.JSONDecodeError:
+            log.warning("Ollama returned invalid JSON: %s", raw_content[:200])
+            data = {'entries': [], 'non_logbook_pages': [], 'unparseable_pages': []}
 
     return {
         'data': data,

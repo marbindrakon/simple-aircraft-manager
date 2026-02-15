@@ -180,6 +180,39 @@ LOGIN_REDIRECT_URL = '/dashboard'
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Logbook import AI model configuration
+LOGBOOK_IMPORT_MODELS = [
+    {
+        'id': 'claude-sonnet-4-5-20250929',
+        'name': 'Sonnet 4.5 (recommended)',
+        'provider': 'anthropic',
+    },
+    {
+        'id': 'claude-haiku-4-5-20251001',
+        'name': 'Haiku 4.5 (faster / cheaper)',
+        'provider': 'anthropic',
+    },
+    {
+        'id': 'claude-opus-4-6',
+        'name': 'Opus 4.6 (highest quality)',
+        'provider': 'anthropic',
+    },
+]
+
+# Add extra models (e.g. Ollama) via JSON env var without rebuilding the image:
+#   LOGBOOK_IMPORT_EXTRA_MODELS='[{"id":"llama3.2-vision","name":"Llama 3.2 Vision (local)","provider":"ollama"}]'
+_extra_models_json = os.environ.get('LOGBOOK_IMPORT_EXTRA_MODELS')
+if _extra_models_json:
+    import json as _json
+    LOGBOOK_IMPORT_MODELS += _json.loads(_extra_models_json)
+
+LOGBOOK_IMPORT_DEFAULT_MODEL = os.environ.get(
+    'LOGBOOK_IMPORT_DEFAULT_MODEL', 'claude-sonnet-4-5-20250929'
+)
+
+# Ollama connection (only needed if any model uses provider=ollama)
+OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
+
 # Security settings for production
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True

@@ -7,11 +7,19 @@ function logbookImport() {
         collectionName: '',
         docName: '',
         docType: 'LOG',
-        model: 'claude-sonnet-4-5-20250929',
+        model: '',
         batchSize: 10,
         uploadOnly: false,
         logTypeOverride: '',
         fileMode: 'images',   // 'images' | 'archive'
+
+        init() {
+            // Read the default model from the server-rendered select element
+            const modelSelect = document.getElementById('model-select');
+            if (modelSelect) {
+                this.model = modelSelect.value;
+            }
+        },
 
         // ── UI state ─────────────────────────────────────────────────────────
         importing: false,

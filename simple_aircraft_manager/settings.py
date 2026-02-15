@@ -141,6 +141,36 @@ LOGIN_REDIRECT_URL = '/dashboard'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Logbook import AI model configuration
+LOGBOOK_IMPORT_MODELS = [
+    {
+        'id': 'claude-sonnet-4-5-20250929',
+        'name': 'Sonnet 4.5 (recommended)',
+        'provider': 'anthropic',
+    },
+    {
+        'id': 'claude-haiku-4-5-20251001',
+        'name': 'Haiku 4.5 (faster / cheaper)',
+        'provider': 'anthropic',
+    },
+    {
+        'id': 'claude-opus-4-6',
+        'name': 'Opus 4.6 (highest quality)',
+        'provider': 'anthropic',
+    },
+    # Example Ollama entry (uncomment and adjust for local models):
+    # {
+    #     'id': 'llama3.2-vision',
+    #     'name': 'Llama 3.2 Vision (local)',
+    #     'provider': 'ollama',
+    # },
+]
+
+LOGBOOK_IMPORT_DEFAULT_MODEL = 'claude-sonnet-4-5-20250929'
+
+# Ollama connection (only needed if any model uses provider=ollama)
+OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
+
 # OIDC Configuration for Development
 # Set OIDC_ENABLED=false by default in dev - enable with environment variable for local testing
 OIDC_ENABLED = os.environ.get('OIDC_ENABLED', 'False').lower() in ('true', '1', 'yes')
