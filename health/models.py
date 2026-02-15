@@ -181,6 +181,10 @@ class LogbookEntry(models.Model):
         ],
         default='OTHER'
     )
+    page_number = models.PositiveIntegerField(
+        blank=True, null=True,
+        help_text="1-based page number within the attached log_image document"
+    )
 
     def __str__(self):
         ret_string = ""

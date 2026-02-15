@@ -16,6 +16,7 @@ function logbookMixin() {
             signoff_person: '',
             signoff_location: '',
             document_collection: '',
+            page_number: '',
         },
         logbookAssociations: { ads: [], inspections: [], squawks: [] },
 
@@ -98,6 +99,7 @@ function logbookMixin() {
                 signoff_person: '',
                 signoff_location: '',
                 document_collection: '',
+                page_number: '',
             };
             this.logbookAssociations = { ads: [], inspections: [], squawks: [] };
             this.loadCollectionsForModal();
@@ -120,6 +122,7 @@ function logbookMixin() {
                 signoff_person: entry.signoff_person || '',
                 signoff_location: entry.signoff_location || '',
                 document_collection: '',
+                page_number: entry.page_number || '',
             };
             this.logbookAssociations = { ads: [], inspections: [], squawks: [] };
             this.loadCollectionsForModal();
@@ -197,6 +200,7 @@ function logbookMixin() {
                 }
                 if (this.logbookForm.signoff_person) data.signoff_person = this.logbookForm.signoff_person;
                 if (this.logbookForm.signoff_location) data.signoff_location = this.logbookForm.signoff_location;
+                data.page_number = this.logbookForm.page_number ? parseInt(this.logbookForm.page_number) : null;
                 if (logImageUrl) data.log_image = logImageUrl;
 
                 let response;
@@ -364,7 +368,8 @@ function logbookMixin() {
                 const resp = await fetch(`/api/documents/${docId}/`);
                 if (resp.ok) {
                     const doc = await resp.json();
-                    this.openDocumentViewer(doc, 'Logbook Document');
+                    const startPage = log.page_number ? log.page_number - 1 : 0;
+                    this.openDocumentViewer(doc, 'Logbook Document', startPage);
                 }
             } catch (error) {
                 console.error('Error loading logbook document:', error);

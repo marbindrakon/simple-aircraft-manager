@@ -376,10 +376,6 @@
               </span>
               <span x-text="ev.message"
                     style="flex:1; white-space:pre-wrap; word-break:break-word;"></span>
-              <template x-if="ev.type==='entry' && ev.hours">
-                <span x-text="ev.hours + ' hrs'"
-                      style="color:#8b949e; flex-shrink:0; font-size:0.75rem;"></span>
-              </template>
             </div>
           </template>
           <template x-if="importing">

@@ -82,10 +82,10 @@ function documentsMixin() {
         },
 
         // Document viewer methods
-        openDocumentViewer(doc, collectionName) {
+        openDocumentViewer(doc, collectionName, startPage) {
             this.viewerDocument = doc;
             this.viewerCollectionName = collectionName;
-            this.viewerImageIndex = 0;
+            this.viewerImageIndex = startPage || 0;
             this.viewerOpen = true;
         },
 

@@ -14,16 +14,15 @@ Event types:
   'batch'   — Claude batch started; also has 'batch' and 'total_batches' keys
   'image'   — image uploaded; also has 'filename', 'page', 'total_pages', 'tags' keys
   'entry'   — logbook entry created; also has 'date', 'log_type', 'entry_type',
-              'hours', 'signoff', 'confidence' keys
+              'signoff', 'confidence' keys
   'complete' — final event; also has 'entries_created', 'entries_skipped',
                'collection_id', 'document_id' keys
 """
 
 import base64
 import json
+import logging
 import os
-import re
-from decimal import Decimal, InvalidOperation
 from datetime import datetime
 from pathlib import Path
 from typing import Iterator, List, Optional, Set
@@ -52,8 +51,6 @@ IMPORTANT RULES:
   weight and balance records, equipment lists, AD lists, or other administrative forms
 - Dates: convert MM/DD/YYYY, MM/DD/YY, or written dates to YYYY-MM-DD; if year is ambiguous
   use context from surrounding entries
-- Aircraft hours: look for "TACH", "HOBBS", "TT", "TTAF", "Total Time", "TSMOH", or hours
-  written alongside the date or signoff
 - Signoffs: include mechanic name, certificate number (e.g. "A&P #123456"), IA certificate
   number, or repair station number
 
@@ -64,38 +61,91 @@ ENTRY TYPE CLASSIFICATION:
 - HOURS_UPDATE: hours log entry with no specific work described
 - OTHER: administrative, continued entries, certifications
 
-Return ONLY valid JSON with this exact structure — no prose, no code fences:
-{
-  "entries": [
-    {
-      "date": "YYYY-MM-DD",
-      "log_type": "AC",
-      "entry_type": "MAINTENANCE",
-      "text": "Verbatim or close paraphrase of entry text. Use [?] for illegible words.",
-      "signoff_person": "Name and/or cert number of signing mechanic/inspector, or null",
-      "signoff_location": "City, State or airport identifier if visible, or null",
-      "aircraft_hours_at_entry": 1234.5,
-      "page_start": 0,
-      "page_end": 0,
-      "confidence": "high",
-      "notes": "Any parsing notes, uncertainty, or context about this entry"
-    }
-  ],
-  "non_logbook_pages": [],
-  "unparseable_pages": []
-}
-
-Field rules:
+Field guidelines:
 - date: ISO 8601 (YYYY-MM-DD), or null if truly unreadable
 - log_type: one of AC (airframe), ENG (engine), PROP (propeller), OTHER
 - entry_type: one of MAINTENANCE, INSPECTION, FLIGHT, HOURS_UPDATE, OTHER
-- aircraft_hours_at_entry: decimal number, or null if not shown
+- text: verbatim or close paraphrase of entry text; use [?] for illegible words
 - signoff_person / signoff_location: string or null (not empty string)
 - page_start / page_end: 0-based indices of images in THIS request (not absolute)
 - confidence: "high" (clearly legible), "medium" (some guesswork), "low" (mostly illegible)
 - non_logbook_pages: 0-based indices of pages that are forms, tags, or non-entry pages
 - unparseable_pages: 0-based indices of pages too illegible to extract anything useful
 """
+
+# JSON schema for structured output — guarantees valid, parseable responses.
+EXTRACT_OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "entries": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": ["string", "null"],
+                        "description": "ISO 8601 date (YYYY-MM-DD), or null if unreadable",
+                    },
+                    "log_type": {
+                        "type": "string",
+                        "enum": ["AC", "ENG", "PROP", "OTHER"],
+                    },
+                    "entry_type": {
+                        "type": "string",
+                        "enum": ["MAINTENANCE", "INSPECTION", "FLIGHT", "HOURS_UPDATE", "OTHER"],
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "Verbatim or close paraphrase of entry text",
+                    },
+                    "signoff_person": {
+                        "type": ["string", "null"],
+                        "description": "Name and/or cert number, or null",
+                    },
+                    "signoff_location": {
+                        "type": ["string", "null"],
+                        "description": "City/State or airport identifier, or null",
+                    },
+                    "page_start": {
+                        "type": "integer",
+                        "description": "0-based index of first image containing this entry",
+                    },
+                    "page_end": {
+                        "type": "integer",
+                        "description": "0-based index of last image containing this entry",
+                    },
+                    "confidence": {
+                        "type": "string",
+                        "enum": ["high", "medium", "low"],
+                    },
+                    "notes": {
+                        "type": ["string", "null"],
+                        "description": "Parsing notes, uncertainty, or context",
+                    },
+                },
+                "required": [
+                    "date", "log_type", "entry_type", "text",
+                    "signoff_person", "signoff_location",
+                    "page_start", "page_end",
+                    "confidence", "notes",
+                ],
+                "additionalProperties": False,
+            },
+        },
+        "non_logbook_pages": {
+            "type": "array",
+            "items": {"type": "integer"},
+            "description": "0-based indices of non-logbook pages",
+        },
+        "unparseable_pages": {
+            "type": "array",
+            "items": {"type": "integer"},
+            "description": "0-based indices of illegible pages",
+        },
+    },
+    "required": ["entries", "non_logbook_pages", "unparseable_pages"],
+    "additionalProperties": False,
+}
 
 
 # ---------------------------------------------------------------------------
@@ -234,7 +284,6 @@ def run_import(
                     'date': entry.get('date'),
                     'log_type': entry.get('log_type'),
                     'entry_type': entry.get('entry_type'),
-                    'hours': str(entry.get('aircraft_hours_at_entry') or ''),
                     'signoff': entry.get('signoff_person') or '',
                     'confidence': entry.get('confidence', 'high'),
                 }
@@ -285,8 +334,11 @@ def _extract_all_entries(
 
         try:
             result = _call_claude(client, batch_files, model)
-        except Exception as exc:
-            yield _ev('error', f"Claude API error in batch {batch_num}: {exc}")
+        except Exception:
+            logging.getLogger(__name__).exception(
+                "Claude API error in batch %d", batch_num
+            )
+            yield _ev('error', f"Claude API error in batch {batch_num}. See server logs for details.")
             for j in range(len(batch_files)):
                 unparseable_pages.add(batch_offset + j)
             continue
@@ -356,29 +408,24 @@ def _call_claude(client, batch_files: List[Path], model: str) -> dict:
 
     response = client.messages.create(
         model=model,
-        max_tokens=4096,
+        max_tokens=16384,
         system=EXTRACT_SYSTEM_PROMPT,
         messages=[{'role': 'user', 'content': content}],
+        output_config={
+            'format': {
+                'type': 'json_schema',
+                'schema': EXTRACT_OUTPUT_SCHEMA,
+            },
+        },
     )
-    return _parse_json_response(response.content[0].text.strip())
 
+    if response.stop_reason == 'max_tokens':
+        raise ValueError(
+            "Response truncated (max_tokens reached) — "
+            "batch may have too many entries"
+        )
 
-def _parse_json_response(text: str) -> dict:
-    """Extract and parse the JSON object from a Claude response."""
-    fence = re.search(r'```(?:json)?\s*([\s\S]*?)```', text)
-    if fence:
-        text = fence.group(1).strip()
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        pass
-    brace = re.search(r'\{[\s\S]*\}', text)
-    if brace:
-        try:
-            return json.loads(brace.group())
-        except json.JSONDecodeError:
-            pass
-    raise ValueError(f"Could not parse JSON from response. First 500 chars: {text[:500]}")
+    return json.loads(response.content[0].text)
 
 
 def _upload_images(
@@ -439,14 +486,6 @@ def _create_single_entry(aircraft, document: Document, entry: dict) -> Optional[
     if entry_type not in VALID_ENTRY_TYPES:
         entry_type = 'OTHER'
 
-    hours = None
-    hours_raw = entry.get('aircraft_hours_at_entry')
-    if hours_raw is not None:
-        try:
-            hours = Decimal(str(hours_raw)).quantize(Decimal('0.1'))
-        except (InvalidOperation, TypeError, ValueError):
-            pass
-
     signoff_person = (entry.get('signoff_person') or '').strip()
     signoff_location = (entry.get('signoff_location') or '').strip()
 
@@ -454,6 +493,11 @@ def _create_single_entry(aircraft, document: Document, entry: dict) -> Optional[
     notes_text = (entry.get('notes') or '').strip()
     if confidence != 'high' and notes_text:
         text = f"{text}\n[Import note ({confidence} confidence): {notes_text}]"
+
+    # Convert 0-based page_start index to 1-based page_number
+    page_number = entry.get('page_start')
+    if page_number is not None:
+        page_number = page_number + 1
 
     LogbookEntry.objects.create(
         aircraft=aircraft,
@@ -463,7 +507,7 @@ def _create_single_entry(aircraft, document: Document, entry: dict) -> Optional[
         text=text,
         signoff_person=signoff_person,
         signoff_location=signoff_location,
-        aircraft_hours_at_entry=hours,
         log_image=document,
+        page_number=page_number,
     )
     return None

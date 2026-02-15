@@ -1275,6 +1275,21 @@
                             </div>
                         </div>
 
+                        <!-- Page Number (when entry has an attached document) -->
+                        <template x-if="editingLogEntry && editingLogEntry.log_image">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="log-page-number">
+                                    <span class="pf-v5-c-form__label-text">Page Number</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input id="log-page-number" class="pf-v5-c-form-control" type="number" min="1" step="1" x-model="logbookForm.page_number" placeholder="Page in attached document">
+                                    <p style="font-size: 0.8em; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;">
+                                        Which page of the attached document this entry appears on.
+                                    </p>
+                                </div>
+                            </div>
+                        </template>
+
                         <!-- Attach Images (new entries only) -->
                         <template x-if="!editingLogEntry">
                             <div>

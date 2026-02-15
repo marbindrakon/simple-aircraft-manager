@@ -696,6 +696,8 @@ class LogbookImportView(LoginRequiredMixin, View):
             tmpdir = None  # prevent finally-block cleanup; generator owns it now
 
             def event_stream():
+                import logging
+                logger = logging.getLogger(__name__)
                 try:
                     from health.logbook_import import run_import
                     for event in run_import(
@@ -711,7 +713,8 @@ class LogbookImportView(LoginRequiredMixin, View):
                     ):
                         yield json.dumps(event) + '\n'
                 except Exception as exc:
-                    yield json.dumps({'type': 'error', 'message': str(exc)}) + '\n'
+                    logger.exception("Unhandled error in logbook import stream")
+                    yield json.dumps({'type': 'error', 'message': 'An unexpected error occurred during import.'}) + '\n'
                 finally:
                     shutil.rmtree(_tmpdir, ignore_errors=True)
 
@@ -720,8 +723,10 @@ class LogbookImportView(LoginRequiredMixin, View):
             response['Cache-Control'] = 'no-cache'
             return response
 
-        except Exception as exc:
-            return JsonResponse({'type': 'error', 'message': str(exc)}, status=500)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception("Unhandled error in LogbookImportView.post")
+            return JsonResponse({'type': 'error', 'message': 'An unexpected error occurred.'}, status=500)
         finally:
             if tmpdir:
                 shutil.rmtree(tmpdir, ignore_errors=True)
@@ -760,6 +765,11 @@ class LogbookImportView(LoginRequiredMixin, View):
             uploaded = request.FILES.getlist('images')
             if not uploaded:
                 return None, 'No image files uploaded.'
+            if len(uploaded) > self._MAX_IMAGE_COUNT:
+                return None, (
+                    f"Too many images uploaded ({len(uploaded)}). "
+                    f"Maximum is {self._MAX_IMAGE_COUNT} per request."
+                )
             for uf in uploaded:
                 dest = Path(tmpdir) / uf.name
                 with open(dest, 'wb') as fh:
@@ -791,9 +801,20 @@ class LogbookImportView(LoginRequiredMixin, View):
         if zipfile.is_zipfile(tmp_archive):
             try:
                 with zipfile.ZipFile(tmp_archive) as zf:
-                    for member in zf.infolist():
-                        if member.filename.endswith('/'):
-                            continue  # skip directory entries
+                    members = [m for m in zf.infolist() if not m.filename.endswith('/')]
+                    if len(members) > self._MAX_ARCHIVE_MEMBERS:
+                        return (
+                            f"Archive contains too many files ({len(members)}). "
+                            f"Maximum is {self._MAX_ARCHIVE_MEMBERS}."
+                        )
+                    total_bytes = 0
+                    for member in members:
+                        total_bytes += member.file_size
+                        if total_bytes > self._MAX_ARCHIVE_BYTES:
+                            return (
+                                f"Archive decompressed size exceeds the "
+                                f"{self._MAX_ARCHIVE_BYTES // (1024 * 1024)} MB limit."
+                            )
                         target = os.path.realpath(
                             os.path.join(real_tmpdir, member.filename)
                         )
@@ -803,13 +824,24 @@ class LogbookImportView(LoginRequiredMixin, View):
                         with zf.open(member) as src, open(target, 'wb') as dst:
                             dst.write(src.read())
             except zipfile.BadZipFile as exc:
-                return f"Invalid ZIP file: {exc}"
+                return "Invalid ZIP file."
         elif tarfile.is_tarfile(tmp_archive):
             try:
                 with tarfile.open(tmp_archive) as tf:
-                    for member in tf.getmembers():
-                        if not member.isfile():
-                            continue
+                    file_members = [m for m in tf.getmembers() if m.isfile()]
+                    if len(file_members) > self._MAX_ARCHIVE_MEMBERS:
+                        return (
+                            f"Archive contains too many files ({len(file_members)}). "
+                            f"Maximum is {self._MAX_ARCHIVE_MEMBERS}."
+                        )
+                    total_bytes = 0
+                    for member in file_members:
+                        total_bytes += member.size
+                        if total_bytes > self._MAX_ARCHIVE_BYTES:
+                            return (
+                                f"Archive decompressed size exceeds the "
+                                f"{self._MAX_ARCHIVE_BYTES // (1024 * 1024)} MB limit."
+                            )
                         target = os.path.realpath(
                             os.path.join(real_tmpdir, member.name)
                         )
@@ -821,15 +853,32 @@ class LogbookImportView(LoginRequiredMixin, View):
                             with open(target, 'wb') as dst:
                                 dst.write(src.read())
             except tarfile.TarError as exc:
-                return f"Invalid archive file: {exc}"
+                return "Invalid archive file."
         else:
             return f"Unrecognised archive format for file: {archive_file.name}"
 
         os.remove(tmp_archive)
         return None
 
+    _ALLOWED_MODELS = {
+        'claude-haiku-4-5-20251001',
+        'claude-sonnet-4-5-20250929',
+        'claude-opus-4-6',
+    }
+    _DEFAULT_MODEL = 'claude-sonnet-4-5-20250929'
+
+    _ALLOWED_BATCH_SIZE_MIN = 1
+    _ALLOWED_BATCH_SIZE_MAX = 20
+
+    # Max number of images accepted per request (images mode)
+    _MAX_IMAGE_COUNT = 100
+    # Max total decompressed bytes from an archive
+    _MAX_ARCHIVE_BYTES = 2048 * 1024 * 1024  # 2048 MB
+    # Max members in an archive
+    _MAX_ARCHIVE_MEMBERS = 200
+
     @staticmethod
-    def _parse_options(request) -> dict:
+    def _parse_options(request):
         def _int(key, default):
             try:
                 return int(request.POST.get(key, default))
@@ -848,14 +897,28 @@ class LogbookImportView(LoginRequiredMixin, View):
         if not doc_name:
             doc_name = collection_name
 
+        # Validate model against server-side allowlist
+        requested_model = request.POST.get('model', LogbookImportView._DEFAULT_MODEL)
+        if requested_model not in LogbookImportView._ALLOWED_MODELS:
+            requested_model = LogbookImportView._DEFAULT_MODEL
+
+        # Clamp batch_size to safe range server-side
+        batch_size = max(
+            LogbookImportView._ALLOWED_BATCH_SIZE_MIN,
+            min(
+                _int('batch_size', 10),
+                LogbookImportView._ALLOWED_BATCH_SIZE_MAX,
+            ),
+        )
+
         return {
             'collection_name': collection_name,
             'doc_name': doc_name,
             'doc_type': request.POST.get('doc_type', 'LOG'),
-            'model': request.POST.get('model', 'claude-sonnet-4-5-20250929'),
+            'model': requested_model,
             'upload_only': upload_only,
             'log_type_override': request.POST.get('log_type_override', ''),
-            'batch_size': _int('batch_size', 10),
+            'batch_size': batch_size,
         }
 
 
