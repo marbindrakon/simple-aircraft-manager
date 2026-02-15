@@ -53,6 +53,9 @@ DJANGO_SUPERUSER_EMAIL: "admin@example.com"
 # OIDC Authentication (optional)
 OIDC_RP_CLIENT_ID: "your-client-id"
 OIDC_RP_CLIENT_SECRET: "your-client-secret"
+
+# AI Logbook Import (optional)
+ANTHROPIC_API_KEY: "sk-ant-..."
 ```
 
 **Generate a Django secret key:**
@@ -80,7 +83,23 @@ If NOT using OIDC:
 - Set `OIDC_ENABLED: "false"` in ConfigMap
 - Remove OIDC variables from ConfigMap and Secret
 
-### 5. Adjust Storage Classes
+### 5. Configure Logbook Import AI (Optional)
+
+The app supports AI-powered transcription of scanned maintenance logbook pages using Anthropic (Claude) and/or local Ollama models.
+
+**Using Anthropic models (cloud):**
+1. Add `ANTHROPIC_API_KEY` to your secrets
+2. Built-in models (Sonnet, Haiku, Opus) are available by default
+
+**Using Ollama models (self-hosted):**
+1. Set `OLLAMA_BASE_URL` in `02-configmap.yaml` to your Ollama instance
+2. Add models via `LOGBOOK_IMPORT_EXTRA_MODELS` JSON array in ConfigMap
+3. Optionally adjust `OLLAMA_TIMEOUT` (default: 1200 seconds)
+
+If NOT using logbook import:
+- No configuration needed — the feature is optional and inactive without an API key
+
+### 6. Adjust Storage Classes
 
 In `07-pvc.yaml`, change `storageClassName` to match your cluster:
 ```yaml
@@ -91,6 +110,10 @@ Common options:
 - OpenShift Data Foundation: `ocs-storagecluster-cephfs`
 - NFS: `nfs-client` or similar
 - Other: Check `oc get storageclass`
+
+### 7. Review Resource Limits
+
+The sam container defaults to 512Mi request / 2Gi limit. The higher limit accommodates AI-powered logbook import which processes multiple images in memory. If not using this feature, you can lower the limit to 512Mi.
 
 ## Deployment Order
 
@@ -319,6 +342,7 @@ oc exec deployment/sam -n sam -c sam -- \
 - [ ] PostgreSQL PGO operator installed
 - [ ] TLS certificates configured
 - [ ] OIDC provider configured (if using)
+- [ ] Logbook import AI configured (if using)
 - [ ] Resource limits tuned for workload
 - [ ] Backups configured and tested
 - [ ] Monitoring/alerting configured

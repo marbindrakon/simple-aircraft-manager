@@ -83,12 +83,14 @@ spec:
           mountPath: /opt/app-root/src/mediafiles
 
         # Resource Limits
+        # Note: AI-powered logbook import can use significant memory during
+        # image processing. If using this feature, 2Gi limit is recommended.
         resources:
           requests:
             cpu: 100m
-            memory: 256Mi
+            memory: 512Mi
           limits:
-            memory: 512Mi  # Adjust based on workload
+            memory: 2Gi  # Adjust based on workload
 
       # Sidecar Container: nginx (TLS + Static/Media Serving)
       - name: nginx

@@ -27,6 +27,10 @@ Use this checklist when deploying Simple Aircraft Manager to your OpenShift/Kube
 - [ ] Configure OIDC settings (or set `OIDC_ENABLED: "false"`)
   - [ ] `OIDC_OP_DISCOVERY_ENDPOINT` updated with your IdP URL
   - [ ] Other OIDC claims/scopes customized if needed
+- [ ] Configure logbook import AI (optional)
+  - [ ] `OLLAMA_BASE_URL` set if using local Ollama models
+  - [ ] `LOGBOOK_IMPORT_EXTRA_MODELS` configured for additional models
+  - [ ] `LOGBOOK_IMPORT_DEFAULT_MODEL` set if changing default
 
 ### 03-nginx-config.yaml
 - [ ] Update `server_name` with your hostname
@@ -46,6 +50,7 @@ Use this checklist when deploying Simple Aircraft Manager to your OpenShift/Kube
   - `DJANGO_SUPERUSER_EMAIL`
   - `OIDC_RP_CLIENT_ID` (if OIDC enabled)
   - `OIDC_RP_CLIENT_SECRET` (if OIDC enabled)
+  - `ANTHROPIC_API_KEY` (if using AI logbook import)
 
 **Option B: Using Plain Kubernetes Secret**
 - [ ] Comment out ExternalSecret resource
@@ -186,8 +191,14 @@ oc get route sam -n sam -o jsonpath='{.spec.host}'
 ### Media Uploads
 - [ ] Can upload aircraft images
 - [ ] Can upload squawk attachments
+- [ ] Can upload logbook page images (if using AI import)
 - [ ] Files persist after pod restart
 - [ ] Images display correctly
+
+### Logbook Import (if configured)
+- [ ] AI model selector shows available models
+- [ ] Can upload and process logbook page images
+- [ ] Ollama models accessible (if configured)
 
 ## 🔧 Common Issues
 
