@@ -539,6 +539,21 @@
                                             </button>
                                         </p>
                                     </template>
+                                    <template x-if="log.related_documents_detail && log.related_documents_detail.length > 0">
+                                        <div style="margin-top: 0.5rem;">
+                                            <strong style="font-size: 0.85em;">Related Documents:</strong>
+                                            <template x-for="rdoc in log.related_documents_detail" :key="rdoc.id">
+                                                <span style="display: inline-flex; align-items: center; gap: 0.25rem; margin-left: 0.5rem;">
+                                                    <i class="fas fa-file-alt" style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></i>
+                                                    <button class="pf-v5-c-button pf-m-link pf-m-inline"
+                                                            @click="viewRelatedDocument(rdoc)"
+                                                            style="font-size: inherit;"
+                                                            x-text="rdoc.name"></button>
+                                                    <span class="pf-v5-c-label pf-m-compact" style="font-size: 0.75em;" x-text="rdoc.doc_type_display"></span>
+                                                </span>
+                                            </template>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
                         </template>
@@ -1329,6 +1344,89 @@
                                 </template>
                             </div>
                         </template>
+
+                        <!-- Related Documents (both new and edit) -->
+                        <div style="border-top: 1px solid var(--pf-v5-global--BorderColor--100); margin-top: 1rem; padding-top: 1rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span style="font-size: 0.85rem; font-weight: 600; color: var(--pf-v5-global--Color--100);">
+                                    Related Documents <span style="font-weight: 400; color: var(--pf-v5-global--Color--200);">(optional)</span>
+                                </span>
+                            </div>
+
+                            <!-- Already linked documents (edit mode) -->
+                            <template x-if="logbookExistingRelatedDocs.length > 0">
+                                <div style="margin-bottom: 0.75rem;">
+                                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.04em;">Linked</span>
+                                    <template x-for="(doc, idx) in logbookExistingRelatedDocs" :key="doc.id">
+                                        <div style="display: flex; gap: 0.5rem; align-items: center; padding: 0.5rem; background: var(--pf-v5-global--BackgroundColor--200); border-radius: 4px; margin-top: 0.35rem;">
+                                            <i class="fas fa-file-alt" style="color: var(--pf-v5-global--Color--200);"></i>
+                                            <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="doc.name"></span>
+                                            <span class="pf-v5-c-label pf-m-compact" style="font-size: 0.75em;" x-text="doc.doc_type_display"></span>
+                                            <button type="button" class="pf-v5-c-button pf-m-plain" @click="removeExistingRelatedDoc(idx)" title="Unlink document" style="color: var(--pf-v5-global--danger-color--100); padding: 0.25rem;">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <!-- Link existing documents -->
+                            <div class="pf-v5-c-form__group" style="margin-bottom: 0.75rem;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.04em;">Link Existing Document</span>
+                                    <button type="button" class="pf-v5-c-button pf-m-link pf-m-inline" @click="addRelatedDoc()" :disabled="availableDocsForLogbook.length === 0" style="font-size: 0.8rem;">+ Add</button>
+                                </div>
+                                <template x-for="(rel, idx) in logbookRelatedDocs" :key="idx">
+                                    <div style="display: flex; gap: 0.5rem; align-items: center; padding: 0.5rem; background: var(--pf-v5-global--BackgroundColor--200); border-radius: 4px; margin-bottom: 0.35rem;">
+                                        <select class="pf-v5-c-form-control" x-model="rel.document_id" style="flex: 1; min-width: 0;">
+                                            <option value="">— Select Document —</option>
+                                            <template x-for="d in availableDocsForLogbook" :key="d.id">
+                                                <option :value="d.id" x-text="d.name + ' (' + d.doc_type_display + ')'"></option>
+                                            </template>
+                                        </select>
+                                        <button type="button" class="pf-v5-c-button pf-m-plain" @click="removeRelatedDoc(idx)" style="color: var(--pf-v5-global--danger-color--100); padding: 0.25rem;">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <!-- Upload new related documents -->
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="log-related-files">
+                                    <span class="pf-v5-c-form__label-text" style="font-size: 0.8rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.04em;">Upload New Documents</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input id="log-related-files" class="pf-v5-c-form-control" type="file" multiple
+                                           accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.pdf,.txt"
+                                           @change="onRelatedDocFilesSelected($event)">
+                                    <template x-if="logbookRelatedDocFiles.length > 0">
+                                        <div style="margin-top: 0.35rem;">
+                                            <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.35rem;">
+                                                <label style="font-size: 0.8rem; white-space: nowrap;">Document Type:</label>
+                                                <select class="pf-v5-c-form-control" x-model="logbookRelatedDocType" style="flex: 1;">
+                                                    <option value="INVOICE">Receipt / Invoice</option>
+                                                    <option value="DISC">Discrepancy List</option>
+                                                    <option value="ALTER">Alteration Record</option>
+                                                    <option value="REPORT">Report</option>
+                                                    <option value="ESTIMATE">Estimate</option>
+                                                    <option value="OTHER">Other</option>
+                                                </select>
+                                            </div>
+                                            <template x-for="(file, idx) in logbookRelatedDocFiles" :key="idx">
+                                                <div style="display: flex; gap: 0.5rem; align-items: center; padding: 0.3rem 0.5rem; background: var(--pf-v5-global--BackgroundColor--200); border-radius: 4px; margin-bottom: 0.25rem; font-size: 0.85em;">
+                                                    <i class="fas fa-file" style="color: var(--pf-v5-global--Color--200);"></i>
+                                                    <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="file.name"></span>
+                                                    <button type="button" class="pf-v5-c-button pf-m-plain" @click="removeRelatedDocFile(idx)" style="color: var(--pf-v5-global--danger-color--100); padding: 0.15rem;">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Associations (new entries only) -->
                         <template x-if="!editingLogEntry && (applicableAds.length > 0 || inspectionTypes.length > 0 || activeSquawks.length > 0)">

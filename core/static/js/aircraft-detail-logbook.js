@@ -20,9 +20,19 @@ function logbookMixin() {
         },
         logbookAssociations: { ads: [], inspections: [], squawks: [] },
 
+        // Related documents state
+        logbookRelatedDocs: [],         // [{document_id: ''}] for linking existing docs
+        logbookRelatedDocFiles: [],     // Files to upload as new related documents
+        logbookRelatedDocType: 'OTHER', // doc_type for new uploaded related docs
+        logbookExistingRelatedDocs: [], // populated in edit mode from related_documents_detail
+
         // Document collections (loaded on demand for modals)
         aircraftCollections: [],
         collectionsLoaded: false,
+
+        // Aircraft documents (loaded on demand for related doc picker)
+        aircraftDocuments: [],
+        aircraftDocumentsLoaded: false,
 
         get availableAdsForLogbook() {
             const selectedIds = this.logbookAssociations.ads.map(a => a.ad_id);
@@ -37,6 +47,14 @@ function logbookMixin() {
         get availableSquawksForLogbook() {
             const selectedIds = this.logbookAssociations.squawks.map(s => s.squawk_id);
             return (this.activeSquawks || []).filter(sq => !selectedIds.includes(sq.id));
+        },
+
+        get availableDocsForLogbook() {
+            const linkedIds = [
+                ...this.logbookExistingRelatedDocs.map(d => d.id),
+                ...this.logbookRelatedDocs.map(d => d.document_id),
+            ];
+            return this.aircraftDocuments.filter(d => !linkedIds.includes(d.id));
         },
 
         addAdAssociation() {
@@ -61,6 +79,39 @@ function logbookMixin() {
 
         removeSquawkAssociation(idx) {
             this.logbookAssociations.squawks.splice(idx, 1);
+        },
+
+        addRelatedDoc() {
+            this.logbookRelatedDocs.push({ document_id: '' });
+        },
+
+        removeRelatedDoc(idx) {
+            this.logbookRelatedDocs.splice(idx, 1);
+        },
+
+        onRelatedDocFilesSelected(event) {
+            this.logbookRelatedDocFiles = Array.from(event.target.files);
+        },
+
+        removeRelatedDocFile(idx) {
+            this.logbookRelatedDocFiles.splice(idx, 1);
+        },
+
+        async loadAircraftDocuments() {
+            if (this.aircraftDocumentsLoaded) return;
+            try {
+                const resp = await fetch(`/api/documents/?aircraft=${this.aircraftId}`);
+                const data = await resp.json();
+                this.aircraftDocuments = (data.results || data).map(d => ({
+                    id: d.id,
+                    name: d.name,
+                    doc_type: d.doc_type,
+                    doc_type_display: d.doc_type_display,
+                }));
+                this.aircraftDocumentsLoaded = true;
+            } catch (error) {
+                console.error('Error loading aircraft documents:', error);
+            }
         },
 
         async loadLogbookEntries() {
@@ -90,6 +141,10 @@ function logbookMixin() {
         openLogbookModal() {
             this.editingLogEntry = null;
             this.logbookImageFiles = [];
+            this.logbookRelatedDocs = [];
+            this.logbookRelatedDocFiles = [];
+            this.logbookRelatedDocType = 'OTHER';
+            this.logbookExistingRelatedDocs = [];
             this.logbookForm = {
                 date: new Date().toISOString().split('T')[0],
                 entry_type: 'MAINTENANCE',
@@ -103,6 +158,7 @@ function logbookMixin() {
             };
             this.logbookAssociations = { ads: [], inspections: [], squawks: [] };
             this.loadCollectionsForModal();
+            this.loadAircraftDocuments();
             // Ensure inspection types are loaded for the associations section
             if (!this.inspectionsLoaded) {
                 this.loadInspections();
@@ -113,6 +169,10 @@ function logbookMixin() {
         editLogEntry(entry) {
             this.editingLogEntry = entry;
             this.logbookImageFiles = [];
+            this.logbookRelatedDocs = [];
+            this.logbookRelatedDocFiles = [];
+            this.logbookRelatedDocType = 'OTHER';
+            this.logbookExistingRelatedDocs = entry.related_documents_detail || [];
             this.logbookForm = {
                 date: entry.date || '',
                 entry_type: entry.entry_type || 'MAINTENANCE',
@@ -126,6 +186,7 @@ function logbookMixin() {
             };
             this.logbookAssociations = { ads: [], inspections: [], squawks: [] };
             this.loadCollectionsForModal();
+            this.loadAircraftDocuments();
             this.logbookModalOpen = true;
         },
 
@@ -133,11 +194,58 @@ function logbookMixin() {
             this.logbookModalOpen = false;
             this.editingLogEntry = null;
             this.logbookImageFiles = [];
+            this.logbookRelatedDocs = [];
+            this.logbookRelatedDocFiles = [];
+            this.logbookExistingRelatedDocs = [];
             this.logbookAssociations = { ads: [], inspections: [], squawks: [] };
         },
 
         onLogbookFilesSelected(event) {
             this.logbookImageFiles = Array.from(event.target.files);
+        },
+
+        async _uploadRelatedDocFiles() {
+            // Upload files as new Document records and return their IDs
+            const newDocIds = [];
+            for (const file of this.logbookRelatedDocFiles) {
+                const docPayload = {
+                    aircraft: `/api/aircraft/${this.aircraftId}/`,
+                    name: file.name,
+                    doc_type: this.logbookRelatedDocType,
+                    components: [],
+                };
+                const docResp = await apiRequest('/api/documents/', {
+                    method: 'POST',
+                    body: JSON.stringify(docPayload),
+                });
+                if (docResp.ok) {
+                    const formData = new FormData();
+                    formData.append('document', `/api/documents/${docResp.data.id}/`);
+                    formData.append('image', file);
+                    formData.append('notes', '');
+                    await fetch('/api/document-images/', {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                        body: formData,
+                    });
+                    newDocIds.push(docResp.data.id);
+                } else {
+                    showNotification(`Failed to upload ${file.name}`, 'warning');
+                }
+            }
+            return newDocIds;
+        },
+
+        _buildRelatedDocumentUrls(uploadedDocIds) {
+            // Combine existing linked docs + newly selected docs + newly uploaded docs
+            const allIds = [
+                ...this.logbookExistingRelatedDocs.map(d => d.id),
+                ...this.logbookRelatedDocs.filter(d => d.document_id).map(d => d.document_id),
+                ...uploadedDocIds,
+            ];
+            // Deduplicate
+            const unique = [...new Set(allIds)];
+            return unique.map(id => `/api/documents/${id}/`);
         },
 
         async submitLogEntry() {
@@ -188,6 +296,9 @@ function logbookMixin() {
                     }
                 }
 
+                // Step 1b: Upload related document files
+                const uploadedRelatedDocIds = await this._uploadRelatedDocFiles();
+
                 // Step 2: Save the logbook entry
                 const data = {
                     date: this.logbookForm.date,
@@ -203,8 +314,18 @@ function logbookMixin() {
                 data.page_number = this.logbookForm.page_number ? parseInt(this.logbookForm.page_number) : null;
                 if (logImageUrl) data.log_image = logImageUrl;
 
+                // Include related documents (for both new and edit)
+                const hasRelatedDocs = this.logbookExistingRelatedDocs.length > 0 ||
+                    this.logbookRelatedDocs.some(d => d.document_id) ||
+                    uploadedRelatedDocIds.length > 0;
+                if (hasRelatedDocs) {
+                    data.related_documents = this._buildRelatedDocumentUrls(uploadedRelatedDocIds);
+                }
+
                 let response;
                 if (this.editingLogEntry) {
+                    // Always send related_documents on edit to handle unlinking
+                    data.related_documents = this._buildRelatedDocumentUrls(uploadedRelatedDocIds);
                     response = await fetch(`/api/logbook-entries/${this.editingLogEntry.id}/`, {
                         method: 'PATCH',
                         headers: {
@@ -309,6 +430,7 @@ function logbookMixin() {
                     );
                     this.closeLogbookModal();
                     this.logbookLoaded = false;
+                    this.aircraftDocumentsLoaded = false;
                     await this.loadLogbookEntries();
                     await this.loadData();
                     if (this.documentsLoaded) {
@@ -374,6 +496,22 @@ function logbookMixin() {
             } catch (error) {
                 console.error('Error loading logbook document:', error);
             }
+        },
+
+        async viewRelatedDocument(doc) {
+            try {
+                const resp = await fetch(`/api/documents/${doc.id}/`);
+                if (resp.ok) {
+                    const fullDoc = await resp.json();
+                    this.openDocumentViewer(fullDoc, doc.name || 'Related Document');
+                }
+            } catch (error) {
+                console.error('Error loading related document:', error);
+            }
+        },
+
+        removeExistingRelatedDoc(idx) {
+            this.logbookExistingRelatedDocs.splice(idx, 1);
         },
     };
 }
