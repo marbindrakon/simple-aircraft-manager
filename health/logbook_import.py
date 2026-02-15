@@ -465,7 +465,9 @@ def _make_batches(image_paths: List[Path], batch_size: int):
         batches.append((i, image_paths[i:end]))
         if end >= n:
             break
-        i = end - 1  # overlap by 1
+        # Overlap by 1 page to catch cross-page entries, but only when
+        # batch_size > 1 (otherwise i would never advance).
+        i = end - 1 if batch_size > 1 else end
     return batches
 
 
