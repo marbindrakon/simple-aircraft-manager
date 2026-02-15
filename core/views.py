@@ -3,6 +3,7 @@ import os
 import shutil
 import tarfile
 import tempfile
+import threading
 import zipfile
 from datetime import date as date_cls, timedelta as td
 from decimal import Decimal
@@ -11,7 +12,7 @@ from pathlib import Path
 from django.conf import settings
 from django.contrib.auth import logout
 from django.db.models import Q
-from django.http import JsonResponse, StreamingHttpResponse
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views import View
@@ -657,17 +658,18 @@ class LogbookImportView(LoginRequiredMixin, View):
     """
     Web UI for importing scanned logbook pages.
 
-    GET  /tools/import-logbook/  — render the form
-    POST /tools/import-logbook/  — accept uploaded files (multiple images or a
-                                   single zip/tar archive), run the import
-                                   service, and stream NDJSON progress events.
+    GET  /tools/import-logbook/                — render the form
+    POST /tools/import-logbook/                — start a background import job
+    GET  /tools/import-logbook/<job_id>/status/ — poll job progress
     """
 
     # Archive extensions we accept
     _ARCHIVE_SUFFIXES = {'.zip', '.tar', '.gz', '.bz2', '.xz', '.tgz'}
     _IMAGE_SUFFIXES = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff'}
 
-    def get(self, request):
+    def get(self, request, job_id=None):
+        if job_id:
+            return self._job_status(request, job_id)
         aircraft_list = Aircraft.objects.all().order_by('tail_number')
         return render(request, 'logbook_import.html', {'aircraft_list': aircraft_list})
 
@@ -691,37 +693,31 @@ class LogbookImportView(LoginRequiredMixin, View):
 
             opts = self._parse_options(request)
 
-            # Capture tmpdir reference for the closure
+            from health.models import ImportJob
+            job = ImportJob.objects.create(aircraft=aircraft, status='pending')
+
+            # Hand tmpdir ownership to the background thread
             _tmpdir = tmpdir
-            tmpdir = None  # prevent finally-block cleanup; generator owns it now
+            tmpdir = None
 
-            def event_stream():
-                import logging
-                logger = logging.getLogger(__name__)
-                try:
-                    from health.logbook_import import run_import
-                    for event in run_import(
-                        aircraft=aircraft,
-                        image_paths=image_paths,
-                        collection_name=opts['collection_name'],
-                        doc_name=opts['doc_name'],
-                        doc_type=opts['doc_type'],
-                        model=opts['model'],
-                        upload_only=opts['upload_only'],
-                        log_type_override=opts['log_type_override'] or None,
-                        batch_size=opts['batch_size'],
-                    ):
-                        yield json.dumps(event) + '\n'
-                except Exception as exc:
-                    logger.exception("Unhandled error in logbook import stream")
-                    yield json.dumps({'type': 'error', 'message': 'An unexpected error occurred during import.'}) + '\n'
-                finally:
-                    shutil.rmtree(_tmpdir, ignore_errors=True)
+            from health.logbook_import import run_import_job
+            t = threading.Thread(
+                target=run_import_job,
+                args=(job.id, _tmpdir, image_paths),
+                kwargs={
+                    'collection_name': opts['collection_name'],
+                    'doc_name': opts['doc_name'],
+                    'doc_type': opts['doc_type'],
+                    'model': opts['model'],
+                    'upload_only': opts['upload_only'],
+                    'log_type_override': opts['log_type_override'] or None,
+                    'batch_size': opts['batch_size'],
+                },
+                daemon=True,
+            )
+            t.start()
 
-            response = StreamingHttpResponse(event_stream(), content_type='application/x-ndjson')
-            response['X-Accel-Buffering'] = 'no'
-            response['Cache-Control'] = 'no-cache'
-            return response
+            return JsonResponse({'job_id': str(job.id)})
 
         except Exception:
             import logging
@@ -730,6 +726,26 @@ class LogbookImportView(LoginRequiredMixin, View):
         finally:
             if tmpdir:
                 shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def _job_status(self, request, job_id):
+        from health.models import ImportJob
+        try:
+            job = ImportJob.objects.get(pk=job_id)
+        except ImportJob.DoesNotExist:
+            return JsonResponse({'error': 'Job not found'}, status=404)
+
+        try:
+            after = int(request.GET.get('after', 0))
+        except (ValueError, TypeError):
+            after = 0
+
+        new_events = job.events[after:]
+
+        return JsonResponse({
+            'status': job.status,
+            'events': new_events,
+            'result': job.result,
+        })
 
     # -------------------------------------------------------------------------
     # Helpers

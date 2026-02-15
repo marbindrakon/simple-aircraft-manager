@@ -102,12 +102,17 @@ function logbookImport() {
         },
 
         // ── Import ────────────────────────────────────────────────────────────
+        _pollTimer: null,
+        _jobId: null,
+        _eventCursor: 0,
+
         async startImport() {
             this.importing = true;
             this.done = false;
             this.events = [];
             this.result = null;
             this.fatalError = null;
+            this._eventCursor = 0;
 
             const formData = new FormData();
             formData.append('aircraft', this.aircraftId);
@@ -144,45 +149,58 @@ function logbookImport() {
                     let msg = `HTTP ${response.status}`;
                     try { msg = JSON.parse(text).message || msg; } catch (_) {}
                     this.fatalError = msg;
+                    this.importing = false;
+                    this.done = true;
                     return;
                 }
 
-                // Read the NDJSON stream
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
+                const data = await response.json();
+                this._jobId = data.job_id;
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop();           // keep incomplete tail
-                    for (const line of lines) {
-                        const trimmed = line.trim();
-                        if (!trimmed) continue;
-                        try {
-                            this._handleEvent(JSON.parse(trimmed));
-                        } catch (_) {
-                            // ignore malformed lines
-                        }
-                    }
-                }
-                // Flush any remaining buffer
-                if (buffer.trim()) {
-                    try { this._handleEvent(JSON.parse(buffer.trim())); } catch (_) {}
-                }
+                // Start polling for progress
+                this._pollTimer = setInterval(() => this._pollStatus(), 2000);
 
             } catch (err) {
                 this.fatalError = String(err);
-            } finally {
                 this.importing = false;
                 this.done = true;
-                // Scroll log to bottom
-                this.$nextTick(() => {
-                    const log = this.$refs.eventLog;
-                    if (log) log.scrollTop = log.scrollHeight;
-                });
+            }
+        },
+
+        async _pollStatus() {
+            if (!this._jobId) return;
+
+            try {
+                const resp = await fetch(
+                    `/tools/import-logbook/${this._jobId}/status/?after=${this._eventCursor}`
+                );
+                if (!resp.ok) return;
+
+                const data = await resp.json();
+
+                // Process new events
+                for (const event of (data.events || [])) {
+                    this._handleEvent(event);
+                }
+                this._eventCursor += (data.events || []).length;
+
+                // Check if job is done
+                if (data.status === 'completed' || data.status === 'failed') {
+                    clearInterval(this._pollTimer);
+                    this._pollTimer = null;
+                    if (data.result) this.result = data.result;
+                    if (data.status === 'failed' && !this.result) {
+                        this.fatalError = this.fatalError || 'Import failed.';
+                    }
+                    this.importing = false;
+                    this.done = true;
+                    this.$nextTick(() => {
+                        const log = this.$refs.eventLog;
+                        if (log) log.scrollTop = log.scrollHeight;
+                    });
+                }
+            } catch (_) {
+                // Transient fetch error — keep polling
             }
         },
 

@@ -317,6 +317,27 @@ class ADCompliance(models.Model):
         return ret_string
 
 
+class ImportJob(models.Model):
+    """Track background logbook import jobs."""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('running', 'Running'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    aircraft = models.ForeignKey(core_models.Aircraft, on_delete=models.CASCADE, related_name='import_jobs')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    events = models.JSONField(default=list)
+    result = models.JSONField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"ImportJob {self.id} ({self.status}) - {self.aircraft.tail_number}"
+
+
 class ConsumableRecord(models.Model):
     RECORD_TYPE_OIL = 'oil'
     RECORD_TYPE_FUEL = 'fuel'

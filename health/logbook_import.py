@@ -23,6 +23,7 @@ import base64
 import json
 import logging
 import os
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Iterator, List, Optional, Set
@@ -30,7 +31,7 @@ from typing import Iterator, List, Optional, Set
 from django.core.files import File
 from django.db import transaction
 
-from health.models import Document, DocumentCollection, DocumentImage, LogbookEntry
+from health.models import Document, DocumentCollection, DocumentImage, ImportJob, LogbookEntry
 
 
 SUPPORTED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff'}
@@ -308,6 +309,17 @@ def run_import(
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+_MAX_TOKENS = 16384
+
+# Rate-limit / overload retry settings
+_MAX_RETRIES = 5
+_INITIAL_BACKOFF = 1.0  # seconds
+_MAX_BACKOFF = 60.0  # seconds
+
+# If output_tokens exceeds this fraction of max_tokens, proactively shrink
+_OUTPUT_PRESSURE_THRESHOLD = 0.80
+
+
 def _ev(kind: str, message: str) -> dict:
     return {'type': kind, 'message': message}
 
@@ -316,34 +328,105 @@ def _extract_all_entries(
     client, image_paths, model, batch_size,
     all_entries, non_logbook_pages, unparseable_pages,
 ):
-    """Generator: yields progress events while filling all_entries / page sets."""
-    seen_keys: Set[tuple] = set()
-    batches = _make_batches(image_paths, batch_size)
-    total = len(batches)
+    """Generator: yields progress events while filling all_entries / page sets.
 
-    for batch_num, (batch_offset, batch_files) in enumerate(batches, 1):
+    Handles output truncation adaptively: if a batch is truncated, it is split
+    into smaller sub-batches and retried.  Also monitors output token pressure
+    and proactively shrinks future batch sizes when approaching the limit.
+    """
+    log = logging.getLogger(__name__)
+    seen_keys: Set[tuple] = set()
+
+    # Work queue: list of (batch_offset, batch_files) to process.
+    # Starts with the initial batches, but truncated batches get split
+    # and re-queued.
+    work_queue = list(_make_batches(image_paths, batch_size))
+    batch_num = 0
+    total_estimate = len(work_queue)
+
+    while work_queue:
+        batch_offset, batch_files = work_queue.pop(0)
+        batch_num += 1
+
         yield {
             'type': 'batch',
             'message': (
-                f"Batch {batch_num}/{total}: pages {batch_offset}–"
+                f"Batch {batch_num}/{total_estimate}: pages {batch_offset}–"
                 f"{batch_offset + len(batch_files) - 1} ({len(batch_files)} images)"
             ),
             'batch': batch_num,
-            'total_batches': total,
+            'total_batches': total_estimate,
         }
 
         try:
             result = _call_claude(client, batch_files, model)
         except Exception:
-            logging.getLogger(__name__).exception(
-                "Claude API error in batch %d", batch_num
-            )
+            log.exception("Claude API error in batch %d", batch_num)
             yield _ev('error', f"Claude API error in batch {batch_num}. See server logs for details.")
             for j in range(len(batch_files)):
                 unparseable_pages.add(batch_offset + j)
             continue
 
-        entries = result.get('entries') or []
+        # -- Handle truncation by splitting the batch -----------------
+        if result['truncated']:
+            if len(batch_files) <= 1:
+                yield _ev('warning',
+                          f"Single-page batch {batch_num} truncated — marking page as unparseable")
+                unparseable_pages.add(batch_offset)
+                continue
+
+            half = max(1, len(batch_files) // 2)
+            sub_a = (batch_offset, batch_files[:half])
+            # Overlap by 1 between the two halves
+            sub_b_start = half - 1
+            sub_b = (batch_offset + sub_b_start, batch_files[sub_b_start:])
+
+            yield _ev('warning',
+                      f"Batch {batch_num} truncated ({len(batch_files)} images) — "
+                      f"splitting into sub-batches of {len(sub_a[1])} and {len(sub_b[1])}")
+
+            # Insert sub-batches at front of work queue
+            work_queue.insert(0, sub_b)
+            work_queue.insert(0, sub_a)
+            total_estimate += 1  # one batch became two
+            continue
+
+        # -- Proactive batch-size shrink for remaining work -----------
+        output_tokens = result['output_tokens']
+        if (output_tokens > _OUTPUT_PRESSURE_THRESHOLD * _MAX_TOKENS
+                and len(batch_files) > 1
+                and work_queue):
+            new_size = max(1, len(batch_files) // 2)
+            yield _ev('info',
+                      f"  Output tokens {output_tokens}/{_MAX_TOKENS} "
+                      f"(>{_OUTPUT_PRESSURE_THRESHOLD:.0%}) — "
+                      f"shrinking remaining batches to {new_size} images")
+            # Re-batch the remaining images from the work queue
+            remaining_offsets_files = []
+            for off, files in work_queue:
+                for i, f in enumerate(files):
+                    remaining_offsets_files.append((off + i, f))
+            # Deduplicate by offset (overlap pages may appear twice)
+            seen_offsets: set = set()
+            deduped: List[tuple] = []
+            for off, f in remaining_offsets_files:
+                if off not in seen_offsets:
+                    seen_offsets.add(off)
+                    deduped.append((off, f))
+            deduped.sort(key=lambda x: x[0])
+            # Re-batch with the new smaller size
+            new_queue = []
+            for i in range(0, len(deduped), new_size):
+                chunk = deduped[i:i + new_size]
+                chunk_offset = chunk[0][0]
+                chunk_files = [f for _, f in chunk]
+                new_queue.append((chunk_offset, chunk_files))
+            work_queue = new_queue
+            total_estimate = batch_num + len(work_queue)
+
+        # -- Collect results ------------------------------------------
+        data = result['data']
+        entries = data.get('entries') or []
         yield _ev('info', f"  → {len(entries)} entries extracted from batch {batch_num}")
 
         for entry in entries:
@@ -358,9 +441,9 @@ def _extract_all_entries(
             seen_keys.add(key)
             all_entries.append(entry)
 
-        for local_idx in result.get('non_logbook_pages') or []:
+        for local_idx in data.get('non_logbook_pages') or []:
             non_logbook_pages.add(batch_offset + local_idx)
-        for local_idx in result.get('unparseable_pages') or []:
+        for local_idx in data.get('unparseable_pages') or []:
             unparseable_pages.add(batch_offset + local_idx)
 
 
@@ -379,7 +462,16 @@ def _make_batches(image_paths: List[Path], batch_size: int):
 
 
 def _call_claude(client, batch_files: List[Path], model: str) -> dict:
-    """Send a batch of images to Claude; return parsed JSON dict."""
+    """
+    Send a batch of images to Claude; return dict with keys:
+      'data'          — parsed JSON response
+      'truncated'     — True if stop_reason was max_tokens
+      'output_tokens' — number of output tokens used
+    Raises anthropic.APIStatusError / anthropic.RateLimitError on
+    unrecoverable API errors (rate-limit retries are handled here).
+    """
+    import anthropic
+
     _MEDIA_TYPES = {
         '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
         '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp',
@@ -406,9 +498,10 @@ def _call_claude(client, batch_files: List[Path], model: str) -> dict:
         ),
     })
 
-    response = client.messages.create(
+    log = logging.getLogger(__name__)
+    request_kwargs = dict(
         model=model,
-        max_tokens=16384,
+        max_tokens=_MAX_TOKENS,
         system=EXTRACT_SYSTEM_PROMPT,
         messages=[{'role': 'user', 'content': content}],
         output_config={
@@ -419,13 +512,55 @@ def _call_claude(client, batch_files: List[Path], model: str) -> dict:
         },
     )
 
-    if response.stop_reason == 'max_tokens':
-        raise ValueError(
-            "Response truncated (max_tokens reached) — "
-            "batch may have too many entries"
-        )
+    backoff = _INITIAL_BACKOFF
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            response = client.messages.create(**request_kwargs)
+            break
+        except anthropic.RateLimitError as exc:
+            if attempt == _MAX_RETRIES:
+                raise
+            wait = _retry_after(exc, backoff)
+            log.warning("Rate limited (attempt %d/%d), waiting %.1fs",
+                        attempt, _MAX_RETRIES, wait)
+            time.sleep(wait)
+            backoff = min(backoff * 2, _MAX_BACKOFF)
+        except anthropic.APIStatusError as exc:
+            if exc.status_code == 529 and attempt < _MAX_RETRIES:
+                wait = _retry_after(exc, backoff)
+                log.warning("API overloaded (attempt %d/%d), waiting %.1fs",
+                            attempt, _MAX_RETRIES, wait)
+                time.sleep(wait)
+                backoff = min(backoff * 2, _MAX_BACKOFF)
+            else:
+                raise
 
-    return json.loads(response.content[0].text)
+    truncated = response.stop_reason == 'max_tokens'
+    output_tokens = getattr(response.usage, 'output_tokens', 0)
+
+    data = {}
+    if not truncated:
+        data = json.loads(response.content[0].text)
+
+    return {
+        'data': data,
+        'truncated': truncated,
+        'output_tokens': output_tokens,
+    }
+
+
+def _retry_after(exc, default_backoff: float) -> float:
+    """Extract retry-after seconds from an API error, falling back to default_backoff."""
+    headers = getattr(exc, 'response', None)
+    if headers is not None:
+        headers = getattr(headers, 'headers', {})
+        retry_after = headers.get('retry-after')
+        if retry_after:
+            try:
+                return max(float(retry_after), 0.5)
+            except (ValueError, TypeError):
+                pass
+    return default_backoff
 
 
 def _upload_images(
@@ -511,3 +646,49 @@ def _create_single_entry(aircraft, document: Document, entry: dict) -> Optional[
         page_number=page_number,
     )
     return None
+
+
+# ---------------------------------------------------------------------------
+# Background job runner
+# ---------------------------------------------------------------------------
+
+def run_import_job(job_id, tmpdir, image_paths, **kwargs):
+    """
+    Run an import as a background job, writing events to ImportJob.
+
+    Intended to be called from a daemon thread.  All kwargs are forwarded
+    to run_import() (collection_name, doc_name, doc_type, model, etc.).
+    """
+    import shutil
+
+    log = logging.getLogger(__name__)
+
+    try:
+        job = ImportJob.objects.get(pk=job_id)
+    except ImportJob.DoesNotExist:
+        log.error("ImportJob %s not found", job_id)
+        return
+
+    job.status = 'running'
+    job.save(update_fields=['status', 'updated_at'])
+
+    try:
+        aircraft = job.aircraft
+        for event in run_import(aircraft=aircraft, image_paths=image_paths, **kwargs):
+            job.events.append(event)
+            if event.get('type') == 'complete':
+                job.result = event
+            job.save(update_fields=['events', 'result', 'updated_at'])
+
+        job.status = 'completed'
+        job.save(update_fields=['status', 'updated_at'])
+
+    except Exception:
+        log.exception("ImportJob %s failed", job_id)
+        error_event = _ev('error', 'An unexpected error occurred during import.')
+        job.events.append(error_event)
+        job.status = 'failed'
+        job.save(update_fields=['events', 'status', 'updated_at'])
+
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
