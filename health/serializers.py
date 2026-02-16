@@ -117,6 +117,7 @@ class DocumentNestedSerializer(serializers.ModelSerializer):
             'doc_type',
             'doc_type_display',
             'collection_id',
+            'shared',
             'images',
         ]
 
@@ -132,6 +133,7 @@ class DocumentCollectionNestedSerializer(serializers.ModelSerializer):
             'id',
             'name',
             'description',
+            'shared',
             'documents',
             'document_count',
         ]
@@ -150,6 +152,7 @@ class DocumentCollectionSerializer(serializers.HyperlinkedModelSerializer):
                 'components',
                 'name',
                 'description',
+                'shared',
                 'documents',
                 ]
         read_only_fields = ['documents']
@@ -170,6 +173,7 @@ class DocumentSerializer(serializers.HyperlinkedModelSerializer):
                 'description',
                 'doc_type',
                 'doc_type_display',
+                'shared',
                 'related_logs',
                 'log_entry',
                 'images',

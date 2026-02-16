@@ -490,7 +490,7 @@ Applied to all standalone aircraft-related viewsets (before `EventLoggingMixin` 
 - **`/shared/<uuid:share_token>/`** — `PublicAircraftView` renders read-only template. No login required. Constant-time token lookup.
 - **`/api/shared/<uuid:share_token>/`** — `PublicAircraftSummaryAPI` returns JSON summary. No CSRF/auth. Strips sensitive fields (`share_token`, `share_url`, `roles`).
 - Token validation: checks `public_sharing_enabled=True` and `share_token_expires_at` is null or in the future; returns 404 otherwise.
-- Frontend: `aircraft-public.js` → `publicAircraftView(shareToken)` Alpine.js component.
+- Frontend: Uses the same `aircraft-detail.js` → `aircraftDetail(aircraftId, shareToken)` with `base_public.html` as base template. The `isPublicView` getter disables write actions and events.
 
 #### Serializer Additions
 
@@ -629,8 +629,7 @@ The logbook entry modal (`logbookModalOpen`) currently has `z-index: 1100` for t
 | Aircraft scoping mixin | `core/mixins.py` (`AircraftScopedMixin`) |
 | Permission classes | `core/permissions.py` |
 | Public sharing views | `core/views.py` (`PublicAircraftView`, `PublicAircraftSummaryAPI`) |
-| Public sharing template | `core/templates/aircraft_public.html` |
-| Public sharing JS | `core/static/js/aircraft-public.js` |
+| Public base template | `core/templates/base_public.html` |
 | Owner backfill command | `core/management/commands/assign_owners.py` |
 | Logbook import (AI providers) | `health/logbook_import.py` |
 | OIDC backend | `core/oidc.py` |

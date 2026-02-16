@@ -1,8 +1,16 @@
-{% extends "base.html" %}
+{% extends base_template %}
 {% load static %}
 
 {% block content %}
-<div x-data="aircraftDetail('{{ aircraft_id }}')" @aircraft-updated.window="loadData()">
+<div x-data="aircraftDetail('{{ aircraft_id }}', '{{ share_token|default:"" }}')" @aircraft-updated.window="loadData()">
+    <!-- Shared View Banner (public mode only) -->
+    <div x-show="isPublicView" x-cloak class="pf-v5-c-alert pf-m-info pf-m-inline" style="margin-bottom: 1rem;">
+        <div class="pf-v5-c-alert__icon"><i class="fas fa-info-circle"></i></div>
+        <p class="pf-v5-c-alert__title">
+            You are viewing a shared, read-only view of <strong x-text="aircraft?.tail_number || '...'"></strong>.
+        </p>
+    </div>
+
     <!-- Page Header -->
     <div class="pf-v5-c-page__main-section pf-m-light">
         <div class="pf-v5-c-content">
@@ -218,7 +226,7 @@
                 </div>
 
                 <!-- Recent Activity Card -->
-                <div class="pf-v5-c-card">
+                <div class="pf-v5-c-card" x-show="!isPublicView">
                     <div class="pf-v5-c-card__header">
                         <div class="pf-v5-c-card__header-main">
                             <div class="pf-v5-c-card__title">
@@ -312,8 +320,8 @@
 
         </div>
 
-        <!-- Events History Modal -->
-        <template x-if="eventsHistoryOpen">
+        <!-- Events History Modal (hidden in public mode) -->
+        <template x-if="!isPublicView && eventsHistoryOpen">
             <div class="pf-v5-c-backdrop">
                 <div class="pf-v5-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-label="Activity History">
                     <div class="pf-v5-c-modal-box__close">
@@ -537,7 +545,7 @@
                                             </template>
                                         </p>
                                     </template>
-                                    <template x-if="log.log_image">
+                                    <template x-if="log.log_image && (!isPublicView || log.log_image_shared)">
                                         <p style="margin-top: 0.5rem;">
                                             <i class="fas fa-paperclip" style="color: var(--pf-v5-global--Color--200);"></i>
                                             <button class="pf-v5-c-button pf-m-link pf-m-inline"
@@ -576,7 +584,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h2>Active Squawks</h2>
                 <div style="display: flex; gap: 0.5rem;">
-                    <a :href="`/aircraft/${aircraftId}/squawks/history/`" class="pf-v5-c-button pf-m-secondary">
+                    <a x-show="!isPublicView" :href="`/aircraft/${aircraftId}/squawks/history/`" class="pf-v5-c-button pf-m-secondary">
                         <i class="fas fa-history"></i> View History
                     </a>
                     <button class="pf-v5-c-button pf-m-primary" x-show="canCreateSquawk" @click="openSquawkModal()">
@@ -637,6 +645,42 @@
                     </div>
                 </template>
             </div>
+
+            <!-- Inline Resolved Squawks (public view only) -->
+            <template x-if="isPublicView && resolvedSquawks.length > 0">
+                <div style="margin-top: 1.5rem;">
+                    <h2 style="margin-bottom: 1rem;">Resolved Squawks</h2>
+                    <table class="pf-v5-c-table pf-m-grid-md">
+                        <thead>
+                            <tr>
+                                <th>Date Reported</th>
+                                <th>Priority</th>
+                                <th>Component</th>
+                                <th>Issue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="squawk in resolvedSquawks" :key="squawk.id">
+                                <tr>
+                                    <td x-text="formatDate(squawk.created_at)"></td>
+                                    <td>
+                                        <span class="pf-v5-c-label" :class="getSquawkPriorityClass(squawk)" x-text="squawk.priority_display"></span>
+                                    </td>
+                                    <td x-text="squawk.component_name || '-'"></td>
+                                    <td>
+                                        <span x-text="squawk.issue_reported"></span>
+                                        <template x-if="squawk.notes">
+                                            <div style="font-size: 0.875rem; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;">
+                                                <strong>Notes:</strong> <span x-text="squawk.notes"></span>
+                                            </div>
+                                        </template>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
         </div>
 
         <!-- ADs Tab -->
@@ -1090,6 +1134,11 @@
                                     </div>
                                 </div>
                                 <div class="pf-v5-c-card__actions" style="display: flex; align-items: center; gap: 0.25rem;">
+                                    <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="toggleCollectionSharing(collection)"
+                                            :title="collection.shared ? 'Shared publicly (click to make private)' : 'Private (click to share publicly)'"
+                                            :style="collection.shared ? 'color: var(--pf-v5-global--success-color--100);' : ''">
+                                        <i class="fas" :class="collection.shared ? 'fa-globe' : 'fa-lock'"></i>
+                                    </button>
                                     <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editCollection(collection)" title="Edit collection">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
@@ -1111,6 +1160,11 @@
                                     <template x-for="doc in collection.documents" :key="doc.id">
                                         <div class="document-item" style="position: relative;" @click="openDocumentViewer(doc, collection.name)">
                                             <div class="document-item-actions" x-show="isOwner" style="position: absolute; top: 0.25rem; right: 0.25rem; display: flex; gap: 0.125rem; z-index: 2;">
+                                                <button class="pf-v5-c-button pf-m-plain" style="padding: 0.25rem; font-size: 0.75rem;" @click.stop="toggleDocumentSharing(doc)"
+                                                        :title="doc.shared === true ? 'Shared (click to cycle)' : doc.shared === false ? 'Hidden (click to cycle)' : 'Inherits from collection (click to cycle)'"
+                                                        :style="doc.shared === true ? 'color: var(--pf-v5-global--success-color--100);' : doc.shared === false ? 'color: var(--pf-v5-global--danger-color--100);' : ''">
+                                                    <i class="fas" :class="doc.shared === true ? 'fa-globe' : doc.shared === false ? 'fa-eye-slash' : 'fa-minus-circle'"></i>
+                                                </button>
                                                 <button class="pf-v5-c-button pf-m-plain" style="padding: 0.25rem; font-size: 0.75rem;" @click="editDocument(doc, $event)" title="Edit document">
                                                     <i class="fas fa-pencil-alt"></i>
                                                 </button>
@@ -1164,6 +1218,11 @@
                                     <template x-for="doc in uncollectedDocuments" :key="doc.id">
                                         <div class="document-item" style="position: relative;" @click="openDocumentViewer(doc, 'Other Documents')">
                                             <div class="document-item-actions" x-show="isOwner" style="position: absolute; top: 0.25rem; right: 0.25rem; display: flex; gap: 0.125rem; z-index: 2;">
+                                                <button class="pf-v5-c-button pf-m-plain" style="padding: 0.25rem; font-size: 0.75rem;" @click.stop="toggleDocumentSharing(doc)"
+                                                        :title="doc.shared === true ? 'Shared (click to make private)' : 'Private (click to share)'"
+                                                        :style="doc.shared === true ? 'color: var(--pf-v5-global--success-color--100);' : ''">
+                                                    <i class="fas" :class="doc.shared === true ? 'fa-globe' : 'fa-lock'"></i>
+                                                </button>
                                                 <button class="pf-v5-c-button pf-m-plain" style="padding: 0.25rem; font-size: 0.75rem;" @click="editDocument(doc, $event)" title="Edit document">
                                                     <i class="fas fa-pencil-alt"></i>
                                                 </button>

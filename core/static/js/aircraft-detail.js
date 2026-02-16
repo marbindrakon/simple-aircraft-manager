@@ -1,4 +1,4 @@
-function aircraftDetail(aircraftId) {
+function aircraftDetail(aircraftId, shareToken) {
     return mergeMixins(
         // Feature mixins (order doesn't matter — all end up on one object)
         componentsMixin(),
@@ -16,12 +16,18 @@ function aircraftDetail(aircraftId) {
         // Core state and methods (last so they win on any key collision)
         {
             aircraftId: aircraftId,
+            _publicShareToken: shareToken || null,
             aircraft: null,
             components: [],
             recentLogs: [],
             activeSquawks: [],
+            resolvedSquawks: [],
             loading: true,
             activeTab: 'overview',
+
+            // Public view detection (uses _publicShareToken to avoid collision
+            // with rolesMixin's shareToken which tracks the aircraft's share token)
+            get isPublicView() { return !!this._publicShareToken; },
 
             // Role-based access helpers
             get userRole() { return this.aircraft?.user_role || null; },
@@ -36,7 +42,20 @@ function aircraftDetail(aircraftId) {
             async init() {
                 await this.loadData();
 
-                // Load ADs and inspections eagerly so issue count badges are visible immediately
+                if (this.isPublicView) {
+                    // Public mode: render charts when their tab becomes visible
+                    this.$watch('activeTab', (tab) => {
+                        if (tab === 'oil' && this.oilRecords.length >= 2) {
+                            this.$nextTick(() => this.renderOilChart());
+                        }
+                        if (tab === 'fuel' && this.fuelRecords.length >= 2) {
+                            this.$nextTick(() => this.renderFuelChart());
+                        }
+                    });
+                    return;
+                }
+
+                // Private mode: load ADs and inspections eagerly for issue count badges
                 this.loadAds();
                 this.loadInspections();
 
@@ -66,26 +85,73 @@ function aircraftDetail(aircraftId) {
             async loadData() {
                 this.loading = true;
                 try {
-                    const response = await fetch(`/api/aircraft/${this.aircraftId}/summary/`);
-                    const data = await response.json();
-
-                    this.aircraft = data.aircraft;
-                    this.components = data.components;
-                    this.recentLogs = data.recent_logs;
-                    this.activeSquawks = data.active_squawks;
-                    this.aircraftNotes = data.notes || [];
-
-                    // Init sharing state from aircraft data
-                    this.initSharingState();
-
-                    // Refresh recent events (non-blocking)
-                    this.loadRecentEvents();
+                    if (this.isPublicView) {
+                        await this._loadPublicData();
+                    } else {
+                        await this._loadPrivateData();
+                    }
                 } catch (error) {
                     console.error('Error loading aircraft data:', error);
                     showNotification('Failed to load aircraft data', 'danger');
                 } finally {
                     this.loading = false;
                 }
+            },
+
+            async _loadPrivateData() {
+                const response = await fetch(`/api/aircraft/${this.aircraftId}/summary/`);
+                const data = await response.json();
+
+                this.aircraft = data.aircraft;
+                this.components = data.components;
+                this.recentLogs = data.recent_logs;
+                this.activeSquawks = data.active_squawks;
+                this.aircraftNotes = data.notes || [];
+
+                // Init sharing state from aircraft data
+                this.initSharingState();
+
+                // Refresh recent events (non-blocking)
+                this.loadRecentEvents();
+            },
+
+            async _loadPublicData() {
+                const resp = await fetch(`/api/shared/${this._publicShareToken}/`);
+                if (!resp.ok) {
+                    showNotification('This shared link is no longer available.', 'danger');
+                    return;
+                }
+                const data = await resp.json();
+
+                this.aircraft = data.aircraft;
+                this.components = data.components || [];
+                this.recentLogs = data.recent_logs || [];
+                this.activeSquawks = data.active_squawks || [];
+                this.resolvedSquawks = data.resolved_squawks || [];
+                this.aircraftNotes = data.notes || [];
+
+                // Populate mixin state from the single public API response
+                this.applicableAds = data.ads || [];
+                this.adsLoaded = true;
+
+                this.inspectionTypes = data.inspections || [];
+                this.inspectionsLoaded = true;
+
+                this.oilRecords = data.oil_records || [];
+                this.oilLoaded = true;
+
+                this.fuelRecords = data.fuel_records || [];
+                this.fuelLoaded = true;
+
+                this.documentCollections = data.document_collections || [];
+                this.uncollectedDocuments = data.documents || [];
+                this.documentsLoaded = true;
+
+                this.logbookEntries = this.recentLogs;
+                this.logbookLoaded = true;
+
+                this.rolesLoaded = true;
+                this.eventsLoaded = true;
             },
 
             // Shared utility delegators

@@ -106,6 +106,7 @@ class DocumentCollection(models.Model):
     components = models.ManyToManyField(Component, related_name='doc_collections', blank=True)
     name = models.CharField(max_length=254)
     description = models.TextField(blank=True)
+    shared = models.BooleanField(default=False)
 
     def __str__(self):
         ret_string = ""
@@ -123,6 +124,7 @@ class Document(models.Model):
     collection = models.ForeignKey(DocumentCollection, related_name='documents', on_delete=models.CASCADE, blank=True, null=True)
     name = models.CharField(max_length=254)
     description = models.TextField(blank=True)
+    shared = models.BooleanField(null=True, default=None)
 
     def __str__(self):
         ret_string = ""

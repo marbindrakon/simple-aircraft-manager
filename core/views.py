@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 import tarfile
 import tempfile
@@ -835,6 +836,7 @@ class AircraftDetailView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['aircraft_id'] = self.kwargs['pk']
+        context['base_template'] = 'base.html'
         return context
 
 
@@ -1144,7 +1146,7 @@ class LogbookImportView(LoginRequiredMixin, View):
 
 class PublicAircraftView(TemplateView):
     """Read-only public view of an aircraft via share token."""
-    template_name = 'aircraft_public.html'
+    template_name = 'aircraft_detail.html'
 
     def get(self, request, share_token, *args, **kwargs):
         from django.http import Http404
@@ -1159,7 +1161,7 @@ class PublicAircraftView(TemplateView):
         return render(request, self.template_name, {
             'aircraft_id': str(aircraft.id),
             'share_token': str(share_token),
-            'aircraft_tail': aircraft.tail_number,
+            'base_template': 'base_public.html',
         })
 
 
@@ -1229,9 +1231,23 @@ class PublicAircraftSummaryAPI(View):
                 type_dict['compliance_status'] = STATUS_LABELS[rank]
             inspections_data.append(type_dict)
 
-        # Build document collections and uncollected documents
-        collections = DocumentCollection.objects.filter(aircraft=aircraft).prefetch_related('documents__images')
-        uncollected_docs = Document.objects.filter(aircraft=aircraft, collection__isnull=True).prefetch_related('images')
+        # Build document collections and uncollected documents (shared only)
+        # A document is publicly visible if:
+        #   - document.shared == True (explicit override), OR
+        #   - document.shared is None AND collection.shared == True (inherits from collection)
+        all_collections = DocumentCollection.objects.filter(aircraft=aircraft).prefetch_related('documents__images')
+        collections = []
+        for col in all_collections:
+            visible_docs = [
+                d for d in col.documents.all()
+                if d.shared is True or (d.shared is None and col.shared)
+            ]
+            if visible_docs:
+                col._visible_documents = visible_docs
+                collections.append(col)
+        uncollected_docs = Document.objects.filter(
+            aircraft=aircraft, collection__isnull=True, shared=True
+        ).prefetch_related('images')
 
         summary_data = {
             'aircraft': AircraftSerializer(aircraft, context={'request': drf_request}).data,
@@ -1245,6 +1261,10 @@ class PublicAircraftSummaryAPI(View):
             ).data,
             'active_squawks': SquawkNestedSerializer(
                 aircraft.squawks.filter(resolved=False),
+                many=True, context={'request': drf_request}
+            ).data,
+            'resolved_squawks': SquawkNestedSerializer(
+                aircraft.squawks.filter(resolved=True).order_by('-created_at'),
                 many=True, context={'request': drf_request}
             ).data,
             'notes': AircraftNoteNestedSerializer(
@@ -1265,9 +1285,40 @@ class PublicAircraftSummaryAPI(View):
                 ).order_by('-date')[:20],
                 many=True
             ).data,
-            'document_collections': DocumentCollectionNestedSerializer(collections, many=True).data,
+            'document_collections': [
+                {
+                    **DocumentCollectionNestedSerializer(col).data,
+                    'documents': DocumentNestedSerializer(col._visible_documents, many=True).data,
+                    'document_count': len(col._visible_documents),
+                }
+                for col in collections
+            ],
             'documents': DocumentNestedSerializer(uncollected_docs, many=True).data,
         }
+
+        # Build set of publicly visible document IDs
+        visible_doc_ids = set()
+        for col in collections:
+            for d in col._visible_documents:
+                visible_doc_ids.add(str(d.id))
+        for d in uncollected_docs:
+            visible_doc_ids.add(str(d.id))
+
+        # Annotate logbook entries with document visibility for public view
+        for log_entry in summary_data['recent_logs']:
+            # log_image is a hyperlinked URL — extract the document ID
+            log_image_url = log_entry.get('log_image')
+            if log_image_url:
+                m = re.search(r'/([0-9a-f-]{36})/?$', log_image_url, re.I)
+                log_entry['log_image_shared'] = bool(m and m.group(1) in visible_doc_ids)
+            else:
+                log_entry['log_image_shared'] = False
+
+            # Filter related_documents_detail to only publicly visible docs
+            rdocs = log_entry.get('related_documents_detail', [])
+            log_entry['related_documents_detail'] = [
+                rd for rd in rdocs if str(rd.get('id', '')) in visible_doc_ids
+            ]
 
         # Strip sensitive fields
         aircraft_data = summary_data['aircraft']

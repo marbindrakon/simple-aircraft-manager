@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Simple Aircraft Manager{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{% static 'icon.png' %}">
+
+    <!-- PatternFly CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@patternfly/patternfly@5.3.1/patternfly.min.css">
+    <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+    <!-- Simplified navbar for public/shared view -->
+    <header class="pf-v5-c-masthead">
+        <div class="pf-v5-c-masthead__main">
+            <span class="pf-v5-c-masthead__brand">Simple Aircraft Manager &mdash; Shared View</span>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="pf-v5-c-page__main" tabindex="-1">
+        <section class="pf-v5-c-page__main-section">
+            {% block content %}{% endblock %}
+        </section>
+    </main>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- App JavaScript -->
+    <script src="{% static 'js/utils.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

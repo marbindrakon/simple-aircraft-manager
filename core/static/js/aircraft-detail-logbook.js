@@ -483,10 +483,31 @@ function logbookMixin() {
             return `${date}${hrs} — ${type}: ${text}`;
         },
 
+        _findLoadedDocument(docId) {
+            // Search already-loaded document data (used in public mode)
+            for (const col of (this.documentCollections || [])) {
+                for (const d of (col.documents || [])) {
+                    if (d.id === docId) return d;
+                }
+            }
+            for (const d of (this.uncollectedDocuments || [])) {
+                if (d.id === docId) return d;
+            }
+            return null;
+        },
+
         async viewLogEntryDocument(log) {
             const docId = this.extractIdFromUrl(log.log_image);
             if (!docId) return;
             try {
+                if (this.isPublicView) {
+                    const doc = this._findLoadedDocument(docId);
+                    if (doc) {
+                        const startPage = log.page_number ? log.page_number - 1 : 0;
+                        this.openDocumentViewer(doc, 'Logbook Document', startPage);
+                    }
+                    return;
+                }
                 const resp = await fetch(`/api/documents/${docId}/`);
                 if (resp.ok) {
                     const doc = await resp.json();
@@ -500,6 +521,11 @@ function logbookMixin() {
 
         async viewRelatedDocument(doc) {
             try {
+                if (this.isPublicView) {
+                    // In public mode, related_documents_detail already has images
+                    this.openDocumentViewer(doc, doc.name || 'Related Document');
+                    return;
+                }
                 const resp = await fetch(`/api/documents/${doc.id}/`);
                 if (resp.ok) {
                     const fullDoc = await resp.json();

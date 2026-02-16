@@ -374,6 +374,66 @@ function documentsMixin() {
             }
         },
 
+        async toggleCollectionSharing(collection) {
+            try {
+                const response = await fetch(`/api/document-collections/${collection.id}/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({ shared: !collection.shared }),
+                });
+
+                if (response.ok) {
+                    collection.shared = !collection.shared;
+                    showNotification(
+                        collection.shared ? 'Collection shared publicly' : 'Collection set to private',
+                        'success'
+                    );
+                } else {
+                    showNotification('Failed to update sharing', 'danger');
+                }
+            } catch (error) {
+                console.error('Error toggling collection sharing:', error);
+                showNotification('Error updating sharing', 'danger');
+            }
+        },
+
+        async toggleDocumentSharing(doc) {
+            // Cycle: null (inherit) → true (shared) → false (hidden) → null
+            let newValue;
+            if (doc.shared === null || doc.shared === undefined) {
+                newValue = true;
+            } else if (doc.shared === true) {
+                newValue = false;
+            } else {
+                newValue = null;
+            }
+
+            try {
+                const response = await fetch(`/api/documents/${doc.id}/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({ shared: newValue }),
+                });
+
+                if (response.ok) {
+                    doc.shared = newValue;
+                    const label = newValue === true ? 'Shared' : newValue === false ? 'Hidden' : 'Inherits from collection';
+                    showNotification(`Document visibility: ${label}`, 'success');
+                } else {
+                    showNotification('Failed to update sharing', 'danger');
+                }
+            } catch (error) {
+                console.error('Error toggling document sharing:', error);
+                showNotification('Error updating sharing', 'danger');
+            }
+        },
+
         async deleteDocumentImage(imageId) {
             if (!confirm('Delete this image?')) return;
 
