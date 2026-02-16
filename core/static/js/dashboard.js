@@ -51,6 +51,11 @@ function aircraftDashboard() {
                 case 'ORANGE': return 'card-border-orange';
                 default: return '';
             }
-        }
+        },
+
+        canUpdateHours(aircraft) {
+            const role = aircraft.user_role;
+            return role === 'owner' || role === 'admin' || role === 'pilot';
+        },
     }
 }

@@ -32,6 +32,9 @@ class Aircraft(models.Model):
     picture = models.ImageField(upload_to=random_picture_filename, blank=True)
     status = models.CharField(max_length=254, blank=False, choices=AIRCRAFT_STATUSES, default="AVAILABLE")
     flight_time = models.DecimalField(max_digits=8, decimal_places=1, default=0.0)
+    public_sharing_enabled = models.BooleanField(default=False)
+    share_token = models.UUIDField(null=True, blank=True, unique=True, editable=False)
+    share_token_expires_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.tail_number} - {self.make} {self.model}"
@@ -59,6 +62,7 @@ EVENT_CATEGORIES = (
     ('inspection', 'Inspection'),
     ('document', 'Document'),
     ('aircraft', 'Aircraft'),
+    ('role', 'Role'),
 )
 
 class AircraftEvent(models.Model):
@@ -75,3 +79,22 @@ class AircraftEvent(models.Model):
 
     def __str__(self):
         return f"{self.aircraft.tail_number} - {self.event_name}"
+
+AIRCRAFT_ROLES = (
+    ('owner', 'Owner'),
+    ('pilot', 'Pilot'),
+)
+
+class AircraftRole(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    aircraft = models.ForeignKey(Aircraft, related_name='roles', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='aircraft_roles', on_delete=models.CASCADE)
+    role = models.CharField(max_length=20, choices=AIRCRAFT_ROLES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('aircraft', 'user')
+        ordering = ['role', 'created_at']
+
+    def __str__(self):
+        return f"{self.user} - {self.role} on {self.aircraft.tail_number}"

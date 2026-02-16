@@ -37,6 +37,13 @@
                         <div class="pf-v5-c-card__header-main">
                             <div class="pf-v5-c-card__title">
                                 <h2 x-text="aircraft.tail_number"></h2>
+                                <template x-if="aircraft.user_role">
+                                    <span class="pf-v5-c-label pf-m-compact"
+                                          :class="aircraft.user_role === 'owner' || aircraft.user_role === 'admin' ? 'pf-m-blue' : 'pf-m-green'"
+                                          style="margin-left: 0.5rem; font-size: 0.75rem;">
+                                        <span class="pf-v5-c-label__content" x-text="aircraft.user_role.charAt(0).toUpperCase() + aircraft.user_role.slice(1)"></span>
+                                    </span>
+                                </template>
                             </div>
                         </div>
                         <div class="pf-v5-c-card__actions">
@@ -95,6 +102,7 @@
                     </div>
                     <div class="pf-v5-c-card__footer">
                         <button class="pf-v5-c-button pf-m-primary"
+                                x-show="canUpdateHours(aircraft)"
                                 @click="openHoursModal(aircraft)"
                                 :disabled="aircraft.airworthiness?.status === 'RED'">
                             Update Hours

@@ -88,6 +88,7 @@ The aircraft detail page is composed from feature-specific mixin files, each ret
 | `aircraft-detail-inspections.js` | `inspectionsMixin()` | Inspection CRUD, history |
 | `aircraft-detail-documents.js` | `documentsMixin()` | Document/collection CRUD, viewer |
 | `aircraft-detail-events.js` | `eventsMixin()` | Recent activity card, history modal |
+| `aircraft-detail-roles.js` | `rolesMixin()` | Role management, public sharing toggle |
 
 The composer (`aircraft-detail.js`) merges all mixins using `mergeMixins()` from `utils.js`. **Do not use the spread operator (`...`) for this** — spread eagerly evaluates `get` properties, breaking cross-mixin `this` references. `mergeMixins()` copies property descriptors intact so getters resolve lazily against the final merged object.
 
@@ -146,6 +147,18 @@ def update_hours(self, request, pk=None):
 @action(detail=True, methods=['get', 'post'])
 def squawks(self, request, pk=None):
     # Get or create squawks for an aircraft
+
+@action(detail=True, methods=['get', 'post', 'delete'], url_path='manage_roles')
+def manage_roles(self, request, pk=None):
+    # List, add/update, or remove role assignments (owner-only)
+
+@action(detail=True, methods=['post'], url_path='toggle_sharing')
+def toggle_sharing(self, request, pk=None):
+    # Toggle public sharing, generates new token on enable (owner-only)
+
+@action(detail=True, methods=['post'], url_path='regenerate_share_token')
+def regenerate_share_token(self, request, pk=None):
+    # Regenerate share token, invalidating old links (owner-only)
 ```
 
 ### Airworthiness Calculation
@@ -181,7 +194,7 @@ All write operations are automatically logged as `AircraftEvent` records, provid
 
 #### Categories
 
-Categories are defined in `EVENT_CATEGORIES` in `core/models.py`: `hours`, `component`, `squawk`, `note`, `oil`, `fuel`, `logbook`, `ad`, `inspection`, `document`, `aircraft`.
+Categories are defined in `EVENT_CATEGORIES` in `core/models.py`: `hours`, `component`, `squawk`, `note`, `oil`, `fuel`, `logbook`, `ad`, `inspection`, `document`, `aircraft`, `role`.
 
 #### Event Name Conventions
 
@@ -201,9 +214,9 @@ The `eventsMixin()` displays:
 
 #### Adding Event Logging to New ViewSets
 
-1. Add `EventLoggingMixin` as the **first** parent class (before `viewsets.ModelViewSet`)
+1. If the viewset is aircraft-scoped, add `AircraftScopedMixin` first, then `EventLoggingMixin`, then `viewsets.ModelViewSet` — e.g., `class MyViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelViewSet)`. If not aircraft-scoped, add `EventLoggingMixin` as the first parent class.
 2. Set `event_category = 'your_category'`
-3. If the model's Aircraft FK is not a direct `aircraft` field, set `aircraft_field` (dot-notation)
+3. If the model's Aircraft FK is not a direct `aircraft` field, set `aircraft_field` (dot-notation for EventLoggingMixin) and `aircraft_fk_path` (double-underscore for AircraftScopedMixin)
 4. If `verbose_name` produces wrong casing, set `event_name_created`/`event_name_updated`/`event_name_deleted`
 
 ### Logbook Import: Multi-Provider AI
@@ -401,6 +414,127 @@ To disable OIDC authentication:
 2. Restart deployment: `oc rollout restart deployment/sam -n sam`
 3. Users will see only the Django username/password form
 
+### Role-Based Access Control (RBAC)
+
+Per-aircraft access control with three effective roles: **Admin** (Django `is_staff`/`is_superuser`), **Owner**, and **Pilot**. Admins bypass all per-aircraft checks.
+
+#### Data Model
+
+- **`AircraftRole`** (`core/models.py`) — Links a user to an aircraft with a role (`owner` or `pilot`). Unique constraint on `(aircraft, user)`.
+- **Aircraft sharing fields**: `public_sharing_enabled` (bool), `share_token` (UUID, unique), `share_token_expires_at` (nullable datetime).
+- **`'role'`** event category for audit logging of role changes and sharing toggles.
+
+#### Access Matrix
+
+| Action | Admin | Owner | Pilot |
+|--------|-------|-------|-------|
+| View aircraft & all data | Yes | Yes | Yes |
+| Update hours, create squawks/notes/oil/fuel | Yes | Yes | Yes |
+| Edit/delete squawks, notes | Yes | Yes | No |
+| CRUD components, logbook, ADs, inspections, documents | Yes | Yes | No |
+| Edit/delete aircraft, manage roles & sharing | Yes | Yes | No |
+| Create new aircraft (becomes owner) | Yes | Yes | Yes |
+
+#### Permission System (`core/permissions.py`)
+
+- **`get_user_role(user, aircraft)`** — Returns `'admin'`, `'owner'`, `'pilot'`, or `None`.
+- **`get_user_role_from_prefetch(user, aircraft)`** — Same but uses prefetched `roles` relation.
+- **`has_aircraft_permission(user, aircraft, required_role)`** — Hierarchy check using `ROLE_HIERARCHY = {'admin': 3, 'owner': 2, 'pilot': 1}`.
+- **`IsAircraftOwnerOrAdmin`** — DRF permission class for owner-level actions.
+- **`IsAircraftPilotOrAbove`** — DRF permission class; safe methods allowed for pilot+, unsafe methods require owner+ unless action is in `PILOT_WRITE_ACTIONS`.
+- **`PILOT_WRITE_ACTIONS`** — `{'update_hours', 'squawks', 'notes', 'oil_records', 'fuel_records'}`.
+- **`PILOT_WRITABLE_MODELS`** — `{'squawk', 'consumablerecord', 'aircraftnote'}` (for standalone viewset writes).
+
+#### AircraftScopedMixin (`core/mixins.py`)
+
+Applied to all standalone aircraft-related viewsets (before `EventLoggingMixin` in MRO). Provides:
+
+1. **Queryset scoping** — Filters to only objects whose aircraft has an `AircraftRole` for the current user (admin sees all).
+2. **Object-level permission checks** — Verifies role before allowing writes. Pilot-writable models (`PILOT_WRITABLE_MODELS`) allow pilot writes; everything else requires owner+.
+
+**Required class attribute**: `aircraft_fk_path` — ORM double-underscore path from the model to Aircraft (e.g., `'aircraft'` or `'document__aircraft'`).
+
+| ViewSet | `aircraft_fk_path` |
+|---------|-------------------|
+| `ComponentViewSet` | `'aircraft'` |
+| `SquawkViewSet` | `'aircraft'` |
+| `DocumentCollectionViewSet` | `'aircraft'` |
+| `DocumentViewSet` | `'aircraft'` |
+| `DocumentImageViewSet` | `'document__aircraft'` |
+| `LogbookEntryViewSet` | `'aircraft'` |
+| `InspectionRecordViewSet` | `'aircraft'` |
+| `ADComplianceViewSet` | `'aircraft'` |
+| `ConsumableRecordViewSet` | `'aircraft'` |
+| `AircraftNoteViewSet` | `'aircraft'` |
+
+#### AircraftViewSet Permission Routing
+
+`AircraftViewSet.get_permissions()` routes per-action:
+- `create` → `IsAuthenticated` (any user; auto-assigned as owner)
+- `update`, `destroy`, `components`, `ads`, `compliance`, `inspections`, `manage_roles`, `toggle_sharing`, `regenerate_share_token` → `IsAircraftOwnerOrAdmin`
+- `update_hours`, `squawks`, `notes`, `oil_records`, `fuel_records` → `IsAircraftPilotOrAbove`
+- `list`, `retrieve`, `summary`, `documents`, `events` → `IsAircraftPilotOrAbove`
+
+`get_queryset()` uses `prefetch_related('roles')` and filters to aircraft with an `AircraftRole` for the user.
+
+`perform_create()` wraps aircraft creation + owner role assignment in `transaction.atomic()`.
+
+#### New Custom Actions on AircraftViewSet
+
+- **`manage_roles`** (detail, GET/POST/DELETE) — Owner-only. Safeguards: last-owner protection, self-removal prevention, uniform error responses to prevent user enumeration. Accepts user by ID only (not username).
+- **`toggle_sharing`** (detail, POST) — Owner-only. Generates new `share_token` every time sharing is enabled (invalidates old links). Optional `expires_in_days` body param.
+- **`regenerate_share_token`** (detail, POST) — Owner-only. New token, preserves expiry setting.
+
+#### Public Sharing
+
+- **`/shared/<uuid:share_token>/`** — `PublicAircraftView` renders read-only template. No login required. Constant-time token lookup.
+- **`/api/shared/<uuid:share_token>/`** — `PublicAircraftSummaryAPI` returns JSON summary. No CSRF/auth. Strips sensitive fields (`share_token`, `share_url`, `roles`).
+- Token validation: checks `public_sharing_enabled=True` and `share_token_expires_at` is null or in the future; returns 404 otherwise.
+- Frontend: `aircraft-public.js` → `publicAircraftView(shareToken)` Alpine.js component.
+
+#### Serializer Additions
+
+- **`UserRoleMixin`** — Adds `get_user_role()` method, used by both `AircraftSerializer` and `AircraftListSerializer` to expose `user_role` field.
+- **`AircraftSerializer`**: Added `user_role`, `public_sharing_enabled`, `share_token` (owner-only), `share_url` (owner-only). `roles` declared as `PrimaryKeyRelatedField` to prevent depth=1 User FK expansion.
+- **`AircraftListSerializer`**: Added `user_role`, `public_sharing_enabled`.
+- **`AircraftRoleSerializer`** — For `manage_roles` endpoint. Fields: `id`, `user`, `username`, `user_display`, `role`, `created_at`.
+
+#### Frontend Role Guards
+
+The `aircraft-detail.js` core state object includes `get` properties (preserved by `mergeMixins()`):
+
+```javascript
+get userRole() { return this.aircraft?.user_role || null; },
+get isOwner() { return this.userRole === 'owner' || this.userRole === 'admin'; },
+get isPilot() { return this.userRole === 'pilot'; },
+get canWrite() { return this.isOwner; },
+get canUpdateHours() { return this.isOwner || this.isPilot; },
+get canCreateSquawk() { return this.isOwner || this.isPilot; },
+get canCreateConsumable() { return this.isOwner || this.isPilot; },
+get canCreateNote() { return this.isOwner || this.isPilot; },
+```
+
+Template buttons use `x-show` directives (`x-show="isOwner"`, `x-show="canUpdateHours"`, etc.) to hide actions the user cannot perform. The API enforces permissions server-side regardless.
+
+Dashboard cards show a role badge and use `canUpdateHours(aircraft)` to guard the Update Hours button.
+
+#### Backfilling Ownership
+
+After initial deployment, run the management command to assign owners to existing aircraft:
+
+```bash
+python manage.py assign_owners --user <username> --all
+```
+
+Options: `--all` (all aircraft without an owner) or `--aircraft <tail_numbers>` (specific aircraft).
+
+#### Adding RBAC to New ViewSets
+
+1. Add `AircraftScopedMixin` as the **first** parent class (before `EventLoggingMixin`, before `viewsets.ModelViewSet`)
+2. Set `aircraft_fk_path` to the ORM path from the model to Aircraft
+3. If the model should be pilot-writable, add its lowercase class name to `PILOT_WRITABLE_MODELS` in `core/permissions.py`
+4. Reference-data viewsets (no Aircraft FK) use `IsAuthenticated` for reads, `IsAdminUser` for writes
+
 ## Common Gotchas
 
 ### 1. Settings Files
@@ -478,7 +612,7 @@ The logbook entry modal (`logbookModalOpen`) currently has `z-index: 1100` for t
 
 ### 11. AircraftSerializer depth=1 and User FKs
 
-`AircraftSerializer` uses `depth = 1`, which auto-expands all FKs on related models. If a related model (like `AircraftEvent`) has a `User` FK, DRF tries to generate a `user-detail` hyperlink — but there's no User API endpoint, causing a 500 error. Fix: explicitly declare the relation field on `AircraftSerializer` (e.g., `events = PrimaryKeyRelatedField(many=True, read_only=True)`) to prevent auto-depth expansion. This applies to any new model with a User FK that's reachable from Aircraft via reverse relations.
+`AircraftSerializer` uses `depth = 1`, which auto-expands all FKs on related models. If a related model (like `AircraftEvent` or `AircraftRole`) has a `User` FK, DRF tries to generate a `user-detail` hyperlink — but there's no User API endpoint, causing a 500 error. Fix: explicitly declare the relation field on `AircraftSerializer` (e.g., `events = PrimaryKeyRelatedField(many=True, read_only=True)`, `roles = PrimaryKeyRelatedField(many=True, read_only=True)`) to prevent auto-depth expansion. This applies to any new model with a User FK that's reachable from Aircraft via reverse relations.
 
 ## File Locations
 
@@ -492,6 +626,12 @@ The logbook entry modal (`logbookModalOpen`) currently has `z-index: 1100` for t
 | Shared upload path factory | `core/models.py` (`make_upload_path`) |
 | Event logging utility | `core/events.py` (`log_event`) |
 | Event logging mixin | `core/mixins.py` (`EventLoggingMixin`) |
+| Aircraft scoping mixin | `core/mixins.py` (`AircraftScopedMixin`) |
+| Permission classes | `core/permissions.py` |
+| Public sharing views | `core/views.py` (`PublicAircraftView`, `PublicAircraftSummaryAPI`) |
+| Public sharing template | `core/templates/aircraft_public.html` |
+| Public sharing JS | `core/static/js/aircraft-public.js` |
+| Owner backfill command | `core/management/commands/assign_owners.py` |
 | Logbook import (AI providers) | `health/logbook_import.py` |
 | OIDC backend | `core/oidc.py` |
 | Context processors | `core/context_processors.py` |
@@ -530,4 +670,8 @@ The API uses plural nouns consistently for all collection endpoints:
 - `/api/logbook-entries/`, `/api/inspection-types/`, `/api/inspections/`
 - `/api/ads/`, `/api/ad-compliances/`, `/api/stcs/`
 
-Custom actions use snake_case: `update_hours`, `reset_service`
+Custom actions use snake_case: `update_hours`, `reset_service`, `manage_roles`, `toggle_sharing`, `regenerate_share_token`
+
+Public (unauthenticated) endpoints:
+- `/shared/<uuid:share_token>/` — Read-only HTML view
+- `/api/shared/<uuid:share_token>/` — Read-only JSON summary

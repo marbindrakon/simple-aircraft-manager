@@ -11,6 +11,7 @@ function aircraftDetail(aircraftId) {
         inspectionsMixin(),
         documentsMixin(),
         eventsMixin(),
+        rolesMixin(),
 
         // Core state and methods (last so they win on any key collision)
         {
@@ -21,6 +22,16 @@ function aircraftDetail(aircraftId) {
             activeSquawks: [],
             loading: true,
             activeTab: 'overview',
+
+            // Role-based access helpers
+            get userRole() { return this.aircraft?.user_role || null; },
+            get isOwner() { return this.userRole === 'owner' || this.userRole === 'admin'; },
+            get isPilot() { return this.userRole === 'pilot'; },
+            get canWrite() { return this.isOwner; },
+            get canUpdateHours() { return this.isOwner || this.isPilot; },
+            get canCreateSquawk() { return this.isOwner || this.isPilot; },
+            get canCreateConsumable() { return this.isOwner || this.isPilot; },
+            get canCreateNote() { return this.isOwner || this.isPilot; },
 
             async init() {
                 await this.loadData();
@@ -46,6 +57,9 @@ function aircraftDetail(aircraftId) {
                     if (tab === 'inspections' && !this.inspectionsLoaded) {
                         this.loadInspections();
                     }
+                    if (tab === 'roles' && !this.rolesLoaded) {
+                        this.loadRoles();
+                    }
                 });
             },
 
@@ -60,6 +74,9 @@ function aircraftDetail(aircraftId) {
                     this.recentLogs = data.recent_logs;
                     this.activeSquawks = data.active_squawks;
                     this.aircraftNotes = data.notes || [];
+
+                    // Init sharing state from aircraft data
+                    this.initSharingState();
 
                     // Refresh recent events (non-blocking)
                     this.loadRecentEvents();

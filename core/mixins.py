@@ -1,6 +1,66 @@
 from functools import reduce
 
+from rest_framework import permissions
+
 from core.events import log_event
+
+
+class AircraftScopedMixin:
+    """ViewSet mixin that scopes querysets and checks permissions per-aircraft.
+
+    Class attributes:
+        aircraft_fk_path (str): Required — ORM lookup path from this model to
+            Aircraft, using double-underscore notation for queryset filtering.
+            E.g. 'aircraft' or 'document__aircraft'.
+    """
+
+    aircraft_fk_path = None  # must be set by subclass
+
+    def get_queryset(self):
+        from core.models import AircraftRole
+        qs = super().get_queryset()
+        user = self.request.user
+        if not user.is_authenticated:
+            return qs.none()
+        if user.is_staff or user.is_superuser:
+            return qs
+        accessible = AircraftRole.objects.filter(user=user).values_list('aircraft_id', flat=True)
+        assert self.aircraft_fk_path, f"{self.__class__.__name__} must set aircraft_fk_path"
+        return qs.filter(**{f'{self.aircraft_fk_path}__in': accessible})
+
+    def _resolve_aircraft_from_instance(self, instance):
+        """Walk the dot-notation path to resolve the Aircraft instance."""
+        path = self.aircraft_fk_path.replace('__', '.')
+        return reduce(getattr, path.split('.'), instance)
+
+    def check_object_permissions(self, request, obj):
+        """Check aircraft-level permissions after DRF's standard checks."""
+        super().check_object_permissions(request, obj)
+        from core.permissions import (
+            get_user_role, ROLE_HIERARCHY, PILOT_WRITE_ACTIONS,
+            PILOT_WRITABLE_MODELS,
+        )
+        from core.models import Aircraft
+        aircraft = self._resolve_aircraft_from_instance(obj)
+        if not isinstance(aircraft, Aircraft):
+            self.permission_denied(request)
+
+        role = get_user_role(request.user, aircraft)
+        if role is None:
+            self.permission_denied(request)
+
+        # Safe methods allowed for any role
+        if request.method in permissions.SAFE_METHODS:
+            return
+
+        # Check if this model is pilot-writable
+        model_name = obj.__class__.__name__.lower()
+        if model_name in PILOT_WRITABLE_MODELS:
+            return  # pilot+ can write these
+
+        # Everything else requires owner+
+        if ROLE_HIERARCHY.get(role, 0) < ROLE_HIERARCHY.get('owner', 0):
+            self.permission_denied(request)
 
 
 class EventLoggingMixin:

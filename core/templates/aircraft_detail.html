@@ -41,15 +41,18 @@
                 </div>
                 <div x-show="aircraft" x-cloak style="display: flex; gap: 0.5rem;">
                     <button class="pf-v5-c-button pf-m-primary"
+                            x-show="canUpdateHours"
                             @click="openHoursModal()"
                             :disabled="aircraft?.airworthiness?.status === 'RED'">
                         Update Hours
                     </button>
                     <button class="pf-v5-c-button pf-m-secondary"
+                            x-show="isOwner"
                             @click="openEditModal()">
                         <i class="fas fa-edit"></i> Edit
                     </button>
                     <button class="pf-v5-c-button pf-m-danger"
+                            x-show="isOwner"
                             @click="openDeleteModal()">
                         <i class="fas fa-trash"></i> Delete
                     </button>
@@ -126,6 +129,11 @@
                         <span class="pf-v5-c-tabs__item-text">Documents</span>
                     </button>
                 </li>
+                <li class="pf-v5-c-tabs__item" x-show="isOwner" :class="{ 'pf-m-current': activeTab === 'roles' }">
+                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'roles'">
+                        <span class="pf-v5-c-tabs__item-text">Sharing &amp; Access</span>
+                    </button>
+                </li>
             </ul>
         </div>
 
@@ -172,7 +180,7 @@
                             </div>
                         </div>
                         <div class="pf-v5-c-card__actions">
-                            <button class="pf-v5-c-button pf-m-plain" @click="openNoteModal()" title="Add Note">
+                            <button class="pf-v5-c-button pf-m-plain" x-show="canCreateNote" @click="openNoteModal()" title="Add Note">
                                 <i class="fas fa-plus"></i>
                             </button>
                         </div>
@@ -387,7 +395,7 @@
             <!-- Header with Add Button -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h2>Components</h2>
-                <button class="pf-v5-c-button pf-m-primary" @click="openComponentModal()">
+                <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openComponentModal()">
                     <i class="fas fa-plus"></i> Add Component
                 </button>
             </div>
@@ -437,7 +445,7 @@
                                       x-text="component.status"></span>
                             </td>
                             <td>
-                                <div style="display: flex; gap: 0.25rem;">
+                                <div x-show="isOwner" style="display: flex; gap: 0.25rem;">
                                     <button class="pf-v5-c-button pf-m-plain"
                                             @click="editComponent(component)"
                                             title="Edit component">
@@ -467,7 +475,7 @@
         <div x-show="activeTab === 'logbook'" class="pf-v5-c-page__main-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h2>Maintenance Logbook</h2>
-                <button class="pf-v5-c-button pf-m-primary" @click="openLogbookModal()">
+                <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openLogbookModal()">
                     <i class="fas fa-plus"></i> New Entry
                 </button>
             </div>
@@ -503,7 +511,7 @@
                                             <span class="pf-v5-c-label pf-m-blue" style="margin-left: 0.5rem;" x-text="log.entry_type || log.log_type"></span>
                                         </div>
                                     </div>
-                                    <div class="pf-v5-c-card__actions">
+                                    <div class="pf-v5-c-card__actions" x-show="isOwner">
                                         <button class="pf-v5-c-button pf-m-plain" @click="editLogEntry(log)" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
@@ -571,7 +579,7 @@
                     <a :href="`/aircraft/${aircraftId}/squawks/history/`" class="pf-v5-c-button pf-m-secondary">
                         <i class="fas fa-history"></i> View History
                     </a>
-                    <button class="pf-v5-c-button pf-m-primary" @click="openSquawkModal()">
+                    <button class="pf-v5-c-button pf-m-primary" x-show="canCreateSquawk" @click="openSquawkModal()">
                         <i class="fas fa-plus"></i> New Squawk
                     </button>
                 </div>
@@ -603,7 +611,7 @@
                                     </template>
                                 </div>
                             </div>
-                            <div class="pf-v5-c-card__actions">
+                            <div class="pf-v5-c-card__actions" x-show="isOwner">
                                 <button class="pf-v5-c-button pf-m-plain" @click="editSquawk(squawk)" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </button>
@@ -635,7 +643,7 @@
         <div x-show="activeTab === 'ads'" class="pf-v5-c-page__main-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h2>Airworthiness Directives</h2>
-                <button class="pf-v5-c-button pf-m-primary" @click="openAdModal()">
+                <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openAdModal()">
                     <i class="fas fa-plus"></i> Add AD
                 </button>
             </div>
@@ -723,7 +731,7 @@
                                         </template>
                                     </td>
                                     <td>
-                                        <div style="display: flex; gap: 0.25rem;">
+                                        <div x-show="isOwner" style="display: flex; gap: 0.25rem;">
                                             <button class="pf-v5-c-button pf-m-plain"
                                                     @click="editAd(ad)"
                                                     title="Edit AD"
@@ -759,7 +767,7 @@
         <div x-show="activeTab === 'inspections'" class="pf-v5-c-page__main-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h2>Inspections</h2>
-                <button class="pf-v5-c-button pf-m-primary" @click="openInspectionTypeModal()">
+                <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openInspectionTypeModal()">
                     <i class="fas fa-plus"></i> Add Inspection Type
                 </button>
             </div>
@@ -838,7 +846,7 @@
                                         </template>
                                     </td>
                                     <td>
-                                        <div style="display: flex; gap: 0.25rem;">
+                                        <div x-show="isOwner" style="display: flex; gap: 0.25rem;">
                                             <button class="pf-v5-c-button pf-m-plain"
                                                     @click="editInspectionType(insp)"
                                                     title="Edit Inspection Type"
@@ -874,7 +882,7 @@
         <div x-show="activeTab === 'oil'" class="pf-v5-c-page__main-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h2>Oil Consumption</h2>
-                <button class="pf-v5-c-button pf-m-primary" @click="openOilModal()">
+                <button class="pf-v5-c-button pf-m-primary" x-show="canCreateConsumable" @click="openOilModal()">
                     <i class="fas fa-plus"></i> Add Oil Record
                 </button>
             </div>
@@ -935,7 +943,7 @@
                                     <td x-text="record.consumable_type || '-'"></td>
                                     <td x-text="record.notes || '-'"></td>
                                     <td>
-                                        <button class="pf-v5-c-button pf-m-plain" @click="editOilRecord(record)" title="Edit">
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editOilRecord(record)" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                     </td>
@@ -951,7 +959,7 @@
         <div x-show="activeTab === 'fuel'" class="pf-v5-c-page__main-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h2>Fuel Consumption</h2>
-                <button class="pf-v5-c-button pf-m-primary" @click="openFuelModal()">
+                <button class="pf-v5-c-button pf-m-primary" x-show="canCreateConsumable" @click="openFuelModal()">
                     <i class="fas fa-plus"></i> Add Fuel Record
                 </button>
             </div>
@@ -1012,7 +1020,7 @@
                                     <td x-text="record.consumable_type || '-'"></td>
                                     <td x-text="record.notes || '-'"></td>
                                     <td>
-                                        <button class="pf-v5-c-button pf-m-plain" @click="editFuelRecord(record)" title="Edit">
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editFuelRecord(record)" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                     </td>
@@ -1029,7 +1037,7 @@
             <!-- Header with action buttons -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h2>Documents</h2>
-                <div style="display: flex; gap: 0.5rem;">
+                <div x-show="isOwner" style="display: flex; gap: 0.5rem;">
                     <button class="pf-v5-c-button pf-m-secondary" @click="openCollectionModal()">
                         <i class="fas fa-folder-plus"></i> Add Collection
                     </button>
@@ -1058,7 +1066,7 @@
                             <div class="pf-v5-c-empty-state__body">
                                 No documents have been uploaded for this aircraft yet.
                             </div>
-                            <div class="pf-v5-c-empty-state__primary" style="margin-top: 1rem;">
+                            <div class="pf-v5-c-empty-state__primary" x-show="isOwner" style="margin-top: 1rem;">
                                 <button class="pf-v5-c-button pf-m-secondary" @click="openCollectionModal()">
                                     <i class="fas fa-folder-plus"></i> Add Collection
                                 </button>
@@ -1082,10 +1090,10 @@
                                     </div>
                                 </div>
                                 <div class="pf-v5-c-card__actions" style="display: flex; align-items: center; gap: 0.25rem;">
-                                    <button class="pf-v5-c-button pf-m-plain" @click="editCollection(collection)" title="Edit collection">
+                                    <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editCollection(collection)" title="Edit collection">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
-                                    <button class="pf-v5-c-button pf-m-plain pf-m-danger" @click="deleteCollection(collection)" title="Delete collection">
+                                    <button class="pf-v5-c-button pf-m-plain pf-m-danger" x-show="isOwner" @click="deleteCollection(collection)" title="Delete collection">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                     <span class="pf-v5-c-label pf-m-blue">
@@ -1102,7 +1110,7 @@
                                 <div class="document-grid">
                                     <template x-for="doc in collection.documents" :key="doc.id">
                                         <div class="document-item" style="position: relative;" @click="openDocumentViewer(doc, collection.name)">
-                                            <div class="document-item-actions" style="position: absolute; top: 0.25rem; right: 0.25rem; display: flex; gap: 0.125rem; z-index: 2;">
+                                            <div class="document-item-actions" x-show="isOwner" style="position: absolute; top: 0.25rem; right: 0.25rem; display: flex; gap: 0.125rem; z-index: 2;">
                                                 <button class="pf-v5-c-button pf-m-plain" style="padding: 0.25rem; font-size: 0.75rem;" @click="editDocument(doc, $event)" title="Edit document">
                                                     <i class="fas fa-pencil-alt"></i>
                                                 </button>
@@ -1155,7 +1163,7 @@
                                 <div class="document-grid">
                                     <template x-for="doc in uncollectedDocuments" :key="doc.id">
                                         <div class="document-item" style="position: relative;" @click="openDocumentViewer(doc, 'Other Documents')">
-                                            <div class="document-item-actions" style="position: absolute; top: 0.25rem; right: 0.25rem; display: flex; gap: 0.125rem; z-index: 2;">
+                                            <div class="document-item-actions" x-show="isOwner" style="position: absolute; top: 0.25rem; right: 0.25rem; display: flex; gap: 0.125rem; z-index: 2;">
                                                 <button class="pf-v5-c-button pf-m-plain" style="padding: 0.25rem; font-size: 0.75rem;" @click="editDocument(doc, $event)" title="Edit document">
                                                     <i class="fas fa-pencil-alt"></i>
                                                 </button>
@@ -1188,6 +1196,193 @@
                             </div>
                         </div>
                     </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sharing & Access Tab -->
+    <div x-show="activeTab === 'roles'" class="pf-v5-c-page__main-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2>Sharing &amp; Access</h2>
+        </div>
+
+        <!-- Public Sharing Card -->
+        <div class="pf-v5-c-card" style="margin-bottom: 1rem;">
+            <div class="pf-v5-c-card__title"><h3 class="pf-v5-c-card__title-text">Public Sharing</h3></div>
+            <div class="pf-v5-c-card__body">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                    <label class="pf-v5-c-switch">
+                        <input class="pf-v5-c-switch__input" type="checkbox"
+                               :checked="sharingEnabled"
+                               @change="toggleSharing()"
+                               :disabled="sharingSubmitting">
+                        <span class="pf-v5-c-switch__toggle"></span>
+                        <span class="pf-v5-c-switch__label" x-text="sharingEnabled ? 'Public sharing enabled' : 'Public sharing disabled'"></span>
+                    </label>
+                </div>
+                <div x-show="!sharingEnabled" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                    <label class="pf-v5-c-form__label" style="white-space: nowrap;">Expires after</label>
+                    <input type="number" class="pf-v5-c-form-control" x-model="sharingExpiresInDays"
+                           placeholder="No expiration"
+                           min="1" style="width: 8rem;">
+                    <span style="color: var(--pf-v5-global--Color--200); white-space: nowrap;">days (optional)</span>
+                </div>
+                <template x-if="sharingEnabled && shareUrl">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <input type="text" class="pf-v5-c-form-control" :value="shareUrl" readonly
+                                   style="flex: 1; font-family: monospace; font-size: 0.85rem;">
+                            <button class="pf-v5-c-button pf-m-secondary" @click="copyShareUrl()" title="Copy link">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                            <button class="pf-v5-c-button pf-m-plain" @click="regenerateToken()" title="Regenerate link"
+                                    :disabled="sharingSubmitting">
+                                <i class="fas fa-redo"></i>
+                            </button>
+                        </div>
+                        <template x-if="shareTokenExpiresAt">
+                            <p style="color: var(--pf-v5-global--Color--200); font-size: 0.85rem;">
+                                Expires: <span x-text="formatDate(shareTokenExpiresAt)"></span>
+                            </p>
+                        </template>
+                        <template x-if="!shareTokenExpiresAt">
+                            <p style="color: var(--pf-v5-global--Color--200); font-size: 0.85rem;">
+                                This link does not expire.
+                            </p>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Roles Card -->
+        <div class="pf-v5-c-card">
+            <div class="pf-v5-c-card__header">
+                <div class="pf-v5-c-card__header-main">
+                    <div class="pf-v5-c-card__title"><h3>User Roles</h3></div>
+                </div>
+                <div class="pf-v5-c-card__actions">
+                    <button class="pf-v5-c-button pf-m-primary" @click="openRoleModal()">
+                        <i class="fas fa-plus"></i> Add User
+                    </button>
+                </div>
+            </div>
+            <div class="pf-v5-c-card__body">
+                <template x-if="roles.length === 0 && rolesLoaded">
+                    <p style="color: var(--pf-v5-global--Color--200);">No roles assigned.</p>
+                </template>
+                <table class="pf-v5-c-table pf-m-compact" x-show="roles.length > 0">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Name</th>
+                            <th>Role</th>
+                            <th>Added</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="r in roles" :key="r.id">
+                            <tr>
+                                <td x-text="r.username"></td>
+                                <td x-text="r.user_display"></td>
+                                <td>
+                                    <select class="pf-v5-c-form-control"
+                                            :value="r.role"
+                                            @change="updateRole(r, $event.target.value)"
+                                            style="width: auto; min-width: 6rem;">
+                                        <option value="owner">Owner</option>
+                                        <option value="pilot">Pilot</option>
+                                    </select>
+                                </td>
+                                <td x-text="formatDate(r.created_at)"></td>
+                                <td>
+                                    <button class="pf-v5-c-button pf-m-plain pf-m-danger"
+                                            @click="removeRole(r)"
+                                            title="Remove user">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Role Modal -->
+    <div class="pf-v5-c-backdrop" x-show="roleModalOpen" x-cloak @click.self="closeRoleModal()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-sm" @click.stop>
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeRoleModal()" style="position: absolute; top: 1rem; right: 1rem;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">Add User Role</h1>
+                </div>
+                <div class="pf-v5-c-modal-box__body">
+                    <template x-if="roleError">
+                        <div class="pf-v5-c-alert pf-m-danger pf-m-inline" style="margin-bottom: 1rem;">
+                            <p class="pf-v5-c-alert__title" x-text="roleError"></p>
+                        </div>
+                    </template>
+                    <div class="pf-v5-c-form__group" style="margin-bottom: 1rem; position: relative;">
+                        <label class="pf-v5-c-form__label">Search User</label>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <input class="pf-v5-c-form-control" type="text"
+                                   x-model="userSearchQuery"
+                                   @input="onUserSearchInput()"
+                                   placeholder="Type username or name..."
+                                   :disabled="!!selectedUser">
+                            <template x-if="selectedUser">
+                                <button class="pf-v5-c-button pf-m-plain" type="button"
+                                        @click="clearUserSelection()" title="Clear selection"
+                                        style="padding: 0.25rem 0.5rem; flex-shrink: 0;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </template>
+                            <template x-if="userSearchLoading">
+                                <span class="pf-v5-c-spinner pf-m-sm" role="progressbar" style="flex-shrink: 0;">
+                                    <span class="pf-v5-c-spinner__clipper"></span>
+                                </span>
+                            </template>
+                        </div>
+                        <template x-if="userSearchResults.length > 0">
+                            <ul style="position: absolute; z-index: 200; background: var(--pf-v5-global--BackgroundColor--100); border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 4px; width: 100%; margin: 0; padding: 0; list-style: none; box-shadow: 0 2px 8px rgba(0,0,0,0.15); max-height: 200px; overflow-y: auto;">
+                                <template x-for="u in userSearchResults" :key="u.id">
+                                    <li @click="selectUser(u)"
+                                        style="padding: 0.5rem 0.75rem; cursor: pointer;"
+                                        @mouseenter="$el.style.background='var(--pf-v5-global--BackgroundColor--200)'"
+                                        @mouseleave="$el.style.background=''"
+                                        x-text="u.display">
+                                    </li>
+                                </template>
+                            </ul>
+                        </template>
+                        <p class="pf-v5-c-form__helper-text" style="color: var(--pf-v5-global--Color--200); font-size: 0.8rem; margin-top: 0.25rem;">
+                            Type at least 2 characters to search.
+                        </p>
+                    </div>
+                    <div class="pf-v5-c-form__group">
+                        <label class="pf-v5-c-form__label">Role</label>
+                        <select class="pf-v5-c-form-control" x-model="roleForm.role">
+                            <option value="pilot">Pilot</option>
+                            <option value="owner">Owner</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" @click="addRole()" :disabled="roleSubmitting || !roleForm.user">
+                        <template x-if="roleSubmitting">
+                            <span class="pf-v5-c-spinner pf-m-sm" role="progressbar">
+                                <span class="pf-v5-c-spinner__clipper"></span>
+                            </span>
+                        </template>
+                        Add Role
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeRoleModal()">Cancel</button>
                 </div>
             </div>
         </div>
@@ -3084,6 +3279,7 @@
 <script src="{% static 'js/aircraft-detail-inspections.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-documents.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-events.js' %}"></script>
+<script src="{% static 'js/aircraft-detail-roles.js' %}"></script>
 <script src="{% static 'js/aircraft-detail.js' %}"></script>
 <script src="{% static 'js/aircraft-modal.js' %}"></script>
 {% endblock %}

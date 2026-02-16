@@ -4,13 +4,15 @@ import shutil
 import tarfile
 import tempfile
 import threading
+import uuid as uuid_mod
 import zipfile
 from datetime import date as date_cls, timedelta as td
 from decimal import Decimal
 from pathlib import Path
 
 from django.conf import settings
-from django.contrib.auth import logout
+from django.contrib.auth import get_user_model, logout
+from django.db import transaction
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -21,15 +23,22 @@ from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from core.events import log_event
-from core.mixins import EventLoggingMixin
-from core.models import Aircraft, AircraftNote, AircraftEvent
+from core.mixins import AircraftScopedMixin, EventLoggingMixin
+from core.models import Aircraft, AircraftNote, AircraftEvent, AircraftRole
+from core.permissions import (
+    get_user_role, has_aircraft_permission,
+    IsAircraftOwnerOrAdmin, IsAircraftPilotOrAbove,
+)
 from core.serializers import (
     AircraftSerializer, AircraftListSerializer, AircraftNoteSerializer,
     AircraftNoteNestedSerializer, AircraftNoteCreateUpdateSerializer,
     AircraftEventSerializer, AircraftEventNestedSerializer,
+    AircraftRoleSerializer,
 )
 from health.models import (
     Component, LogbookEntry, Squawk, Document, DocumentCollection,
@@ -52,15 +61,53 @@ from health.services import (
 )
 
 
+User = get_user_model()
+
+
 class AircraftViewSet(viewsets.ModelViewSet):
     queryset = Aircraft.objects.all()
     serializer_class = AircraftSerializer
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [IsAuthenticated()]
+        if self.action in ('update', 'partial_update', 'destroy',
+                           'components', 'remove_ad', 'compliance',
+                           'remove_inspection_type',
+                           'manage_roles', 'toggle_sharing', 'regenerate_share_token'):
+            return [IsAuthenticated(), IsAircraftOwnerOrAdmin()]
+        # ADs and inspections: GET is readable by pilots, POST/DELETE requires owner
+        if self.action in ('ads', 'inspections'):
+            if self.request.method == 'GET':
+                return [IsAuthenticated(), IsAircraftPilotOrAbove()]
+            return [IsAuthenticated(), IsAircraftOwnerOrAdmin()]
+        if self.action in ('update_hours', 'squawks', 'notes',
+                           'oil_records', 'fuel_records'):
+            return [IsAuthenticated(), IsAircraftPilotOrAbove()]
+        # list, retrieve, summary, documents, events
+        return [IsAuthenticated(), IsAircraftPilotOrAbove()]
+
+    def get_queryset(self):
+        qs = super().get_queryset().prefetch_related('roles')
+        user = self.request.user
+        if not user.is_authenticated:
+            return qs.none()
+        if user.is_staff or user.is_superuser:
+            return qs
+        accessible = AircraftRole.objects.filter(user=user).values_list('aircraft_id', flat=True)
+        return qs.filter(id__in=accessible)
 
     def get_serializer_class(self):
         """Use lightweight serializer for list, full serializer for detail."""
         if self.action == 'list':
             return AircraftListSerializer
         return AircraftSerializer
+
+    def perform_create(self, serializer):
+        with transaction.atomic():
+            aircraft = serializer.save()
+            AircraftRole.objects.create(aircraft=aircraft, user=self.request.user, role='owner')
+        log_event(aircraft, 'aircraft', 'Aircraft created', user=self.request.user)
 
     @action(detail=True, methods=['post'])
     def update_hours(self, request, pk=None):
@@ -602,10 +649,156 @@ class AircraftViewSet(viewsets.ModelViewSet):
         insp_type.applicable_aircraft.remove(aircraft)
         return Response({'success': True})
 
+    @action(detail=True, methods=['get', 'post', 'delete'], url_path='manage_roles')
+    def manage_roles(self, request, pk=None):
+        """
+        List, add/update, or remove role assignments.
+        GET  - List all roles
+        POST - Add or update a role: {user: <user_id>, role: 'owner'|'pilot'}
+        DELETE - Remove a role: {user: <user_id>}
+        """
+        aircraft = self.get_object()
 
-class AircraftNoteViewSet(EventLoggingMixin, viewsets.ModelViewSet):
+        if request.method == 'GET':
+            roles = AircraftRole.objects.filter(aircraft=aircraft).select_related('user')
+            return Response({
+                'roles': AircraftRoleSerializer(roles, many=True).data,
+            })
+
+        if request.method == 'POST':
+            user_id = request.data.get('user')
+            role = request.data.get('role')
+            if not user_id or role not in ('owner', 'pilot'):
+                return Response({'error': 'Valid user and role required.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            try:
+                target_user = User.objects.get(pk=user_id)
+            except (User.DoesNotExist, ValueError):
+                # Uniform error to prevent user enumeration
+                return Response({'error': 'Valid user and role required.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            existing = AircraftRole.objects.filter(aircraft=aircraft, user=target_user).first()
+            if existing:
+                # Changing role
+                if existing.role == 'owner' and role == 'pilot':
+                    # Demoting owner — check last-owner protection
+                    if not request.user.is_staff:
+                        owner_count = AircraftRole.objects.filter(
+                            aircraft=aircraft, role='owner').count()
+                        if owner_count <= 1:
+                            return Response(
+                                {'error': 'Cannot demote the last owner.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+                existing.role = role
+                existing.save()
+                log_event(aircraft, 'role',
+                          f"Role updated: {role} for {target_user.username}",
+                          user=request.user,
+                          notes=f"by {request.user.username}")
+            else:
+                AircraftRole.objects.create(aircraft=aircraft, user=target_user, role=role)
+                log_event(aircraft, 'role',
+                          f"Role granted: {role} to {target_user.username}",
+                          user=request.user,
+                          notes=f"by {request.user.username}")
+
+            roles = AircraftRole.objects.filter(aircraft=aircraft).select_related('user')
+            return Response({
+                'roles': AircraftRoleSerializer(roles, many=True).data,
+            })
+
+        if request.method == 'DELETE':
+            user_id = request.data.get('user')
+            if not user_id:
+                return Response({'error': 'user is required.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            try:
+                role_obj = AircraftRole.objects.select_related('user').get(
+                    aircraft=aircraft, user_id=user_id)
+            except (AircraftRole.DoesNotExist, ValueError):
+                return Response({'error': 'Role not found.'},
+                                status=status.HTTP_404_NOT_FOUND)
+
+            # Self-removal prevention (non-admin)
+            if role_obj.user == request.user and not request.user.is_staff:
+                return Response({'error': 'Cannot remove your own role.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            # Last-owner protection (non-admin)
+            if role_obj.role == 'owner' and not request.user.is_staff:
+                owner_count = AircraftRole.objects.filter(
+                    aircraft=aircraft, role='owner').count()
+                if owner_count <= 1:
+                    return Response({'error': 'Cannot remove the last owner.'},
+                                    status=status.HTTP_400_BAD_REQUEST)
+
+            target_username = role_obj.user.username
+            role_obj.delete()
+            log_event(aircraft, 'role',
+                      f"Role removed: {target_username}",
+                      user=request.user,
+                      notes=f"by {request.user.username}")
+
+            roles = AircraftRole.objects.filter(aircraft=aircraft).select_related('user')
+            return Response({
+                'roles': AircraftRoleSerializer(roles, many=True).data,
+            })
+
+    @action(detail=True, methods=['post'], url_path='toggle_sharing')
+    def toggle_sharing(self, request, pk=None):
+        """Toggle public sharing. Generates a new token each time sharing is enabled."""
+        aircraft = self.get_object()
+        aircraft.public_sharing_enabled = not aircraft.public_sharing_enabled
+
+        if aircraft.public_sharing_enabled:
+            aircraft.share_token = uuid_mod.uuid4()
+            expires_in_days = request.data.get('expires_in_days')
+            if expires_in_days:
+                try:
+                    aircraft.share_token_expires_at = timezone.now() + td(days=int(expires_in_days))
+                except (ValueError, TypeError):
+                    pass
+            else:
+                aircraft.share_token_expires_at = None
+            aircraft.save()
+            log_event(aircraft, 'role', 'Public sharing enabled', user=request.user)
+            share_url = request.build_absolute_uri(f'/shared/{aircraft.share_token}/')
+        else:
+            aircraft.share_token = None
+            aircraft.share_token_expires_at = None
+            aircraft.save()
+            log_event(aircraft, 'role', 'Public sharing disabled', user=request.user)
+            share_url = None
+
+        return Response({
+            'public_sharing_enabled': aircraft.public_sharing_enabled,
+            'share_token': str(aircraft.share_token) if aircraft.share_token else None,
+            'share_url': share_url,
+            'share_token_expires_at': aircraft.share_token_expires_at,
+        })
+
+    @action(detail=True, methods=['post'], url_path='regenerate_share_token')
+    def regenerate_share_token(self, request, pk=None):
+        """Regenerate the share token, invalidating old links."""
+        aircraft = self.get_object()
+        if not aircraft.public_sharing_enabled:
+            return Response({'error': 'Sharing is not enabled.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        aircraft.share_token = uuid_mod.uuid4()
+        aircraft.save()
+        log_event(aircraft, 'role', 'Share token regenerated', user=request.user)
+        return Response({
+            'share_token': str(aircraft.share_token),
+            'share_url': request.build_absolute_uri(f'/shared/{aircraft.share_token}/'),
+            'share_token_expires_at': aircraft.share_token_expires_at,
+        })
+
+
+class AircraftNoteViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelViewSet):
     queryset = AircraftNote.objects.all().order_by('-added_timestamp')
     serializer_class = AircraftNoteSerializer
+    aircraft_fk_path = 'aircraft'
     event_category = 'note'
     event_name_created = 'Note added'
     event_name_deleted = 'Note deleted'
@@ -670,7 +863,14 @@ class LogbookImportView(LoginRequiredMixin, View):
     def get(self, request, job_id=None):
         if job_id:
             return self._job_status(request, job_id)
-        aircraft_list = Aircraft.objects.all().order_by('tail_number')
+        # Only show aircraft the user owns (or all for admin)
+        if request.user.is_staff or request.user.is_superuser:
+            aircraft_list = Aircraft.objects.all().order_by('tail_number')
+        else:
+            owned_ids = AircraftRole.objects.filter(
+                user=request.user, role='owner'
+            ).values_list('aircraft_id', flat=True)
+            aircraft_list = Aircraft.objects.filter(id__in=owned_ids).order_by('tail_number')
         return render(request, 'logbook_import.html', {
             'aircraft_list': aircraft_list,
             'import_models': settings.LOGBOOK_IMPORT_MODELS,
@@ -764,6 +964,8 @@ class LogbookImportView(LoginRequiredMixin, View):
             aircraft = Aircraft.objects.get(pk=aircraft_id)
         except (Aircraft.DoesNotExist, ValueError):
             return None, JsonResponse({'type': 'error', 'message': 'Aircraft not found'}, status=404)
+        if not has_aircraft_permission(request.user, aircraft, 'owner'):
+            return None, JsonResponse({'type': 'error', 'message': 'Permission denied'}, status=403)
         return aircraft, None
 
     def _prepare_images(self, request, tmpdir: str):
@@ -940,6 +1142,142 @@ class LogbookImportView(LoginRequiredMixin, View):
         }
 
 
+class PublicAircraftView(TemplateView):
+    """Read-only public view of an aircraft via share token."""
+    template_name = 'aircraft_public.html'
+
+    def get(self, request, share_token, *args, **kwargs):
+        from django.http import Http404
+        try:
+            aircraft = Aircraft.objects.get(share_token=share_token)
+        except Aircraft.DoesNotExist:
+            raise Http404
+        if not aircraft.public_sharing_enabled:
+            raise Http404
+        if aircraft.share_token_expires_at and aircraft.share_token_expires_at < timezone.now():
+            raise Http404
+        return render(request, self.template_name, {
+            'aircraft_id': str(aircraft.id),
+            'share_token': str(share_token),
+            'aircraft_tail': aircraft.tail_number,
+        })
+
+
+class PublicAircraftSummaryAPI(View):
+    """Public API endpoint that returns aircraft summary data for shared links."""
+
+    def get(self, request, share_token):
+        try:
+            aircraft = Aircraft.objects.get(share_token=share_token)
+        except Aircraft.DoesNotExist:
+            return JsonResponse({'error': 'Not found'}, status=404)
+        if not aircraft.public_sharing_enabled:
+            return JsonResponse({'error': 'Not found'}, status=404)
+        if aircraft.share_token_expires_at and aircraft.share_token_expires_at < timezone.now():
+            return JsonResponse({'error': 'Not found'}, status=404)
+
+        from rest_framework.request import Request
+        from rest_framework.parsers import JSONParser
+
+        drf_request = Request(request, parsers=[JSONParser()])
+
+        current_hours = aircraft.flight_time
+        today = date_cls.today()
+
+        # Build AD status list (same logic as AircraftViewSet.ads GET)
+        component_ids = aircraft.components.values_list('id', flat=True)
+        aircraft_ads = AD.objects.filter(applicable_aircraft=aircraft)
+        component_ads = AD.objects.filter(applicable_component__in=component_ids)
+        all_ads = (aircraft_ads | component_ads).distinct()
+
+        ads_data = []
+        for ad in all_ads:
+            ad_dict = ADNestedSerializer(ad).data
+            compliance = ADCompliance.objects.filter(ad=ad).filter(
+                Q(aircraft=aircraft) | Q(component__aircraft=aircraft)
+            ).order_by('-date_complied').first()
+            ad_dict['latest_compliance'] = ADComplianceNestedSerializer(compliance).data if compliance else None
+            if ad.compliance_type == 'conditional':
+                ad_dict['compliance_status'] = 'compliant' if compliance else 'conditional'
+            elif not compliance:
+                ad_dict['compliance_status'] = 'no_compliance'
+            elif compliance.permanent:
+                ad_dict['compliance_status'] = 'compliant'
+            else:
+                rank, extras = ad_compliance_status(ad, compliance, current_hours, today)
+                ad_dict.update(extras)
+                ad_dict['compliance_status'] = STATUS_LABELS[rank]
+            ads_data.append(ad_dict)
+
+        # Build inspection status list (same logic as AircraftViewSet.inspections GET)
+        aircraft_inspections = InspectionType.objects.filter(applicable_aircraft=aircraft)
+        component_inspections = InspectionType.objects.filter(applicable_component__in=component_ids)
+        all_types = (aircraft_inspections | component_inspections).distinct()
+
+        inspections_data = []
+        for insp_type in all_types:
+            type_dict = InspectionTypeNestedSerializer(insp_type).data
+            last_record = InspectionRecord.objects.filter(inspection_type=insp_type).filter(
+                Q(aircraft=aircraft) | Q(component__aircraft=aircraft)
+            ).order_by('-date').first()
+            type_dict['latest_record'] = InspectionRecordNestedSerializer(last_record).data if last_record else None
+            if not last_record:
+                type_dict['compliance_status'] = 'never_completed'
+            else:
+                rank, extras = inspection_compliance_status(insp_type, last_record, current_hours, today)
+                type_dict.update(extras)
+                type_dict['compliance_status'] = STATUS_LABELS[rank]
+            inspections_data.append(type_dict)
+
+        # Build document collections and uncollected documents
+        collections = DocumentCollection.objects.filter(aircraft=aircraft).prefetch_related('documents__images')
+        uncollected_docs = Document.objects.filter(aircraft=aircraft, collection__isnull=True).prefetch_related('images')
+
+        summary_data = {
+            'aircraft': AircraftSerializer(aircraft, context={'request': drf_request}).data,
+            'components': ComponentSerializer(
+                aircraft.components.all(), many=True,
+                context={'request': drf_request}
+            ).data,
+            'recent_logs': LogbookEntrySerializer(
+                aircraft.logbook_entries.order_by('-date')[:10],
+                many=True, context={'request': drf_request}
+            ).data,
+            'active_squawks': SquawkNestedSerializer(
+                aircraft.squawks.filter(resolved=False),
+                many=True, context={'request': drf_request}
+            ).data,
+            'notes': AircraftNoteNestedSerializer(
+                aircraft.notes.order_by('-added_timestamp'),
+                many=True, context={'request': drf_request}
+            ).data,
+            'ads': ads_data,
+            'inspections': inspections_data,
+            'oil_records': ConsumableRecordNestedSerializer(
+                aircraft.consumable_records.filter(
+                    record_type=ConsumableRecord.RECORD_TYPE_OIL
+                ).order_by('-date')[:20],
+                many=True
+            ).data,
+            'fuel_records': ConsumableRecordNestedSerializer(
+                aircraft.consumable_records.filter(
+                    record_type=ConsumableRecord.RECORD_TYPE_FUEL
+                ).order_by('-date')[:20],
+                many=True
+            ).data,
+            'document_collections': DocumentCollectionNestedSerializer(collections, many=True).data,
+            'documents': DocumentNestedSerializer(uncollected_docs, many=True).data,
+        }
+
+        # Strip sensitive fields
+        aircraft_data = summary_data['aircraft']
+        for field in ('share_token', 'share_url', 'roles'):
+            aircraft_data.pop(field, None)
+        aircraft_data['user_role'] = None
+
+        return JsonResponse(summary_data)
+
+
 def custom_logout(request):
     """
     Custom logout view that handles both OIDC and Django sessions.
@@ -966,3 +1304,27 @@ def custom_logout(request):
     # Standard Django logout (for local users or if OIDC disabled)
     logout(request)
     return redirect('/')
+
+
+class UserSearchView(APIView):
+    """Search users by username or full name for role assignment."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        q = request.query_params.get('q', '').strip()
+        if len(q) < 2:
+            return Response([])
+        users = User.objects.filter(
+            Q(username__icontains=q) |
+            Q(first_name__icontains=q) |
+            Q(last_name__icontains=q)
+        ).order_by('username')[:10]
+        results = []
+        for u in users:
+            full_name = f"{u.first_name} {u.last_name}".strip()
+            results.append({
+                'id': str(u.pk),
+                'username': u.username,
+                'display': f"{u.username} ({full_name})" if full_name else u.username,
+            })
+        return Response(results)
