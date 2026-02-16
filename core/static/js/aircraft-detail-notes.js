@@ -16,6 +16,12 @@ function notesMixin() {
             this.noteModalOpen = true;
         },
 
+        viewNote(note) {
+            this.editingNote = note;
+            this.noteForm = { text: note.text };
+            this.noteModalOpen = true;
+        },
+
         editNote(note) {
             this.editingNote = note;
             this.noteForm = { text: note.text };

@@ -297,6 +297,13 @@ function inspectionsMixin() {
             this.inspectionHistoryLoading = true;
             this.inspectionHistoryOpen = true;
 
+            // In public view, use pre-loaded data from the public API response
+            if (this.isPublicView && insp.inspection_history) {
+                this.inspectionHistory = insp.inspection_history;
+                this.inspectionHistoryLoading = false;
+                return;
+            }
+
             try {
                 const response = await fetch(`/api/inspections/?inspection_type=${insp.id}&aircraft=${this.aircraftId}`);
                 const data = await response.json();

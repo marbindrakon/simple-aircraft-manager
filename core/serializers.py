@@ -26,6 +26,7 @@ class UserRoleMixin:
 class AircraftSerializer(AirworthinessMixin, UserRoleMixin, serializers.HyperlinkedModelSerializer):
     airworthiness = serializers.SerializerMethodField()
     user_role = serializers.SerializerMethodField()
+    notes = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     events = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     roles = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     share_token = serializers.SerializerMethodField()

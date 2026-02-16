@@ -391,6 +391,13 @@ function adsMixin() {
             this.complianceHistoryLoading = true;
             this.complianceHistoryOpen = true;
 
+            // In public view, use pre-loaded data from the public API response
+            if (this.isPublicView && ad.compliance_history) {
+                this.complianceHistory = ad.compliance_history;
+                this.complianceHistoryLoading = false;
+                return;
+            }
+
             try {
                 const response = await fetch(`/api/ad-compliances/?ad=${ad.id}&aircraft=${this.aircraftId}`);
                 const data = await response.json();
@@ -409,9 +416,22 @@ function adsMixin() {
             this.complianceHistory = [];
         },
 
-        async viewLogEntryFromCompliance(logbookEntryUrl) {
-            const entryId = this.extractIdFromUrl(logbookEntryUrl);
+        async viewLogEntryFromCompliance(logbookEntryRef) {
+            // logbookEntryRef may be a URL (from HyperlinkedSerializer) or a UUID (from ModelSerializer in public API)
+            const entryId = this.extractIdFromUrl(logbookEntryRef) || logbookEntryRef;
             if (!entryId) return;
+
+            // In public view, look up from pre-loaded logbook entries
+            if (this.isPublicView) {
+                const entry = (this.logbookEntries || []).find(e => e.id === entryId);
+                if (entry) {
+                    this.logEntryDetail = entry;
+                    this.logEntryDetailOpen = true;
+                } else {
+                    showNotification('Logbook entry not available in shared view', 'warning');
+                }
+                return;
+            }
 
             this.logEntryDetailLoading = true;
             this.logEntryDetail = null;

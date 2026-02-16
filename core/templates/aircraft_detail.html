@@ -200,7 +200,7 @@
                         <template x-if="aircraftNotes.length > 0">
                             <div class="notes-list">
                                 <template x-for="note in aircraftNotes.slice(0, 3)" :key="note.id">
-                                    <div class="note-item" @click="editNote(note)">
+                                    <div class="note-item" @click="isPublicView ? viewNote(note) : editNote(note)" :style="isPublicView ? '' : 'cursor: pointer;'">
                                         <p class="note-text" x-text="note.text"></p>
                                         <div class="note-meta">
                                             <span x-text="formatDate(note.added_timestamp)"></span>
@@ -775,24 +775,24 @@
                                         </template>
                                     </td>
                                     <td>
-                                        <div x-show="isOwner" style="display: flex; gap: 0.25rem;">
-                                            <button class="pf-v5-c-button pf-m-plain"
-                                                    @click="editAd(ad)"
-                                                    title="Edit AD"
-                                                    aria-label="Edit AD">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="pf-v5-c-button pf-m-plain"
-                                                    @click="openComplianceModal(ad)"
-                                                    title="Record Compliance">
-                                                <i class="fas fa-check"></i>
-                                            </button>
+                                        <div style="display: flex; gap: 0.25rem;">
                                             <button class="pf-v5-c-button pf-m-plain"
                                                     @click="openComplianceHistory(ad)"
                                                     title="View Compliance History">
                                                 <i class="fas fa-history"></i>
                                             </button>
-                                            <button class="pf-v5-c-button pf-m-plain pf-m-danger"
+                                            <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                                    @click="editAd(ad)"
+                                                    title="Edit AD"
+                                                    aria-label="Edit AD">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                                    @click="openComplianceModal(ad)"
+                                                    title="Record Compliance">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button class="pf-v5-c-button pf-m-plain pf-m-danger" x-show="isOwner"
                                                     @click="removeAd(ad)"
                                                     title="Remove AD">
                                                 <i class="fas fa-times"></i>
@@ -890,24 +890,24 @@
                                         </template>
                                     </td>
                                     <td>
-                                        <div x-show="isOwner" style="display: flex; gap: 0.25rem;">
-                                            <button class="pf-v5-c-button pf-m-plain"
-                                                    @click="editInspectionType(insp)"
-                                                    title="Edit Inspection Type"
-                                                    aria-label="Edit Inspection Type">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="pf-v5-c-button pf-m-plain"
-                                                    @click="openInspectionModal(insp)"
-                                                    title="Record Inspection">
-                                                <i class="fas fa-check"></i>
-                                            </button>
+                                        <div style="display: flex; gap: 0.25rem;">
                                             <button class="pf-v5-c-button pf-m-plain"
                                                     @click="openInspectionHistory(insp)"
                                                     title="View Inspection History">
                                                 <i class="fas fa-history"></i>
                                             </button>
-                                            <button class="pf-v5-c-button pf-m-plain pf-m-danger"
+                                            <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                                    @click="editInspectionType(insp)"
+                                                    title="Edit Inspection Type"
+                                                    aria-label="Edit Inspection Type">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                                    @click="openInspectionModal(insp)"
+                                                    title="Record Inspection">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button class="pf-v5-c-button pf-m-plain pf-m-danger" x-show="isOwner"
                                                     @click="removeInspectionType(insp)"
                                                     title="Remove Inspection Type">
                                                 <i class="fas fa-times"></i>
@@ -1831,7 +1831,7 @@
                                     <th>Permanent</th>
                                     <th>Next Due (hrs)</th>
                                     <th>Logbook Entry</th>
-                                    <th></th>
+                                    <th x-show="isOwner"></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1874,7 +1874,7 @@
                                                 <span style="color: var(--pf-v5-global--Color--200);">—</span>
                                             </template>
                                         </td>
-                                        <td style="white-space: nowrap;">
+                                        <td x-show="isOwner" style="white-space: nowrap;">
                                             <button class="pf-v5-c-button pf-m-plain" title="Edit" @click="openEditComplianceModal(record)">
                                                 <i class="fas fa-pencil-alt"></i>
                                             </button>
@@ -1890,7 +1890,7 @@
                 </div>
 
                 <footer class="pf-v5-c-modal-box__footer">
-                    <button class="pf-v5-c-button pf-m-primary" type="button" @click="openComplianceModal(selectedAdForHistory); closeComplianceHistory()">
+                    <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" type="button" @click="openComplianceModal(selectedAdForHistory); closeComplianceHistory()">
                         <i class="fas fa-plus"></i> Record New Compliance
                     </button>
                     <button class="pf-v5-c-button pf-m-link" type="button" @click="closeComplianceHistory()">Close</button>
@@ -2420,12 +2420,28 @@
                 </button>
 
                 <header class="pf-v5-c-modal-box__header">
-                    <h1 class="pf-v5-c-modal-box__title" x-text="editingNote ? 'Edit Note' : 'Add Note'"></h1>
+                    <h1 class="pf-v5-c-modal-box__title" x-text="isPublicView ? 'Note' : (editingNote ? 'Edit Note' : 'Add Note')"></h1>
                 </header>
 
-                <div class="pf-v5-c-modal-box__body">
+                <!-- View-only body for public view -->
+                <div class="pf-v5-c-modal-box__body" x-show="isPublicView">
+                    <p style="white-space: pre-wrap;" x-text="noteForm.text"></p>
+                    <template x-if="editingNote">
+                        <div class="note-meta" style="margin-top: 1rem; color: var(--pf-v5-global--Color--200); font-size: 0.875rem;">
+                            <span x-text="formatDate(editingNote.added_timestamp)"></span>
+                            <template x-if="editingNote.added_by_username">
+                                <span> - <span x-text="editingNote.added_by_username"></span></span>
+                            </template>
+                            <template x-if="editingNote.edited_timestamp">
+                                <span class="note-edited">(edited)</span>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Editable body for authenticated view -->
+                <div class="pf-v5-c-modal-box__body" x-show="!isPublicView">
                     <form @submit.prevent="submitNote" class="pf-v5-c-form">
-                        <!-- Note Text -->
                         <div class="pf-v5-c-form__group">
                             <label class="pf-v5-c-form__label" for="note-text">
                                 <span class="pf-v5-c-form__label-text">Note</span>
@@ -2438,7 +2454,13 @@
                     </form>
                 </div>
 
-                <footer class="pf-v5-c-modal-box__footer">
+                <!-- Public view footer -->
+                <footer class="pf-v5-c-modal-box__footer" x-show="isPublicView">
+                    <button class="pf-v5-c-button pf-m-link" @click="closeNoteModal()">Close</button>
+                </footer>
+
+                <!-- Authenticated view footer -->
+                <footer class="pf-v5-c-modal-box__footer" x-show="!isPublicView">
                     <button class="pf-v5-c-button pf-m-primary" @click="submitNote" :disabled="noteSubmitting">
                         <span x-show="!noteSubmitting" x-text="editingNote ? 'Save Changes' : 'Add Note'"></span>
                         <span x-show="noteSubmitting">Saving...</span>
@@ -2469,7 +2491,7 @@
                 <div class="pf-v5-c-modal-box__body">
                     <div class="notes-list notes-list-full">
                         <template x-for="note in aircraftNotes" :key="note.id">
-                            <div class="note-item" @click="editNote(note); showAllNotes = false;">
+                            <div class="note-item" @click="isPublicView ? (viewNote(note), showAllNotes = false) : (editNote(note), showAllNotes = false)">
                                 <p class="note-text" x-text="note.text"></p>
                                 <div class="note-meta">
                                     <span x-text="formatDate(note.added_timestamp)"></span>
@@ -2486,7 +2508,7 @@
                 </div>
 
                 <footer class="pf-v5-c-modal-box__footer">
-                    <button class="pf-v5-c-button pf-m-primary" @click="openNoteModal(); showAllNotes = false;">
+                    <button class="pf-v5-c-button pf-m-primary" x-show="canCreateNote" @click="openNoteModal(); showAllNotes = false;">
                         <i class="fas fa-plus"></i> Add Note
                     </button>
                     <button class="pf-v5-c-button pf-m-link" @click="showAllNotes = false">Close</button>
@@ -2849,7 +2871,7 @@
                                     <th>Date</th>
                                     <th>Aircraft Hours</th>
                                     <th>Logbook Entry</th>
-                                    <th></th>
+                                    <th x-show="isOwner"></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2875,7 +2897,7 @@
                                                 <span style="color: var(--pf-v5-global--Color--200);">—</span>
                                             </template>
                                         </td>
-                                        <td>
+                                        <td x-show="isOwner">
                                             <div style="display: flex; gap: 0.25rem;">
                                                 <button class="pf-v5-c-button pf-m-plain"
                                                         @click="editInspectionRecord(record)"
@@ -2897,7 +2919,7 @@
                 </div>
 
                 <footer class="pf-v5-c-modal-box__footer">
-                    <button class="pf-v5-c-button pf-m-primary" @click="openInspectionModal(selectedInspectionType)">
+                    <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openInspectionModal(selectedInspectionType)">
                         <i class="fas fa-plus"></i> Record Inspection
                     </button>
                     <button class="pf-v5-c-button pf-m-link" @click="closeInspectionHistory()">Close</button>

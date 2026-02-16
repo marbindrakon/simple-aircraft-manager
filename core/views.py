@@ -1209,6 +1209,11 @@ class PublicAircraftSummaryAPI(View):
                 rank, extras = ad_compliance_status(ad, compliance, current_hours, today)
                 ad_dict.update(extras)
                 ad_dict['compliance_status'] = STATUS_LABELS[rank]
+            # Include full compliance history for public view
+            all_compliances = ADCompliance.objects.filter(ad=ad).filter(
+                Q(aircraft=aircraft) | Q(component__aircraft=aircraft)
+            ).order_by('-date_complied')
+            ad_dict['compliance_history'] = ADComplianceNestedSerializer(all_compliances, many=True).data
             ads_data.append(ad_dict)
 
         # Build inspection status list (same logic as AircraftViewSet.inspections GET)
@@ -1229,6 +1234,11 @@ class PublicAircraftSummaryAPI(View):
                 rank, extras = inspection_compliance_status(insp_type, last_record, current_hours, today)
                 type_dict.update(extras)
                 type_dict['compliance_status'] = STATUS_LABELS[rank]
+            # Include full inspection history for public view
+            all_records = InspectionRecord.objects.filter(inspection_type=insp_type).filter(
+                Q(aircraft=aircraft) | Q(component__aircraft=aircraft)
+            ).order_by('-date')
+            type_dict['inspection_history'] = InspectionRecordNestedSerializer(all_records, many=True).data
             inspections_data.append(type_dict)
 
         # Build document collections and uncollected documents (shared only)
