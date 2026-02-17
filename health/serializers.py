@@ -339,6 +339,36 @@ class MajorRepairAlterationNestedSerializer(serializers.ModelSerializer):
             return name
         return None
 
+    def validate(self, data):
+        # For creates, aircraft is injected into data by the view before validation.
+        # For PATCH updates it won't be present, so fall back to the existing instance.
+        aircraft = data.get('aircraft') or (self.instance.aircraft if self.instance else None)
+        if not aircraft:
+            return data
+
+        errors = {}
+
+        if 'component' in data and data['component'] is not None:
+            if data['component'].aircraft_id != aircraft.id:
+                errors['component'] = 'Component does not belong to this aircraft.'
+
+        if 'form_337_document' in data and data['form_337_document'] is not None:
+            if data['form_337_document'].aircraft_id != aircraft.id:
+                errors['form_337_document'] = 'Document does not belong to this aircraft.'
+
+        if 'stc_document' in data and data['stc_document'] is not None:
+            if data['stc_document'].aircraft_id != aircraft.id:
+                errors['stc_document'] = 'Document does not belong to this aircraft.'
+
+        if 'logbook_entry' in data and data['logbook_entry'] is not None:
+            if data['logbook_entry'].aircraft_id != aircraft.id:
+                errors['logbook_entry'] = 'Logbook entry does not belong to this aircraft.'
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return data
+
 class InspectionRecordSerializer(serializers.HyperlinkedModelSerializer):
     id = serializers.UUIDField(read_only=True)
 
