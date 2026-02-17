@@ -21,6 +21,7 @@ function aircraftDetail(aircraftId, shareToken) {
             aircraft: null,
             components: [],
             recentLogs: [],
+            linkedLogbookEntriesById: {},
             activeSquawks: [],
             resolvedSquawks: [],
             loading: true,
@@ -44,8 +45,11 @@ function aircraftDetail(aircraftId, shareToken) {
                 await this.loadData();
 
                 if (this.isPublicView) {
-                    // Public mode: render charts when their tab becomes visible
+                    // Public mode: lazy-load logbook tab and render charts on tab activation
                     this.$watch('activeTab', (tab) => {
+                        if (tab === 'logbook' && !this.logbookLoaded) {
+                            this.loadLogbookEntries();
+                        }
                         if (tab === 'oil' && this.oilRecords.length >= 2) {
                             this.$nextTick(() => this.renderOilChart());
                         }
@@ -129,7 +133,6 @@ function aircraftDetail(aircraftId, shareToken) {
 
                 this.aircraft = data.aircraft;
                 this.components = data.components || [];
-                this.recentLogs = data.recent_logs || [];
                 this.activeSquawks = data.active_squawks || [];
                 this.resolvedSquawks = data.resolved_squawks || [];
                 this.aircraftNotes = data.notes || [];
@@ -151,8 +154,13 @@ function aircraftDetail(aircraftId, shareToken) {
                 this.uncollectedDocuments = data.documents || [];
                 this.documentsLoaded = true;
 
-                this.logbookEntries = this.recentLogs;
-                this.logbookLoaded = true;
+                // Build a fast-lookup dict for "View Logbook Entry" links on major
+                // records, AD compliances, and inspections. Only the referenced entries
+                // are included — the logbook tab itself lazy-loads via the paginated endpoint.
+                this.linkedLogbookEntriesById = Object.fromEntries(
+                    (data.linked_logbook_entries || []).map(e => [e.id, e])
+                );
+                // logbookLoaded stays false so the tab watcher triggers the load
 
                 this.majorRecords = data.major_records || [];
                 this.majorRecordsLoaded = true;

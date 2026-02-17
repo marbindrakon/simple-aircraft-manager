@@ -578,6 +578,14 @@
                                 </div>
                             </div>
                         </template>
+                        <template x-if="isPublicView && logbookHasMore">
+                            <div style="text-align: center; padding: 1rem 0;">
+                                <button class="pf-v5-c-button pf-m-secondary"
+                                        @click="loadLogbookEntries(logbookEntries.length)">
+                                    Load more
+                                </button>
+                            </div>
+                        </template>
                     </div>
                 </template>
             </div>

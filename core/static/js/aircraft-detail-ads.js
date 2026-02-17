@@ -421,9 +421,9 @@ function adsMixin() {
             const entryId = this.extractIdFromUrl(logbookEntryRef) || logbookEntryRef;
             if (!entryId) return;
 
-            // In public view, look up from pre-loaded logbook entries
+            // In public view, look up from the pre-fetched linked-entries dict
             if (this.isPublicView) {
-                const entry = (this.logbookEntries || []).find(e => e.id === entryId);
+                const entry = this.linkedLogbookEntriesById?.[entryId];
                 if (entry) {
                     this.logEntryDetail = entry;
                     this.logEntryDetailOpen = true;

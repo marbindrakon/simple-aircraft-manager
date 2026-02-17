@@ -52,6 +52,7 @@ urlpatterns = [
     path('aircraft/<uuid:pk>/squawks/history/', core_views.SquawkHistoryView.as_view(), name='squawk-history'),
     path('shared/<uuid:share_token>/', core_views.PublicAircraftView.as_view(), name='public-aircraft'),
     path('api/shared/<uuid:share_token>/', core_views.PublicAircraftSummaryAPI.as_view(), name='public-aircraft-api'),
+    path('api/shared/<uuid:share_token>/logbook-entries/', core_views.PublicLogbookEntriesAPI.as_view(), name='public-logbook-entries'),
     path('tools/import-logbook/', core_views.LogbookImportView.as_view(), name='logbook-import'),
     path('tools/import-logbook/<uuid:job_id>/status/', core_views.LogbookImportView.as_view(), name='logbook-import-status'),
     path('api/user-search/', core_views.UserSearchView.as_view(), name='user-search'),

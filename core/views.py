@@ -1288,16 +1288,38 @@ class PublicAircraftSummaryAPI(View):
             aircraft=aircraft, collection__isnull=True, shared=True
         ).prefetch_related('images')
 
+        # Pre-build major records so we can collect their linked logbook entry IDs
+        major_records_data = MajorRepairAlterationNestedSerializer(
+            MajorRepairAlteration.objects.filter(aircraft=aircraft),
+            many=True
+        ).data
+
+        # Collect IDs of every logbook entry referenced by any linked record in the response
+        linked_ids = set()
+        for mr in major_records_data:
+            if mr.get('logbook_entry'):
+                linked_ids.add(mr['logbook_entry'])
+        for ad_dict in ads_data:
+            for rec in ad_dict.get('compliance_history', []):
+                if rec.get('logbook_entry'):
+                    linked_ids.add(rec['logbook_entry'])
+        for insp_dict in inspections_data:
+            for rec in insp_dict.get('inspection_history', []):
+                if rec.get('logbook_entry'):
+                    linked_ids.add(rec['logbook_entry'])
+
+        linked_logbook_entries = LogbookEntrySerializer(
+            LogbookEntry.objects.filter(id__in=linked_ids),
+            many=True, context={'request': drf_request}
+        ).data if linked_ids else []
+
         summary_data = {
             'aircraft': AircraftSerializer(aircraft, context={'request': drf_request}).data,
             'components': ComponentSerializer(
                 aircraft.components.all(), many=True,
                 context={'request': drf_request}
             ).data,
-            'recent_logs': LogbookEntrySerializer(
-                aircraft.logbook_entries.order_by('-date'),
-                many=True, context={'request': drf_request}
-            ).data,
+            'linked_logbook_entries': linked_logbook_entries,
             'active_squawks': SquawkNestedSerializer(
                 aircraft.squawks.filter(resolved=False),
                 many=True, context={'request': drf_request}
@@ -1333,10 +1355,7 @@ class PublicAircraftSummaryAPI(View):
                 for col in collections
             ],
             'documents': DocumentNestedSerializer(uncollected_docs, many=True).data,
-            'major_records': MajorRepairAlterationNestedSerializer(
-                MajorRepairAlteration.objects.filter(aircraft=aircraft),
-                many=True
-            ).data,
+            'major_records': major_records_data,
         }
 
         # Build set of publicly visible document IDs
@@ -1347,8 +1366,8 @@ class PublicAircraftSummaryAPI(View):
         for d in uncollected_docs:
             visible_doc_ids.add(str(d.id))
 
-        # Annotate logbook entries with document visibility for public view
-        for log_entry in summary_data['recent_logs']:
+        # Annotate linked logbook entries with document visibility for public view
+        for log_entry in summary_data['linked_logbook_entries']:
             # log_image is a hyperlinked URL — extract the document ID
             log_image_url = log_entry.get('log_image')
             if log_image_url:
@@ -1370,6 +1389,62 @@ class PublicAircraftSummaryAPI(View):
         aircraft_data['user_role'] = None
 
         return JsonResponse(summary_data)
+
+
+class PublicLogbookEntriesAPI(View):
+    """Paginated public endpoint for browsing logbook entries on a shared aircraft."""
+
+    def get(self, request, share_token):
+        try:
+            aircraft = Aircraft.objects.get(share_token=share_token)
+        except Aircraft.DoesNotExist:
+            return JsonResponse({'error': 'Not found'}, status=404)
+        if not aircraft.public_sharing_enabled:
+            return JsonResponse({'error': 'Not found'}, status=404)
+        if aircraft.share_token_expires_at and aircraft.share_token_expires_at < timezone.now():
+            return JsonResponse({'error': 'Not found'}, status=404)
+
+        try:
+            limit = min(int(request.GET.get('limit', 50)), 200)
+            offset = max(int(request.GET.get('offset', 0)), 0)
+        except (ValueError, TypeError):
+            return JsonResponse({'error': 'Invalid pagination parameters'}, status=400)
+
+        from rest_framework.request import Request
+        from rest_framework.parsers import JSONParser
+        drf_request = Request(request, parsers=[JSONParser()])
+
+        qs = aircraft.logbook_entries.order_by('-date')
+        total = qs.count()
+        entries = LogbookEntrySerializer(
+            qs[offset:offset + limit], many=True, context={'request': drf_request}
+        ).data
+
+        # Apply the same log_image_shared annotation used in the summary endpoint
+        all_collections = DocumentCollection.objects.filter(aircraft=aircraft).prefetch_related('documents')
+        visible_doc_ids = set()
+        for col in all_collections:
+            if col.shared:
+                for d in col.documents.all():
+                    if d.shared is True or d.shared is None:
+                        visible_doc_ids.add(str(d.id))
+        uncollected = Document.objects.filter(aircraft=aircraft, collection__isnull=True, shared=True)
+        for d in uncollected:
+            visible_doc_ids.add(str(d.id))
+
+        for log_entry in entries:
+            log_image_url = log_entry.get('log_image')
+            if log_image_url:
+                m = re.search(r'/([0-9a-f-]{36})/?$', log_image_url, re.I)
+                log_entry['log_image_shared'] = bool(m and m.group(1) in visible_doc_ids)
+            else:
+                log_entry['log_image_shared'] = False
+            rdocs = log_entry.get('related_documents_detail', [])
+            log_entry['related_documents_detail'] = [
+                rd for rd in rdocs if str(rd.get('id', '')) in visible_doc_ids
+            ]
+
+        return JsonResponse({'results': entries, 'total': total, 'offset': offset, 'limit': limit})
 
 
 def custom_logout(request):

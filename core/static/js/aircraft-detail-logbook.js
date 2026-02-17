@@ -3,6 +3,7 @@ function logbookMixin() {
         // Logbook state
         logbookEntries: [],
         logbookLoaded: false,
+        logbookHasMore: false,
         logbookModalOpen: false,
         editingLogEntry: null,
         logbookSubmitting: false,
@@ -114,11 +115,24 @@ function logbookMixin() {
             }
         },
 
-        async loadLogbookEntries() {
+        async loadLogbookEntries(offset = 0) {
             try {
-                const response = await fetch(`/api/logbook-entries/?aircraft=${this.aircraftId}`);
-                const data = await response.json();
-                this.logbookEntries = data.results || data;
+                if (this.isPublicView) {
+                    const response = await fetch(
+                        `/api/shared/${this._publicShareToken}/logbook-entries/?offset=${offset}&limit=50`
+                    );
+                    const data = await response.json();
+                    const newEntries = data.results || [];
+                    this.logbookEntries = offset === 0
+                        ? newEntries
+                        : [...this.logbookEntries, ...newEntries];
+                    this.logbookHasMore = (offset + newEntries.length) < data.total;
+                } else {
+                    const response = await fetch(`/api/logbook-entries/?aircraft=${this.aircraftId}`);
+                    const data = await response.json();
+                    this.logbookEntries = data.results || data;
+                    this.logbookHasMore = false;
+                }
                 this.logbookLoaded = true;
             } catch (error) {
                 console.error('Error loading logbook entries:', error);
