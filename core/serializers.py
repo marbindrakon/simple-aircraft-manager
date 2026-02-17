@@ -57,7 +57,6 @@ class AircraftSerializer(AirworthinessMixin, UserRoleMixin, serializers.Hyperlin
                 'events',
                 'roles',
                 'ads',
-                'stcs',
                 'inspections',
                 'ad_compliance',
                 'components',

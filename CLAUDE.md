@@ -87,6 +87,7 @@ The aircraft detail page is composed from feature-specific mixin files, each ret
 | `aircraft-detail-ads.js` | `adsMixin()` | AD CRUD, compliance records, history |
 | `aircraft-detail-inspections.js` | `inspectionsMixin()` | Inspection CRUD, history |
 | `aircraft-detail-documents.js` | `documentsMixin()` | Document/collection CRUD, viewer |
+| `aircraft-detail-major-records.js` | `majorRecordsMixin()` | Major repair/alteration CRUD |
 | `aircraft-detail-events.js` | `eventsMixin()` | Recent activity card, history modal |
 | `aircraft-detail-roles.js` | `rolesMixin()` | Role management, public sharing toggle |
 
@@ -148,6 +149,10 @@ def update_hours(self, request, pk=None):
 def squawks(self, request, pk=None):
     # Get or create squawks for an aircraft
 
+@action(detail=True, methods=['get', 'post'], url_path='major_records')
+def major_records(self, request, pk=None):
+    # Get or create major repair/alteration records (owner-only for POST)
+
 @action(detail=True, methods=['get', 'post', 'delete'], url_path='manage_roles')
 def manage_roles(self, request, pk=None):
     # List, add/update, or remove role assignments (owner-only)
@@ -190,11 +195,11 @@ All write operations are automatically logged as `AircraftEvent` records, provid
 
 - **`log_event(aircraft, category, event_name, user=None, notes="")`** (`core/events.py`) — single function to create an event record. Called explicitly from views (not via Django signals) so we have access to `request.user` and full context.
 - **`EventLoggingMixin`** (`core/mixins.py`) — ViewSet mixin that auto-logs `perform_create`/`perform_update`/`perform_destroy`. Set `event_category` on the viewset class. For models where the Aircraft FK is indirect (e.g., `DocumentImage.document.aircraft`), set `aircraft_field = 'document.aircraft'`.
-- **Manual `log_event()` calls** — Used in `AircraftViewSet` custom actions (`update_hours`, `squawks`, `notes`, `oil_records`, `fuel_records`, `components`, `ads`, `compliance`, `inspections`) where the mixin pattern doesn't apply.
+- **Manual `log_event()` calls** — Used in `AircraftViewSet` custom actions (`update_hours`, `squawks`, `notes`, `oil_records`, `fuel_records`, `components`, `ads`, `compliance`, `inspections`, `major_records`) where the mixin pattern doesn't apply.
 
 #### Categories
 
-Categories are defined in `EVENT_CATEGORIES` in `core/models.py`: `hours`, `component`, `squawk`, `note`, `oil`, `fuel`, `logbook`, `ad`, `inspection`, `document`, `aircraft`, `role`.
+Categories are defined in `EVENT_CATEGORIES` in `core/models.py`: `hours`, `component`, `squawk`, `note`, `oil`, `fuel`, `logbook`, `ad`, `inspection`, `document`, `aircraft`, `role`, `major_record`.
 
 #### Event Name Conventions
 
@@ -466,12 +471,13 @@ Applied to all standalone aircraft-related viewsets (before `EventLoggingMixin` 
 | `ADComplianceViewSet` | `'aircraft'` |
 | `ConsumableRecordViewSet` | `'aircraft'` |
 | `AircraftNoteViewSet` | `'aircraft'` |
+| `MajorRepairAlterationViewSet` | `'aircraft'` |
 
 #### AircraftViewSet Permission Routing
 
 `AircraftViewSet.get_permissions()` routes per-action:
 - `create` → `IsAuthenticated` (any user; auto-assigned as owner)
-- `update`, `destroy`, `components`, `ads`, `compliance`, `inspections`, `manage_roles`, `toggle_sharing`, `regenerate_share_token` → `IsAircraftOwnerOrAdmin`
+- `update`, `destroy`, `components`, `ads`, `compliance`, `inspections`, `major_records`, `manage_roles`, `toggle_sharing`, `regenerate_share_token` → `IsAircraftOwnerOrAdmin`
 - `update_hours`, `squawks`, `notes`, `oil_records`, `fuel_records` → `IsAircraftPilotOrAbove`
 - `list`, `retrieve`, `summary`, `documents`, `events` → `IsAircraftPilotOrAbove`
 
@@ -667,9 +673,9 @@ The API uses plural nouns consistently for all collection endpoints:
 - `/api/components/`, `/api/component-types/`
 - `/api/documents/`, `/api/document-collections/`, `/api/document-images/`
 - `/api/logbook-entries/`, `/api/inspection-types/`, `/api/inspections/`
-- `/api/ads/`, `/api/ad-compliances/`, `/api/stcs/`
+- `/api/ads/`, `/api/ad-compliances/`, `/api/major-records/`
 
-Custom actions use snake_case: `update_hours`, `reset_service`, `manage_roles`, `toggle_sharing`, `regenerate_share_token`
+Custom actions use snake_case: `update_hours`, `reset_service`, `manage_roles`, `toggle_sharing`, `regenerate_share_token`, `major_records`
 
 Public (unauthenticated) endpoints:
 - `/shared/<uuid:share_token>/` — Read-only HTML view

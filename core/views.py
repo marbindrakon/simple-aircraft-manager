@@ -44,6 +44,7 @@ from core.serializers import (
 from health.models import (
     Component, LogbookEntry, Squawk, Document, DocumentCollection,
     ConsumableRecord, AD, ADCompliance, InspectionType, InspectionRecord,
+    MajorRepairAlteration,
 )
 from health.serializers import (
     ComponentSerializer, ComponentCreateUpdateSerializer,
@@ -55,6 +56,7 @@ from health.serializers import (
     ADSerializer,
     InspectionTypeSerializer, InspectionTypeNestedSerializer,
     InspectionRecordNestedSerializer,
+    MajorRepairAlterationNestedSerializer,
 )
 from health.services import (
     end_of_month_after, ad_compliance_status, inspection_compliance_status,
@@ -74,7 +76,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated()]
         if self.action in ('update', 'partial_update', 'destroy',
                            'components', 'remove_ad', 'compliance',
-                           'remove_inspection_type',
+                           'remove_inspection_type', 'major_records',
                            'manage_roles', 'toggle_sharing', 'regenerate_share_token'):
             return [IsAuthenticated(), IsAircraftOwnerOrAdmin()]
         # ADs and inspections: GET is readable by pilots, POST/DELETE requires owner
@@ -603,6 +605,33 @@ class AircraftViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_201_CREATED
                 )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get', 'post'], url_path='major_records')
+    def major_records(self, request, pk=None):
+        """
+        Get or create major repair/alteration records for an aircraft.
+        GET  /api/aircraft/{id}/major_records/
+        POST /api/aircraft/{id}/major_records/
+        """
+        aircraft = self.get_object()
+
+        if request.method == 'GET':
+            records = MajorRepairAlteration.objects.filter(aircraft=aircraft)
+            serializer = MajorRepairAlterationNestedSerializer(records, many=True)
+            return Response(serializer.data)
+
+        data = request.data.copy()
+        data['aircraft'] = aircraft.id
+        serializer = MajorRepairAlterationNestedSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        record = serializer.save()
+        log_event(aircraft, 'major_record',
+                  f'{record.get_record_type_display()} created: {record.title}',
+                  user=request.user)
+        return Response(
+            MajorRepairAlterationNestedSerializer(record).data,
+            status=status.HTTP_201_CREATED,
+        )
 
     @action(detail=True, methods=['get'])
     def events(self, request, pk=None):
@@ -1266,7 +1295,7 @@ class PublicAircraftSummaryAPI(View):
                 context={'request': drf_request}
             ).data,
             'recent_logs': LogbookEntrySerializer(
-                aircraft.logbook_entries.order_by('-date')[:10],
+                aircraft.logbook_entries.order_by('-date'),
                 many=True, context={'request': drf_request}
             ).data,
             'active_squawks': SquawkNestedSerializer(
@@ -1304,6 +1333,10 @@ class PublicAircraftSummaryAPI(View):
                 for col in collections
             ],
             'documents': DocumentNestedSerializer(uncollected_docs, many=True).data,
+            'major_records': MajorRepairAlterationNestedSerializer(
+                MajorRepairAlteration.objects.filter(aircraft=aircraft),
+                many=True
+            ).data,
         }
 
         # Build set of publicly visible document IDs

@@ -9,14 +9,14 @@ from core.events import log_event
 from core.mixins import AircraftScopedMixin, EventLoggingMixin
 from health.models import (
     ComponentType, Component, DocumentCollection, Document, DocumentImage,
-    LogbookEntry, Squawk, InspectionType, AD, STCApplication,
+    LogbookEntry, Squawk, InspectionType, AD, MajorRepairAlteration,
     InspectionRecord, ADCompliance, ConsumableRecord,
 )
 from health.serializers import (
     ComponentTypeSerializer, ComponentSerializer, ComponentCreateUpdateSerializer,
     DocumentCollectionSerializer, DocumentSerializer, DocumentImageSerializer,
     LogbookEntrySerializer, SquawkSerializer, SquawkCreateUpdateSerializer,
-    InspectionTypeSerializer, ADSerializer, STCApplicationSerializer,
+    InspectionTypeSerializer, ADSerializer, MajorRepairAlterationNestedSerializer,
     InspectionRecordSerializer, InspectionRecordNestedSerializer,
     ADComplianceSerializer, ADComplianceNestedSerializer,
     ConsumableRecordNestedSerializer, ConsumableRecordCreateSerializer,
@@ -159,14 +159,14 @@ class ADViewSet(viewsets.ModelViewSet):
             return [IsAdminUser()]
         return [IsAuthenticated()]
 
-class STCApplicationViewSet(viewsets.ModelViewSet):
-    queryset = STCApplication.objects.all()
-    serializer_class = STCApplicationSerializer
-
-    def get_permissions(self):
-        if self.action in ('create', 'update', 'partial_update', 'destroy'):
-            return [IsAdminUser()]
-        return [IsAuthenticated()]
+class MajorRepairAlterationViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelViewSet):
+    queryset = MajorRepairAlteration.objects.all()
+    serializer_class = MajorRepairAlterationNestedSerializer
+    event_category = 'major_record'
+    aircraft_fk_path = 'aircraft'
+    event_name_created = 'Major record created'
+    event_name_updated = 'Major record updated'
+    event_name_deleted = 'Major record deleted'
 
 class InspectionRecordViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelViewSet):
     queryset = InspectionRecord.objects.all().order_by('-date')

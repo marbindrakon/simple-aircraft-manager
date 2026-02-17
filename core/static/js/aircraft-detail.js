@@ -9,6 +9,7 @@ function aircraftDetail(aircraftId, shareToken) {
         logbookMixin(),
         adsMixin(),
         inspectionsMixin(),
+        majorRecordsMixin(),
         documentsMixin(),
         eventsMixin(),
         rolesMixin(),
@@ -75,6 +76,9 @@ function aircraftDetail(aircraftId, shareToken) {
                     }
                     if (tab === 'inspections' && !this.inspectionsLoaded) {
                         this.loadInspections();
+                    }
+                    if (tab === 'major-records' && !this.majorRecordsLoaded) {
+                        this.loadMajorRecords();
                     }
                     if (tab === 'roles' && !this.rolesLoaded) {
                         this.loadRoles();
@@ -149,6 +153,9 @@ function aircraftDetail(aircraftId, shareToken) {
 
                 this.logbookEntries = this.recentLogs;
                 this.logbookLoaded = true;
+
+                this.majorRecords = data.major_records || [];
+                this.majorRecordsLoaded = true;
 
                 this.rolesLoaded = true;
                 this.eventsLoaded = true;

@@ -63,6 +63,7 @@ EVENT_CATEGORIES = (
     ('document', 'Document'),
     ('aircraft', 'Aircraft'),
     ('role', 'Role'),
+    ('major_record', 'Major Repair/Alteration'),
 )
 
 class AircraftEvent(models.Model):

@@ -2,7 +2,7 @@ import os
 
 from rest_framework import serializers
 
-from .models import ComponentType, Component, DocumentCollection, Document, DocumentImage, LogbookEntry, Squawk, InspectionType, AD, STCApplication, InspectionRecord, ADCompliance, ConsumableRecord
+from .models import ComponentType, Component, DocumentCollection, Document, DocumentImage, LogbookEntry, Squawk, InspectionType, AD, MajorRepairAlteration, InspectionRecord, ADCompliance, ConsumableRecord
 
 ALLOWED_UPLOAD_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.pdf', '.txt'}
 ALLOWED_UPLOAD_CONTENT_TYPES = {
@@ -70,7 +70,6 @@ class ComponentSerializer(serializers.HyperlinkedModelSerializer):
                 'squawks',
                 'applicable_inspections',
                 'ads',
-                'stcs',
                 'inspections',
                 'ad_compliance',
                 ]
@@ -311,12 +310,34 @@ class ADComplianceNestedSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id']
 
-class STCApplicationSerializer(serializers.HyperlinkedModelSerializer):
-    id = serializers.UUIDField(read_only=True)
+class MajorRepairAlterationNestedSerializer(serializers.ModelSerializer):
+    record_type_display = serializers.CharField(source='get_record_type_display', read_only=True)
+    component_name = serializers.SerializerMethodField()
+    form_337_document_name = serializers.CharField(source='form_337_document.name', read_only=True, default=None)
+    stc_document_name = serializers.CharField(source='stc_document.name', read_only=True, default=None)
+    logbook_entry_date = serializers.DateField(source='logbook_entry.date', read_only=True, default=None)
 
     class Meta:
-        model = STCApplication
-        fields = '__all__'
+        model = MajorRepairAlteration
+        fields = [
+            'id', 'aircraft', 'record_type', 'record_type_display',
+            'title', 'description', 'date_performed', 'performed_by',
+            'component', 'component_name',
+            'form_337_document', 'form_337_document_name',
+            'stc_number', 'stc_holder', 'stc_document', 'stc_document_name',
+            'logbook_entry', 'logbook_entry_date',
+            'aircraft_hours', 'notes', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'record_type_display', 'component_name',
+                            'form_337_document_name', 'stc_document_name', 'logbook_entry_date']
+
+    def get_component_name(self, obj):
+        if obj.component:
+            name = obj.component.component_type.name
+            if obj.component.install_location:
+                name += f" ({obj.component.install_location})"
+            return name
+        return None
 
 class InspectionRecordSerializer(serializers.HyperlinkedModelSerializer):
     id = serializers.UUIDField(read_only=True)

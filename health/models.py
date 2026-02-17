@@ -256,25 +256,54 @@ class AD(models.Model):
     def __str__(self):
         return self.name
 
-class STCApplication(models.Model):
-    id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=254)
-    short_description = models.CharField(max_length=254)
-    date_applied = models.DateField()
-    aircraft = models.ForeignKey(core_models.Aircraft, related_name='stcs', on_delete=models.CASCADE, blank=True, null=True)
-    component = models.ForeignKey(Component, related_name='stcs', blank=True, null=True, on_delete=models.CASCADE)
-    logbook_entry = models.ForeignKey(LogbookEntry, related_name='stcs', blank=True, null=True, on_delete=models.CASCADE)
-    documents = models.ManyToManyField(Document, related_name='stcs', blank=True)
+MAJOR_RECORD_TYPES = (
+    ('repair', 'Major Repair'),
+    ('alteration', 'Major Alteration'),
+)
+
+class MajorRepairAlteration(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    aircraft = models.ForeignKey(core_models.Aircraft, related_name='major_records', on_delete=models.CASCADE)
+    record_type = models.CharField(max_length=20, choices=MAJOR_RECORD_TYPES)
+
+    # Description
+    title = models.CharField(max_length=254, help_text="Brief title, e.g. 'Longeron repair' or 'STC SA00001SE installation'")
+    description = models.TextField(blank=True, help_text="Detailed description of the work performed")
+    date_performed = models.DateField(help_text="Date the repair or alteration was completed")
+    performed_by = models.CharField(max_length=254, blank=True, help_text="Mechanic, shop, or IA who performed the work")
+
+    # What was worked on
+    component = models.ForeignKey(Component, related_name='major_records', blank=True, null=True, on_delete=models.SET_NULL,
+                                  help_text="Component this applies to (engine, prop, etc.), if applicable")
+
+    # Form 337 document
+    form_337_document = models.ForeignKey(Document, related_name='form_337_records', blank=True, null=True, on_delete=models.SET_NULL,
+                                          help_text="Scanned/uploaded Form 337 document")
+
+    # STC info (alterations only, optional)
+    stc_number = models.CharField(max_length=100, blank=True, help_text="STC number (e.g. SA00001SE), if this alteration was done under an STC")
+    stc_holder = models.CharField(max_length=254, blank=True, help_text="STC holder / manufacturer name")
+    stc_document = models.ForeignKey(Document, related_name='stc_records', blank=True, null=True, on_delete=models.SET_NULL,
+                                     help_text="STC paperwork / data package document")
+
+    # Linkages
+    logbook_entry = models.ForeignKey(LogbookEntry, related_name='major_records', blank=True, null=True, on_delete=models.SET_NULL,
+                                      help_text="Associated logbook entry recording this work")
+    aircraft_hours = models.DecimalField(max_digits=8, decimal_places=1, blank=True, null=True,
+                                         help_text="Aircraft total hours at time of work")
+
+    # Metadata
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date_performed', '-created_at']
 
     def __str__(self):
-        ret_string = ""
-        if self.aircraft:
-            ret_string += f"{self.aircraft.tail_number}"
-        if self.component:
-            ret_string += f"{self.component.component_type}"
-        ret_string += f" - {self.name}"
-        ret_string += f" - {self.short_description}"
-        return ret_string
+        prefix = "Repair" if self.record_type == 'repair' else "Alteration"
+        tail = self.aircraft.tail_number if self.aircraft else "?"
+        return f"{prefix}: {self.title} ({tail})"
 
 class InspectionRecord(models.Model):
     id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)

@@ -122,6 +122,11 @@
                         </template>
                     </button>
                 </li>
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'major-records' }">
+                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'major-records'">
+                        <span class="pf-v5-c-tabs__item-text">Repairs &amp; Alterations</span>
+                    </button>
+                </li>
                 <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'oil' }">
                     <button class="pf-v5-c-tabs__link" @click="activeTab = 'oil'">
                         <span class="pf-v5-c-tabs__item-text">Oil</span>
@@ -919,6 +924,397 @@
                         </tbody>
                     </table>
                 </template>
+            </div>
+        </div>
+
+        <!-- Repairs & Alterations Tab -->
+        <div x-show="activeTab === 'major-records'" class="pf-v5-c-page__main-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>Repairs &amp; Alterations</h2>
+                <div x-show="isOwner" style="display: flex; gap: 0.5rem;">
+                    <button class="pf-v5-c-button pf-m-primary" @click="openMajorRecordModal('repair')">
+                        <i class="fas fa-plus"></i> Add Repair
+                    </button>
+                    <button class="pf-v5-c-button pf-m-secondary" @click="openMajorRecordModal('alteration')">
+                        <i class="fas fa-plus"></i> Add Alteration
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div x-show="!majorRecordsLoaded" class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
+                    <h2 class="pf-v5-c-title pf-m-lg">Loading records...</h2>
+                </div>
+            </div>
+
+            <div x-show="majorRecordsLoaded" x-cloak>
+                <!-- Filter toggle -->
+                <template x-if="majorRecords.length > 0">
+                    <div class="pf-v5-c-toggle-group" style="margin-bottom: 1rem;">
+                        <div class="pf-v5-c-toggle-group__item">
+                            <button class="pf-v5-c-toggle-group__button" :class="{ 'pf-m-selected': majorRecordFilter === 'all' }" @click="majorRecordFilter = 'all'">
+                                <span class="pf-v5-c-toggle-group__text">All</span>
+                            </button>
+                        </div>
+                        <div class="pf-v5-c-toggle-group__item">
+                            <button class="pf-v5-c-toggle-group__button" :class="{ 'pf-m-selected': majorRecordFilter === 'repair' }" @click="majorRecordFilter = 'repair'">
+                                <span class="pf-v5-c-toggle-group__text">Repairs</span>
+                            </button>
+                        </div>
+                        <div class="pf-v5-c-toggle-group__item">
+                            <button class="pf-v5-c-toggle-group__button" :class="{ 'pf-m-selected': majorRecordFilter === 'alteration' }" @click="majorRecordFilter = 'alteration'">
+                                <span class="pf-v5-c-toggle-group__text">Alterations</span>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Empty State -->
+                <template x-if="majorRecords.length === 0">
+                    <div class="pf-v5-c-empty-state">
+                        <div class="pf-v5-c-empty-state__content">
+                            <i class="fas fa-wrench" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                            <h2 class="pf-v5-c-title pf-m-lg">No Major Repairs or Alterations</h2>
+                            <div class="pf-v5-c-empty-state__body">
+                                No major repairs or alterations have been recorded for this aircraft.
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Major Repairs Section -->
+                <template x-if="majorRecordFilter !== 'alteration' && majorRepairs.length > 0">
+                    <div style="margin-bottom: 2rem;">
+                        <h3 style="margin-bottom: 0.75rem; color: var(--pf-v5-global--Color--200);">Major Repairs</h3>
+                        <table class="pf-v5-c-table pf-m-grid-md pf-m-compact">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Date</th>
+                                    <th>Component</th>
+                                    <th>Performed By</th>
+                                    <th>Related</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="record in majorRepairs" :key="record.id">
+                                    <tr>
+                                        <td>
+                                            <span x-text="record.title"></span>
+                                            <template x-if="record.description">
+                                                <div style="font-size: 0.8rem; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;" x-text="record.description.substring(0, 100) + (record.description.length > 100 ? '...' : '')"></div>
+                                            </template>
+                                        </td>
+                                        <td x-text="formatDate(record.date_performed)"></td>
+                                        <td x-text="record.component_name || '-'"></td>
+                                        <td x-text="record.performed_by || '-'"></td>
+                                        <td>
+                                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                                <template x-if="record.logbook_entry">
+                                                    <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewMajorRecordLogEntry(record)" title="View Logbook Entry" style="font-size: 0.85rem; padding: 0;">
+                                                        <i class="fas fa-book" style="margin-right: 0.25rem;"></i>Logbook
+                                                    </button>
+                                                </template>
+                                                <template x-if="canViewDocument(record.form_337_document)">
+                                                    <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewMajorRecordDocument(record.form_337_document, record.form_337_document_name || 'Form 337')" title="View Form 337 Document" style="font-size: 0.85rem; padding: 0;">
+                                                        <i class="fas fa-file-alt" style="margin-right: 0.25rem;"></i><span x-text="'Form 337'"></span>
+                                                    </button>
+                                                </template>
+                                                <template x-if="!record.logbook_entry && !canViewDocument(record.form_337_document)">
+                                                    <span style="color: var(--pf-v5-global--Color--200);">-</span>
+                                                </template>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div style="display: flex; gap: 0.25rem;">
+                                                <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                                        @click="editMajorRecord(record)"
+                                                        title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="pf-v5-c-button pf-m-plain pf-m-danger" x-show="isOwner"
+                                                        @click="deleteMajorRecord(record)"
+                                                        title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+
+                <!-- Major Alterations Section -->
+                <template x-if="majorRecordFilter !== 'repair' && majorAlterations.length > 0">
+                    <div>
+                        <h3 style="margin-bottom: 0.75rem; color: var(--pf-v5-global--Color--200);">Major Alterations</h3>
+                        <table class="pf-v5-c-table pf-m-grid-md pf-m-compact">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Date</th>
+                                    <th>Component</th>
+                                    <th>STC #</th>
+                                    <th>STC Holder</th>
+                                    <th>Related</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="record in majorAlterations" :key="record.id">
+                                    <tr>
+                                        <td>
+                                            <span x-text="record.title"></span>
+                                            <template x-if="record.description">
+                                                <div style="font-size: 0.8rem; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;" x-text="record.description.substring(0, 100) + (record.description.length > 100 ? '...' : '')"></div>
+                                            </template>
+                                        </td>
+                                        <td x-text="formatDate(record.date_performed)"></td>
+                                        <td x-text="record.component_name || '-'"></td>
+                                        <td x-text="record.stc_number || '-'"></td>
+                                        <td x-text="record.stc_holder || '-'"></td>
+                                        <td>
+                                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                                <template x-if="record.logbook_entry">
+                                                    <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewMajorRecordLogEntry(record)" title="View Logbook Entry" style="font-size: 0.85rem; padding: 0;">
+                                                        <i class="fas fa-book" style="margin-right: 0.25rem;"></i>Logbook
+                                                    </button>
+                                                </template>
+                                                <template x-if="canViewDocument(record.form_337_document)">
+                                                    <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewMajorRecordDocument(record.form_337_document, record.form_337_document_name || 'Form 337')" title="View Form 337 Document" style="font-size: 0.85rem; padding: 0;">
+                                                        <i class="fas fa-file-alt" style="margin-right: 0.25rem;"></i><span x-text="'Form 337'"></span>
+                                                    </button>
+                                                </template>
+                                                <template x-if="canViewDocument(record.stc_document)">
+                                                    <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewMajorRecordDocument(record.stc_document, record.stc_document_name || 'STC Document')" title="View STC Document" style="font-size: 0.85rem; padding: 0;">
+                                                        <i class="fas fa-certificate" style="margin-right: 0.25rem;"></i><span x-text="'STC Doc'"></span>
+                                                    </button>
+                                                </template>
+                                                <template x-if="!record.logbook_entry && !canViewDocument(record.form_337_document) && !canViewDocument(record.stc_document)">
+                                                    <span style="color: var(--pf-v5-global--Color--200);">-</span>
+                                                </template>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div style="display: flex; gap: 0.25rem;">
+                                                <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                                        @click="editMajorRecord(record)"
+                                                        title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="pf-v5-c-button pf-m-plain pf-m-danger" x-show="isOwner"
+                                                        @click="deleteMajorRecord(record)"
+                                                        title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+
+                <!-- Filtered empty state -->
+                <template x-if="majorRecords.length > 0 && filteredMajorRecords.length === 0">
+                    <div class="pf-v5-c-empty-state">
+                        <div class="pf-v5-c-empty-state__content">
+                            <h2 class="pf-v5-c-title pf-m-lg" x-text="majorRecordFilter === 'repair' ? 'No Major Repairs' : 'No Major Alterations'"></h2>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Major Record Create/Edit Modal -->
+        <div class="pf-v5-c-backdrop" x-show="majorRecordModalOpen" x-cloak>
+            <div class="pf-v5-c-modal-box" role="dialog" aria-modal="true" style="width: 700px;">
+                <div class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title" x-text="editingMajorRecord ? 'Edit Record' : (majorRecordForm.record_type === 'repair' ? 'Add Major Repair' : 'Add Major Alteration')"></h1>
+                </div>
+                <div class="pf-v5-c-modal-box__body">
+                    <form @submit.prevent="saveMajorRecord()" class="pf-v5-c-form">
+                        <!-- Record Type -->
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label">
+                                <span class="pf-v5-c-form__label-text">Record Type</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <select class="pf-v5-c-form-control" x-model="majorRecordForm.record_type">
+                                    <option value="repair">Major Repair</option>
+                                    <option value="alteration">Major Alteration</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Title -->
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label">
+                                <span class="pf-v5-c-form__label-text">Title</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true">&#42;</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input class="pf-v5-c-form-control" type="text" x-model="majorRecordForm.title" required
+                                       placeholder="e.g. Longeron repair, STC SA00001SE installation">
+                            </div>
+                        </div>
+
+                        <!-- Date Performed -->
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label">
+                                <span class="pf-v5-c-form__label-text">Date Performed</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true">&#42;</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input class="pf-v5-c-form-control" type="date" x-model="majorRecordForm.date_performed" required>
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label">
+                                <span class="pf-v5-c-form__label-text">Description</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <textarea class="pf-v5-c-form-control" x-model="majorRecordForm.description" rows="3"
+                                          placeholder="Detailed description of the work performed"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Performed By -->
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label">
+                                <span class="pf-v5-c-form__label-text">Performed By</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <input class="pf-v5-c-form-control" type="text" x-model="majorRecordForm.performed_by"
+                                       placeholder="Mechanic, shop, or IA">
+                            </div>
+                        </div>
+
+                        <!-- Two-column row: Component + Aircraft Hours -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <!-- Component -->
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label">
+                                    <span class="pf-v5-c-form__label-text">Component</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <select class="pf-v5-c-form-control" x-model="majorRecordForm.component">
+                                        <option value="">-- None --</option>
+                                        <template x-for="comp in components" :key="comp.id">
+                                            <option :value="comp.id" x-text="comp.component_type_name + (comp.install_location ? ' (' + comp.install_location + ')' : '')"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Aircraft Hours -->
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label">
+                                    <span class="pf-v5-c-form__label-text">Aircraft Hours</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input class="pf-v5-c-form-control" type="number" step="0.1" x-model="majorRecordForm.aircraft_hours"
+                                           placeholder="Total hours at time of work">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form 337 Document -->
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label">
+                                <span class="pf-v5-c-form__label-text">Form 337 Document</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <select class="pf-v5-c-form-control" x-model="majorRecordForm.form_337_document">
+                                    <option value="">-- None --</option>
+                                    <template x-for="doc in (documentCollections || []).flatMap(c => c.documents).concat(uncollectedDocuments || [])" :key="doc.id">
+                                        <option :value="doc.id" x-text="doc.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- STC fields (shown only for alterations) -->
+                        <template x-if="majorRecordForm.record_type === 'alteration'">
+                            <div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div class="pf-v5-c-form__group">
+                                        <label class="pf-v5-c-form__label">
+                                            <span class="pf-v5-c-form__label-text">STC Number</span>
+                                        </label>
+                                        <div class="pf-v5-c-form__group-control">
+                                            <input class="pf-v5-c-form-control" type="text" x-model="majorRecordForm.stc_number"
+                                                   placeholder="e.g. SA00001SE">
+                                        </div>
+                                    </div>
+                                    <div class="pf-v5-c-form__group">
+                                        <label class="pf-v5-c-form__label">
+                                            <span class="pf-v5-c-form__label-text">STC Holder</span>
+                                        </label>
+                                        <div class="pf-v5-c-form__group-control">
+                                            <input class="pf-v5-c-form-control" type="text" x-model="majorRecordForm.stc_holder"
+                                                   placeholder="STC holder / manufacturer">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="pf-v5-c-form__group">
+                                    <label class="pf-v5-c-form__label">
+                                        <span class="pf-v5-c-form__label-text">STC Document</span>
+                                    </label>
+                                    <div class="pf-v5-c-form__group-control">
+                                        <select class="pf-v5-c-form-control" x-model="majorRecordForm.stc_document">
+                                            <option value="">-- None --</option>
+                                            <template x-for="doc in (documentCollections || []).flatMap(c => c.documents).concat(uncollectedDocuments || [])" :key="doc.id">
+                                                <option :value="doc.id" x-text="doc.name"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Logbook Entry -->
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label">
+                                <span class="pf-v5-c-form__label-text">Logbook Entry</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <select class="pf-v5-c-form-control" x-model="majorRecordForm.logbook_entry">
+                                    <option value="">-- None --</option>
+                                    <template x-for="entry in logbookEntries" :key="entry.id">
+                                        <option :value="entry.id" x-text="formatDate(entry.date) + ' - ' + (entry.text || '').substring(0, 60)"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label">
+                                <span class="pf-v5-c-form__label-text">Notes</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <textarea class="pf-v5-c-form-control" x-model="majorRecordForm.notes" rows="2"
+                                          placeholder="Additional notes"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" @click="saveMajorRecord()" :disabled="majorRecordSubmitting || !majorRecordForm.title || !majorRecordForm.date_performed">
+                        <span x-show="majorRecordSubmitting" class="pf-v5-c-spinner pf-m-sm" role="progressbar"><span class="pf-v5-c-spinner__clipper"></span></span>
+                        <span x-text="editingMajorRecord ? 'Save Changes' : 'Create'"></span>
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeMajorRecordModal()">Cancel</button>
+                </footer>
             </div>
         </div>
 
@@ -3358,6 +3754,7 @@
 <script src="{% static 'js/aircraft-detail-logbook.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-ads.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-inspections.js' %}"></script>
+<script src="{% static 'js/aircraft-detail-major-records.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-documents.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-events.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-roles.js' %}"></script>
