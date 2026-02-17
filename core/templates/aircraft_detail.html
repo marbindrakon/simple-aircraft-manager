@@ -2349,7 +2349,7 @@
                                     </dd>
                                 </div>
                             </template>
-                            <template x-if="logEntryDetail.log_image">
+                            <template x-if="logEntryDetail.log_image && (!isPublicView || logEntryDetail.log_image_shared)">
                                 <div class="pf-v5-c-description-list__group">
                                     <dt class="pf-v5-c-description-list__term">Attached Document</dt>
                                     <dd class="pf-v5-c-description-list__description">
