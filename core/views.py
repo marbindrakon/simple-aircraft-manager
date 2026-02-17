@@ -1366,6 +1366,18 @@ class PublicAircraftSummaryAPI(View):
         for d in uncollected_docs:
             visible_doc_ids.add(str(d.id))
 
+        # Strip non-public document UUIDs from major records so private document
+        # IDs are not disclosed to anonymous viewers of a share link.
+        for record in summary_data['major_records']:
+            for doc_field, name_field in (
+                ('form_337_document', 'form_337_document_name'),
+                ('stc_document', 'stc_document_name'),
+            ):
+                doc_id = record.get(doc_field)
+                if doc_id and str(doc_id) not in visible_doc_ids:
+                    record[doc_field] = None
+                    record[name_field] = None
+
         # Annotate linked logbook entries with document visibility for public view
         for log_entry in summary_data['linked_logbook_entries']:
             # log_image is a hyperlinked URL — extract the document ID
