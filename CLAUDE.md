@@ -157,13 +157,14 @@ def major_records(self, request, pk=None):
 def manage_roles(self, request, pk=None):
     # List, add/update, or remove role assignments (owner-only)
 
-@action(detail=True, methods=['post'], url_path='toggle_sharing')
-def toggle_sharing(self, request, pk=None):
-    # Toggle public sharing, generates new token on enable (owner-only)
+@action(detail=True, methods=['get', 'post'], url_path='share_tokens')
+def manage_share_tokens(self, request, pk=None):
+    # List or create share tokens (owner-only for POST)
 
-@action(detail=True, methods=['post'], url_path='regenerate_share_token')
-def regenerate_share_token(self, request, pk=None):
-    # Regenerate share token, invalidating old links (owner-only)
+@action(detail=True, methods=['delete'],
+        url_path=r'share_tokens/(?P<token_id>[^/.]+)')
+def delete_share_token(self, request, pk=None, token_id=None):
+    # Revoke a share token by ID (owner-only)
 ```
 
 ### Airworthiness Calculation
@@ -426,8 +427,9 @@ Per-aircraft access control with three effective roles: **Admin** (Django `is_st
 #### Data Model
 
 - **`AircraftRole`** (`core/models.py`) — Links a user to an aircraft with a role (`owner` or `pilot`). Unique constraint on `(aircraft, user)`.
-- **Aircraft sharing fields**: `public_sharing_enabled` (bool), `share_token` (UUID, unique), `share_token_expires_at` (nullable datetime).
-- **`'role'`** event category for audit logging of role changes and sharing toggles.
+- **`AircraftShareToken`** (`core/models.py`) — A shareable link token tied to an aircraft. Fields: `token` (UUID, unique), `label` (optional), `privilege` (`'status'` or `'maintenance'`), `expires_at` (nullable), `created_by`. Max 10 per aircraft.
+- **`AircraftNote.public`** — Boolean flag (default `False`). Only notes with `public=True` are exposed through any share link, regardless of privilege level.
+- **`'role'`** event category for audit logging of role changes and sharing actions.
 
 #### Access Matrix
 
@@ -477,7 +479,7 @@ Applied to all standalone aircraft-related viewsets (before `EventLoggingMixin` 
 
 `AircraftViewSet.get_permissions()` routes per-action:
 - `create` → `IsAuthenticated` (any user; auto-assigned as owner)
-- `update`, `destroy`, `components`, `ads`, `compliance`, `inspections`, `major_records`, `manage_roles`, `toggle_sharing`, `regenerate_share_token` → `IsAircraftOwnerOrAdmin`
+- `update`, `destroy`, `components`, `ads`, `compliance`, `inspections`, `major_records`, `manage_roles`, `manage_share_tokens`, `delete_share_token` → `IsAircraftOwnerOrAdmin`
 - `update_hours`, `squawks`, `notes`, `oil_records`, `fuel_records` → `IsAircraftPilotOrAbove`
 - `list`, `retrieve`, `summary`, `documents`, `events` → `IsAircraftPilotOrAbove`
 
@@ -488,28 +490,48 @@ Applied to all standalone aircraft-related viewsets (before `EventLoggingMixin` 
 #### New Custom Actions on AircraftViewSet
 
 - **`manage_roles`** (detail, GET/POST/DELETE) — Owner-only. Safeguards: last-owner protection, self-removal prevention, uniform error responses to prevent user enumeration. Accepts user by ID only (not username).
-- **`toggle_sharing`** (detail, POST) — Owner-only. Generates new `share_token` every time sharing is enabled (invalidates old links). Optional `expires_in_days` body param.
-- **`regenerate_share_token`** (detail, POST) — Owner-only. New token, preserves expiry setting.
+- **`manage_share_tokens`** (detail, GET/POST, url_path `share_tokens`) — Owner-only. GET lists all tokens; POST creates a new token. Body: `privilege` (required: `'status'`|`'maintenance'`), `label` (optional), `expires_in_days` (optional). Max 10 tokens per aircraft.
+- **`delete_share_token`** (detail, DELETE, url_path `share_tokens/<token_id>`) — Owner-only. Revokes the token immediately; the public URL returns 404 thereafter.
 
 #### Public Sharing
 
-- **`/shared/<uuid:share_token>/`** — `PublicAircraftView` renders read-only template. No login required. Constant-time token lookup.
-- **`/api/shared/<uuid:share_token>/`** — `PublicAircraftSummaryAPI` returns JSON summary. No CSRF/auth. Strips sensitive fields (`share_token`, `share_url`, `roles`).
-- Token validation: checks `public_sharing_enabled=True` and `share_token_expires_at` is null or in the future; returns 404 otherwise.
-- Frontend: Uses the same `aircraft-detail.js` → `aircraftDetail(aircraftId, shareToken)` with `base_public.html` as base template. The `isPublicView` getter disables write actions and events.
+- **`/shared/<uuid:token>/`** — `PublicAircraftView` renders read-only template. No login required. Looks up `AircraftShareToken` by `token` field and passes `privilege_level` to template context.
+- **`/api/shared/<uuid:token>/`** — `PublicAircraftSummaryAPI` returns JSON summary filtered by privilege level. No CSRF/auth. Strips `has_share_links` and `roles`; sets `user_role=None`.
+- **`/api/shared/<uuid:token>/logbook-entries/`** — `PublicLogbookEntriesAPI`. Returns 404 for `status` privilege tokens.
+- Token validation: looks up `AircraftShareToken` by `token` field; returns 404 if not found or `expires_at` is in the past.
+- Frontend: Uses `aircraftDetail(aircraftId, shareToken, privilegeLevel)` with `base_public.html`. `isPublicView` getter disables write actions; `isMaintenance` getter controls visibility of history, logbook, major records tabs/buttons.
+
+#### Privilege Levels
+
+| Data | `status` | `maintenance` |
+|------|----------|--------------|
+| Overview, components, airworthiness | Yes | Yes |
+| Active squawks | Yes | Yes |
+| AD/inspection current status + `latest_record` | Yes | Yes |
+| Oil & fuel records, public documents | Yes | Yes |
+| Notes (`public=True` only) | Yes | Yes |
+| AD compliance history | No | Yes |
+| Inspection history | No | Yes |
+| Resolved squawks | No | Yes |
+| Major repairs & alterations | No | Yes |
+| Full logbook (paginated) | No | Yes |
+| Linked logbook entries | No | Yes |
 
 #### Serializer Additions
 
 - **`UserRoleMixin`** — Adds `get_user_role()` method, used by both `AircraftSerializer` and `AircraftListSerializer` to expose `user_role` field.
-- **`AircraftSerializer`**: Added `user_role`, `public_sharing_enabled`, `share_token` (owner-only), `share_url` (owner-only). `roles` declared as `PrimaryKeyRelatedField` to prevent depth=1 User FK expansion.
-- **`AircraftListSerializer`**: Added `user_role`, `public_sharing_enabled`.
+- **`AircraftSerializer`**: Includes `user_role`, `has_share_links` (owner/admin only — `True` if any `AircraftShareToken` exists). `roles` declared as `PrimaryKeyRelatedField` to prevent depth=1 User FK expansion.
+- **`AircraftListSerializer`**: Includes `user_role`, `has_share_links`.
 - **`AircraftRoleSerializer`** — For `manage_roles` endpoint. Fields: `id`, `user`, `username`, `user_display`, `role`, `created_at`.
+- **`AircraftShareTokenSerializer`** — For `manage_share_tokens` endpoint. Fields: `id`, `label`, `privilege`, `expires_at`, `created_at`, `share_url` (computed). `token` UUID is never exposed to the API consumer.
 
 #### Frontend Role Guards
 
 The `aircraft-detail.js` core state object includes `get` properties (preserved by `mergeMixins()`):
 
 ```javascript
+get isPublicView() { return !!this._publicShareToken; },
+get isMaintenance() { return !this.isPublicView || this._privilegeLevel === 'maintenance'; },
 get userRole() { return this.aircraft?.user_role || null; },
 get isOwner() { return this.userRole === 'owner' || this.userRole === 'admin'; },
 get isPilot() { return this.userRole === 'pilot'; },
@@ -520,7 +542,7 @@ get canCreateConsumable() { return this.isOwner || this.isPilot; },
 get canCreateNote() { return this.isOwner || this.isPilot; },
 ```
 
-Template buttons use `x-show` directives (`x-show="isOwner"`, `x-show="canUpdateHours"`, etc.) to hide actions the user cannot perform. The API enforces permissions server-side regardless.
+Template buttons use `x-show` directives (`x-show="isOwner"`, `x-show="canUpdateHours"`, etc.) to hide actions the user cannot perform. `isMaintenance` guards the Logbook tab, Repairs & Alterations tab, compliance/inspection history buttons, and resolved squawks section in the public view. The API enforces permissions server-side regardless.
 
 Dashboard cards show a role badge and use `canUpdateHours(aircraft)` to guard the Update Hours button.
 
@@ -675,8 +697,9 @@ The API uses plural nouns consistently for all collection endpoints:
 - `/api/logbook-entries/`, `/api/inspection-types/`, `/api/inspections/`
 - `/api/ads/`, `/api/ad-compliances/`, `/api/major-records/`
 
-Custom actions use snake_case: `update_hours`, `reset_service`, `manage_roles`, `toggle_sharing`, `regenerate_share_token`, `major_records`
+Custom actions use snake_case: `update_hours`, `reset_service`, `manage_roles`, `manage_share_tokens`, `delete_share_token`, `major_records`
 
 Public (unauthenticated) endpoints:
-- `/shared/<uuid:share_token>/` — Read-only HTML view
-- `/api/shared/<uuid:share_token>/` — Read-only JSON summary
+- `/shared/<uuid:token>/` — Read-only HTML view (privilege level from token)
+- `/api/shared/<uuid:token>/` — Read-only JSON summary (filtered by privilege)
+- `/api/shared/<uuid:token>/logbook-entries/` — Paginated logbook (maintenance privilege only)

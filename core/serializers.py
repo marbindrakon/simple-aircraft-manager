@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Aircraft, AircraftNote, AircraftEvent, AircraftRole
+from .models import Aircraft, AircraftNote, AircraftEvent, AircraftRole, AircraftShareToken
 from health.services import calculate_airworthiness
 
 
@@ -26,11 +26,10 @@ class UserRoleMixin:
 class AircraftSerializer(AirworthinessMixin, UserRoleMixin, serializers.HyperlinkedModelSerializer):
     airworthiness = serializers.SerializerMethodField()
     user_role = serializers.SerializerMethodField()
+    has_share_links = serializers.SerializerMethodField()
     notes = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     events = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     roles = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    share_token = serializers.SerializerMethodField()
-    share_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Aircraft
@@ -49,9 +48,7 @@ class AircraftSerializer(AirworthinessMixin, UserRoleMixin, serializers.Hyperlin
                 'flight_time',
                 'airworthiness',
                 'user_role',
-                'public_sharing_enabled',
-                'share_token',
-                'share_url',
+                'has_share_links',
                 'notes',
                 'squawks',
                 'events',
@@ -66,26 +63,18 @@ class AircraftSerializer(AirworthinessMixin, UserRoleMixin, serializers.Hyperlin
                 ]
         depth = 1
 
-    def get_share_token(self, obj):
+    def get_has_share_links(self, obj):
         """Only visible to owners/admins."""
         role = self.get_user_role(obj)
         if role in ('owner', 'admin'):
-            return str(obj.share_token) if obj.share_token else None
-        return None
-
-    def get_share_url(self, obj):
-        """Only visible to owners/admins."""
-        role = self.get_user_role(obj)
-        if role in ('owner', 'admin') and obj.share_token and obj.public_sharing_enabled:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(f'/shared/{obj.share_token}/')
+            return obj.share_tokens.exists()
         return None
 
 
 class AircraftListSerializer(AirworthinessMixin, UserRoleMixin, serializers.HyperlinkedModelSerializer):
     airworthiness = serializers.SerializerMethodField()
     user_role = serializers.SerializerMethodField()
+    has_share_links = serializers.SerializerMethodField()
 
     class Meta:
         model = Aircraft
@@ -100,8 +89,14 @@ class AircraftListSerializer(AirworthinessMixin, UserRoleMixin, serializers.Hype
             'picture',
             'airworthiness',
             'user_role',
-            'public_sharing_enabled',
+            'has_share_links',
         ]
+
+    def get_has_share_links(self, obj):
+        role = self.get_user_role(obj)
+        if role in ('owner', 'admin'):
+            return obj.share_tokens.exists()
+        return None
 
 
 class AircraftNoteSerializer(serializers.HyperlinkedModelSerializer):
@@ -115,6 +110,7 @@ class AircraftNoteSerializer(serializers.HyperlinkedModelSerializer):
                 'edited_timestamp',
                 'added_by',
                 'text',
+                'public',
                 ]
 
 
@@ -132,6 +128,7 @@ class AircraftNoteNestedSerializer(serializers.ModelSerializer):
             'added_by',
             'added_by_username',
             'text',
+            'public',
         ]
 
 
@@ -139,8 +136,21 @@ class AircraftNoteCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating/updating notes"""
     class Meta:
         model = AircraftNote
-        fields = ['id', 'aircraft', 'text']
+        fields = ['id', 'aircraft', 'text', 'public']
         read_only_fields = ['id']
+
+
+class AircraftShareTokenSerializer(serializers.ModelSerializer):
+    share_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AircraftShareToken
+        fields = ['id', 'label', 'privilege', 'expires_at', 'created_at', 'share_url']
+        read_only_fields = ['id', 'created_at', 'share_url']
+
+    def get_share_url(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(f'/shared/{obj.token}/') if request else None
 
 
 class AircraftEventSerializer(serializers.HyperlinkedModelSerializer):

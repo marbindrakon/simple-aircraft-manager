@@ -5,7 +5,6 @@ import shutil
 import tarfile
 import tempfile
 import threading
-import uuid as uuid_mod
 import zipfile
 from datetime import date as date_cls, timedelta as td
 from decimal import Decimal
@@ -30,7 +29,7 @@ from rest_framework.views import APIView
 
 from core.events import log_event
 from core.mixins import AircraftScopedMixin, EventLoggingMixin
-from core.models import Aircraft, AircraftNote, AircraftEvent, AircraftRole
+from core.models import Aircraft, AircraftNote, AircraftEvent, AircraftRole, AircraftShareToken
 from core.permissions import (
     get_user_role, has_aircraft_permission,
     IsAircraftOwnerOrAdmin, IsAircraftPilotOrAbove,
@@ -39,7 +38,7 @@ from core.serializers import (
     AircraftSerializer, AircraftListSerializer, AircraftNoteSerializer,
     AircraftNoteNestedSerializer, AircraftNoteCreateUpdateSerializer,
     AircraftEventSerializer, AircraftEventNestedSerializer,
-    AircraftRoleSerializer,
+    AircraftRoleSerializer, AircraftShareTokenSerializer,
 )
 from health.models import (
     Component, LogbookEntry, Squawk, Document, DocumentCollection,
@@ -77,7 +76,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
         if self.action in ('update', 'partial_update', 'destroy',
                            'components', 'remove_ad', 'compliance',
                            'remove_inspection_type', 'major_records',
-                           'manage_roles', 'toggle_sharing', 'regenerate_share_token'):
+                           'manage_roles', 'manage_share_tokens', 'delete_share_token'):
             return [IsAuthenticated(), IsAircraftOwnerOrAdmin()]
         # ADs and inspections: GET is readable by pilots, POST/DELETE requires owner
         if self.action in ('ads', 'inspections'):
@@ -775,54 +774,80 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 'roles': AircraftRoleSerializer(roles, many=True).data,
             })
 
-    @action(detail=True, methods=['post'], url_path='toggle_sharing')
-    def toggle_sharing(self, request, pk=None):
-        """Toggle public sharing. Generates a new token each time sharing is enabled."""
+    @action(detail=True, methods=['get', 'post'], url_path='share_tokens')
+    def manage_share_tokens(self, request, pk=None):
+        """
+        List or create share tokens for an aircraft.
+        GET  /api/aircraft/{id}/share_tokens/ - List all tokens
+        POST /api/aircraft/{id}/share_tokens/ - Create a new token
+        """
         aircraft = self.get_object()
-        aircraft.public_sharing_enabled = not aircraft.public_sharing_enabled
 
-        if aircraft.public_sharing_enabled:
-            aircraft.share_token = uuid_mod.uuid4()
-            expires_in_days = request.data.get('expires_in_days')
-            if expires_in_days:
-                try:
-                    aircraft.share_token_expires_at = timezone.now() + td(days=int(expires_in_days))
-                except (ValueError, TypeError):
-                    pass
-            else:
-                aircraft.share_token_expires_at = None
-            aircraft.save()
-            log_event(aircraft, 'role', 'Public sharing enabled', user=request.user)
-            share_url = request.build_absolute_uri(f'/shared/{aircraft.share_token}/')
-        else:
-            aircraft.share_token = None
-            aircraft.share_token_expires_at = None
-            aircraft.save()
-            log_event(aircraft, 'role', 'Public sharing disabled', user=request.user)
-            share_url = None
+        if request.method == 'GET':
+            tokens = aircraft.share_tokens.all()
+            return Response(
+                AircraftShareTokenSerializer(tokens, many=True, context={'request': request}).data
+            )
 
-        return Response({
-            'public_sharing_enabled': aircraft.public_sharing_enabled,
-            'share_token': str(aircraft.share_token) if aircraft.share_token else None,
-            'share_url': share_url,
-            'share_token_expires_at': aircraft.share_token_expires_at,
-        })
+        # POST: create a new token
+        token_count = aircraft.share_tokens.count()
+        if token_count >= 10:
+            return Response(
+                {'error': 'Maximum of 10 share links per aircraft.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-    @action(detail=True, methods=['post'], url_path='regenerate_share_token')
-    def regenerate_share_token(self, request, pk=None):
-        """Regenerate the share token, invalidating old links."""
+        privilege = request.data.get('privilege')
+        if privilege not in ('status', 'maintenance'):
+            return Response(
+                {'error': 'privilege must be "status" or "maintenance".'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        label = request.data.get('label', '').strip()
+        expires_at = None
+        expires_in_days = request.data.get('expires_in_days')
+        if expires_in_days:
+            try:
+                expires_at = timezone.now() + td(days=int(expires_in_days))
+            except (ValueError, TypeError):
+                return Response({'error': 'expires_in_days must be an integer.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+        token_obj = AircraftShareToken.objects.create(
+            aircraft=aircraft,
+            label=label,
+            privilege=privilege,
+            expires_at=expires_at,
+            created_by=request.user,
+        )
+        log_event(
+            aircraft, 'role',
+            f"Share link created: {label or privilege}",
+            user=request.user,
+        )
+        return Response(
+            AircraftShareTokenSerializer(token_obj, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=True, methods=['delete'],
+            url_path=r'share_tokens/(?P<token_id>[^/.]+)')
+    def delete_share_token(self, request, pk=None, token_id=None):
+        """
+        Delete a share token.
+        DELETE /api/aircraft/{id}/share_tokens/{token_id}/
+        """
         aircraft = self.get_object()
-        if not aircraft.public_sharing_enabled:
-            return Response({'error': 'Sharing is not enabled.'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        aircraft.share_token = uuid_mod.uuid4()
-        aircraft.save()
-        log_event(aircraft, 'role', 'Share token regenerated', user=request.user)
-        return Response({
-            'share_token': str(aircraft.share_token),
-            'share_url': request.build_absolute_uri(f'/shared/{aircraft.share_token}/'),
-            'share_token_expires_at': aircraft.share_token_expires_at,
-        })
+        try:
+            token_obj = AircraftShareToken.objects.get(id=token_id, aircraft=aircraft)
+        except (AircraftShareToken.DoesNotExist, ValueError):
+            return Response({'error': 'Share token not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        label = token_obj.label or token_obj.privilege
+        token_obj.delete()
+        log_event(aircraft, 'role', f"Share link revoked: {label}", user=request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AircraftNoteViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelViewSet):
@@ -1180,16 +1205,16 @@ class PublicAircraftView(TemplateView):
     def get(self, request, share_token, *args, **kwargs):
         from django.http import Http404
         try:
-            aircraft = Aircraft.objects.get(share_token=share_token)
-        except Aircraft.DoesNotExist:
+            token_obj = AircraftShareToken.objects.select_related('aircraft').get(token=share_token)
+        except AircraftShareToken.DoesNotExist:
             raise Http404
-        if not aircraft.public_sharing_enabled:
+        if token_obj.expires_at and token_obj.expires_at < timezone.now():
             raise Http404
-        if aircraft.share_token_expires_at and aircraft.share_token_expires_at < timezone.now():
-            raise Http404
+        aircraft = token_obj.aircraft
         return render(request, self.template_name, {
             'aircraft_id': str(aircraft.id),
             'share_token': str(share_token),
+            'privilege_level': token_obj.privilege,
             'base_template': 'base_public.html',
         })
 
@@ -1199,13 +1224,13 @@ class PublicAircraftSummaryAPI(View):
 
     def get(self, request, share_token):
         try:
-            aircraft = Aircraft.objects.get(share_token=share_token)
-        except Aircraft.DoesNotExist:
+            token_obj = AircraftShareToken.objects.select_related('aircraft').get(token=share_token)
+        except AircraftShareToken.DoesNotExist:
             return JsonResponse({'error': 'Not found'}, status=404)
-        if not aircraft.public_sharing_enabled:
+        if token_obj.expires_at and token_obj.expires_at < timezone.now():
             return JsonResponse({'error': 'Not found'}, status=404)
-        if aircraft.share_token_expires_at and aircraft.share_token_expires_at < timezone.now():
-            return JsonResponse({'error': 'Not found'}, status=404)
+        aircraft = token_obj.aircraft
+        privilege = token_obj.privilege
 
         from rest_framework.request import Request
         from rest_framework.parsers import JSONParser
@@ -1238,11 +1263,12 @@ class PublicAircraftSummaryAPI(View):
                 rank, extras = ad_compliance_status(ad, compliance, current_hours, today)
                 ad_dict.update(extras)
                 ad_dict['compliance_status'] = STATUS_LABELS[rank]
-            # Include full compliance history for public view
-            all_compliances = ADCompliance.objects.filter(ad=ad).filter(
-                Q(aircraft=aircraft) | Q(component__aircraft=aircraft)
-            ).order_by('-date_complied')
-            ad_dict['compliance_history'] = ADComplianceNestedSerializer(all_compliances, many=True).data
+            # Include full compliance history only for maintenance privilege
+            if privilege == 'maintenance':
+                all_compliances = ADCompliance.objects.filter(ad=ad).filter(
+                    Q(aircraft=aircraft) | Q(component__aircraft=aircraft)
+                ).order_by('-date_complied')
+                ad_dict['compliance_history'] = ADComplianceNestedSerializer(all_compliances, many=True).data
             ads_data.append(ad_dict)
 
         # Build inspection status list (same logic as AircraftViewSet.inspections GET)
@@ -1263,11 +1289,12 @@ class PublicAircraftSummaryAPI(View):
                 rank, extras = inspection_compliance_status(insp_type, last_record, current_hours, today)
                 type_dict.update(extras)
                 type_dict['compliance_status'] = STATUS_LABELS[rank]
-            # Include full inspection history for public view
-            all_records = InspectionRecord.objects.filter(inspection_type=insp_type).filter(
-                Q(aircraft=aircraft) | Q(component__aircraft=aircraft)
-            ).order_by('-date')
-            type_dict['inspection_history'] = InspectionRecordNestedSerializer(all_records, many=True).data
+            # Include full inspection history only for maintenance privilege
+            if privilege == 'maintenance':
+                all_records = InspectionRecord.objects.filter(inspection_type=insp_type).filter(
+                    Q(aircraft=aircraft) | Q(component__aircraft=aircraft)
+                ).order_by('-date')
+                type_dict['inspection_history'] = InspectionRecordNestedSerializer(all_records, many=True).data
             inspections_data.append(type_dict)
 
         # Build document collections and uncollected documents (shared only)
@@ -1288,30 +1315,34 @@ class PublicAircraftSummaryAPI(View):
             aircraft=aircraft, collection__isnull=True, shared=True
         ).prefetch_related('images')
 
-        # Pre-build major records so we can collect their linked logbook entry IDs
-        major_records_data = MajorRepairAlterationNestedSerializer(
-            MajorRepairAlteration.objects.filter(aircraft=aircraft),
-            many=True
-        ).data
+        # Major records and linked logbook entries: maintenance privilege only
+        if privilege == 'maintenance':
+            major_records_data = MajorRepairAlterationNestedSerializer(
+                MajorRepairAlteration.objects.filter(aircraft=aircraft),
+                many=True
+            ).data
 
-        # Collect IDs of every logbook entry referenced by any linked record in the response
-        linked_ids = set()
-        for mr in major_records_data:
-            if mr.get('logbook_entry'):
-                linked_ids.add(mr['logbook_entry'])
-        for ad_dict in ads_data:
-            for rec in ad_dict.get('compliance_history', []):
-                if rec.get('logbook_entry'):
-                    linked_ids.add(rec['logbook_entry'])
-        for insp_dict in inspections_data:
-            for rec in insp_dict.get('inspection_history', []):
-                if rec.get('logbook_entry'):
-                    linked_ids.add(rec['logbook_entry'])
+            # Collect IDs of every logbook entry referenced by any linked record in the response
+            linked_ids = set()
+            for mr in major_records_data:
+                if mr.get('logbook_entry'):
+                    linked_ids.add(mr['logbook_entry'])
+            for ad_dict in ads_data:
+                for rec in ad_dict.get('compliance_history', []):
+                    if rec.get('logbook_entry'):
+                        linked_ids.add(rec['logbook_entry'])
+            for insp_dict in inspections_data:
+                for rec in insp_dict.get('inspection_history', []):
+                    if rec.get('logbook_entry'):
+                        linked_ids.add(rec['logbook_entry'])
 
-        linked_logbook_entries = LogbookEntrySerializer(
-            LogbookEntry.objects.filter(id__in=linked_ids),
-            many=True, context={'request': drf_request}
-        ).data if linked_ids else []
+            linked_logbook_entries = LogbookEntrySerializer(
+                LogbookEntry.objects.filter(id__in=linked_ids),
+                many=True, context={'request': drf_request}
+            ).data if linked_ids else []
+        else:
+            major_records_data = []
+            linked_logbook_entries = []
 
         summary_data = {
             'aircraft': AircraftSerializer(aircraft, context={'request': drf_request}).data,
@@ -1327,9 +1358,9 @@ class PublicAircraftSummaryAPI(View):
             'resolved_squawks': SquawkNestedSerializer(
                 aircraft.squawks.filter(resolved=True).order_by('-created_at'),
                 many=True, context={'request': drf_request}
-            ).data,
+            ).data if privilege == 'maintenance' else [],
             'notes': AircraftNoteNestedSerializer(
-                aircraft.notes.order_by('-added_timestamp'),
+                aircraft.notes.filter(public=True).order_by('-added_timestamp'),
                 many=True, context={'request': drf_request}
             ).data,
             'ads': ads_data,
@@ -1396,7 +1427,7 @@ class PublicAircraftSummaryAPI(View):
 
         # Strip sensitive fields
         aircraft_data = summary_data['aircraft']
-        for field in ('share_token', 'share_url', 'roles'):
+        for field in ('has_share_links', 'roles'):
             aircraft_data.pop(field, None)
         aircraft_data['user_role'] = None
 
@@ -1408,13 +1439,14 @@ class PublicLogbookEntriesAPI(View):
 
     def get(self, request, share_token):
         try:
-            aircraft = Aircraft.objects.get(share_token=share_token)
-        except Aircraft.DoesNotExist:
+            token_obj = AircraftShareToken.objects.select_related('aircraft').get(token=share_token)
+        except AircraftShareToken.DoesNotExist:
             return JsonResponse({'error': 'Not found'}, status=404)
-        if not aircraft.public_sharing_enabled:
+        if token_obj.expires_at and token_obj.expires_at < timezone.now():
             return JsonResponse({'error': 'Not found'}, status=404)
-        if aircraft.share_token_expires_at and aircraft.share_token_expires_at < timezone.now():
+        if token_obj.privilege == 'status':
             return JsonResponse({'error': 'Not found'}, status=404)
+        aircraft = token_obj.aircraft
 
         try:
             limit = min(int(request.GET.get('limit', 50)), 200)

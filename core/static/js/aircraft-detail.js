@@ -1,4 +1,4 @@
-function aircraftDetail(aircraftId, shareToken) {
+function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
     return mergeMixins(
         // Feature mixins (order doesn't matter — all end up on one object)
         componentsMixin(),
@@ -18,6 +18,7 @@ function aircraftDetail(aircraftId, shareToken) {
         {
             aircraftId: aircraftId,
             _publicShareToken: shareToken || null,
+            _privilegeLevel: privilegeLevel || null,
             aircraft: null,
             components: [],
             recentLogs: [],
@@ -27,9 +28,11 @@ function aircraftDetail(aircraftId, shareToken) {
             loading: true,
             activeTab: 'overview',
 
-            // Public view detection (uses _publicShareToken to avoid collision
-            // with rolesMixin's shareToken which tracks the aircraft's share token)
+            // Public view detection
             get isPublicView() { return !!this._publicShareToken; },
+
+            // Privilege level: true when private view OR maintenance privilege
+            get isMaintenance() { return !this.isPublicView || this._privilegeLevel === 'maintenance'; },
 
             // Role-based access helpers
             get userRole() { return this.aircraft?.user_role || null; },
@@ -47,7 +50,7 @@ function aircraftDetail(aircraftId, shareToken) {
                 if (this.isPublicView) {
                     // Public mode: lazy-load logbook tab and render charts on tab activation
                     this.$watch('activeTab', (tab) => {
-                        if (tab === 'logbook' && !this.logbookLoaded) {
+                        if (tab === 'logbook' && !this.logbookLoaded && this.isMaintenance) {
                             this.loadLogbookEntries();
                         }
                         if (tab === 'oil' && this.oilRecords.length >= 2) {
@@ -115,9 +118,6 @@ function aircraftDetail(aircraftId, shareToken) {
                 this.recentLogs = data.recent_logs;
                 this.activeSquawks = data.active_squawks;
                 this.aircraftNotes = data.notes || [];
-
-                // Init sharing state from aircraft data
-                this.initSharingState();
 
                 // Refresh recent events (non-blocking)
                 this.loadRecentEvents();

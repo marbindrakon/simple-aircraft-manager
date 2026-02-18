@@ -8,30 +8,31 @@ function notesMixin() {
         noteSubmitting: false,
         noteForm: {
             text: '',
+            public: false,
         },
 
         openNoteModal() {
             this.editingNote = null;
-            this.noteForm = { text: '' };
+            this.noteForm = { text: '', public: false };
             this.noteModalOpen = true;
         },
 
         viewNote(note) {
             this.editingNote = note;
-            this.noteForm = { text: note.text };
+            this.noteForm = { text: note.text, public: note.public || false };
             this.noteModalOpen = true;
         },
 
         editNote(note) {
             this.editingNote = note;
-            this.noteForm = { text: note.text };
+            this.noteForm = { text: note.text, public: note.public || false };
             this.noteModalOpen = true;
         },
 
         closeNoteModal() {
             this.noteModalOpen = false;
             this.editingNote = null;
-            this.noteForm = { text: '' };
+            this.noteForm = { text: '', public: false };
         },
 
         async submitNote() {
@@ -43,7 +44,7 @@ function notesMixin() {
 
             this.noteSubmitting = true;
             try {
-                const data = { text: this.noteForm.text };
+                const data = { text: this.noteForm.text, public: this.noteForm.public };
 
                 let response;
                 if (this.editingNote) {

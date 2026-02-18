@@ -10,13 +10,15 @@ function rolesMixin() {
         userSearchResults: [],
         userSearchLoading: false,
         selectedUser: null,
-        sharingEnabled: false,
-        shareUrl: null,
-        shareToken: null,
-        shareTokenExpiresAt: null,
-        sharingSubmitting: false,
-        sharingExpiresInDays: '',
         _userSearchTimer: null,
+
+        // Share token management
+        shareTokens: [],
+        shareTokensLoaded: false,
+        shareTokenModalOpen: false,
+        shareTokenForm: { label: '', privilege: 'status', expires_in_days: '' },
+        shareTokenSubmitting: false,
+        shareTokenError: null,
 
         async loadRoles() {
             const { ok, data } = await apiRequest(`/api/aircraft/${this.aircraftId}/manage_roles/`);
@@ -24,6 +26,8 @@ function rolesMixin() {
                 this.roles = data.roles || [];
                 this.rolesLoaded = true;
             }
+            // Load share tokens alongside roles
+            await this.loadShareTokens();
         },
 
         openRoleModal() {
@@ -128,64 +132,72 @@ function rolesMixin() {
             }
         },
 
-        async toggleSharing() {
-            this.sharingSubmitting = true;
-            const payload = {};
-            if (!this.sharingEnabled && this.sharingExpiresInDays) {
-                const days = parseInt(this.sharingExpiresInDays, 10);
+        // Share token methods
+        async loadShareTokens() {
+            const { ok, data } = await apiRequest(`/api/aircraft/${this.aircraftId}/share_tokens/`);
+            if (ok) {
+                this.shareTokens = Array.isArray(data) ? data : [];
+                this.shareTokensLoaded = true;
+            }
+        },
+
+        openShareTokenModal() {
+            this.shareTokenForm = { label: '', privilege: 'status', expires_in_days: '' };
+            this.shareTokenError = null;
+            this.shareTokenModalOpen = true;
+        },
+
+        closeShareTokenModal() {
+            this.shareTokenModalOpen = false;
+            this.shareTokenError = null;
+        },
+
+        async createShareToken() {
+            if (this.shareTokenSubmitting) return;
+            this.shareTokenSubmitting = true;
+            this.shareTokenError = null;
+
+            const payload = {
+                privilege: this.shareTokenForm.privilege,
+                label: this.shareTokenForm.label.trim(),
+            };
+            if (this.shareTokenForm.expires_in_days) {
+                const days = parseInt(this.shareTokenForm.expires_in_days, 10);
                 if (days > 0) payload.expires_in_days = days;
             }
-            const { ok, data } = await apiRequest(`/api/aircraft/${this.aircraftId}/toggle_sharing/`, {
+
+            const { ok, data } = await apiRequest(`/api/aircraft/${this.aircraftId}/share_tokens/`, {
                 method: 'POST',
                 body: JSON.stringify(payload),
             });
-            this.sharingSubmitting = false;
+            this.shareTokenSubmitting = false;
             if (ok) {
-                this.sharingEnabled = data.public_sharing_enabled;
-                this.shareToken = data.share_token;
-                this.shareUrl = data.share_url;
-                this.shareTokenExpiresAt = data.share_token_expires_at;
-                showNotification(
-                    this.sharingEnabled ? 'Public sharing enabled' : 'Public sharing disabled',
-                    'success'
-                );
+                this.shareTokens.push(data);
+                this.closeShareTokenModal();
+                showNotification('Share link created', 'success');
             } else {
-                showNotification(formatApiError(data, 'Failed to toggle sharing'), 'danger');
+                this.shareTokenError = formatApiError(data, 'Failed to create share link');
             }
         },
 
-        async regenerateToken() {
-            if (!confirm('Regenerate share link? The old link will stop working.')) return;
-            this.sharingSubmitting = true;
-            const { ok, data } = await apiRequest(`/api/aircraft/${this.aircraftId}/regenerate_share_token/`, {
-                method: 'POST',
-                body: JSON.stringify({}),
+        async revokeShareToken(tokenId) {
+            if (!confirm('Revoke this share link? Anyone with the link will no longer be able to access it.')) return;
+            const { ok } = await apiRequest(
+                `/api/aircraft/${this.aircraftId}/share_tokens/${tokenId}/`,
+                { method: 'DELETE' }
+            );
+            if (ok) {
+                this.shareTokens = this.shareTokens.filter(t => t.id !== tokenId);
+                showNotification('Share link revoked', 'success');
+            } else {
+                showNotification('Failed to revoke share link', 'danger');
+            }
+        },
+
+        copyTokenUrl(url) {
+            navigator.clipboard.writeText(url).then(() => {
+                showNotification('Share link copied to clipboard', 'success');
             });
-            this.sharingSubmitting = false;
-            if (ok) {
-                this.shareToken = data.share_token;
-                this.shareUrl = data.share_url;
-                this.shareTokenExpiresAt = data.share_token_expires_at;
-                showNotification('Share link regenerated', 'success');
-            } else {
-                showNotification(formatApiError(data, 'Failed to regenerate token'), 'danger');
-            }
-        },
-
-        copyShareUrl() {
-            if (this.shareUrl) {
-                navigator.clipboard.writeText(this.shareUrl).then(() => {
-                    showNotification('Share link copied to clipboard', 'success');
-                });
-            }
-        },
-
-        initSharingState() {
-            if (this.aircraft) {
-                this.sharingEnabled = this.aircraft.public_sharing_enabled || false;
-                this.shareToken = this.aircraft.share_token || null;
-                this.shareUrl = this.aircraft.share_url || null;
-            }
         },
     };
 }

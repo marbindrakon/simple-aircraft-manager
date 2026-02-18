@@ -32,9 +32,6 @@ class Aircraft(models.Model):
     picture = models.ImageField(upload_to=random_picture_filename, blank=True)
     status = models.CharField(max_length=254, blank=False, choices=AIRCRAFT_STATUSES, default="AVAILABLE")
     flight_time = models.DecimalField(max_digits=8, decimal_places=1, default=0.0)
-    public_sharing_enabled = models.BooleanField(default=False)
-    share_token = models.UUIDField(null=True, blank=True, unique=True, editable=False)
-    share_token_expires_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.tail_number} - {self.make} {self.model}"
@@ -46,6 +43,7 @@ class AircraftNote(models.Model):
     edited_timestamp = models.DateTimeField(blank=True, null=True)
     added_by = models.ForeignKey(settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL)
     text = models.TextField()
+    public = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.aircraft.tail_number} - {self.text}"
@@ -99,3 +97,27 @@ class AircraftRole(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.role} on {self.aircraft.tail_number}"
+
+
+SHARE_PRIVILEGE_CHOICES = [
+    ('status', 'Current Status'),
+    ('maintenance', 'Maintenance Detail'),
+]
+
+
+class AircraftShareToken(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    aircraft = models.ForeignKey(Aircraft, on_delete=models.CASCADE, related_name='share_tokens')
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    label = models.CharField(max_length=100, blank=True)
+    privilege = models.CharField(max_length=20, choices=SHARE_PRIVILEGE_CHOICES, default='status')
+    expires_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                   null=True, editable=False)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.aircraft.tail_number} - {self.label or self.privilege} share token"

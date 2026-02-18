@@ -82,6 +82,17 @@ Automatic status calculation based on:
 - Add notes to aircraft from the Overview tab
 - Edit and delete notes
 - View all notes with timestamps and authors
+- Mark individual notes as **public** to expose them on share links
+
+### Public Sharing
+- Owners can create multiple share links per aircraft (up to 10)
+- Two **privilege levels** per link:
+  - **Current Status** — Overview, airworthiness, active squawks, public notes, documents. No maintenance history.
+  - **Maintenance Detail** — Full history including logbook, AD/inspection history, resolved squawks, and major repairs.
+- Optional link expiration (in days)
+- Optional label for each link
+- Revoke individual links without affecting others
+- Public views are fully read-only; no login required
 
 ### Airworthiness Directives (ADs)
 - **AD Management UI** - Create and edit ADs directly from aircraft detail page
@@ -156,6 +167,8 @@ All API endpoints require authentication and are accessible at `/api/`.
 | `/api/aircraft/{id}/squawks/` | GET, POST | Aircraft squawks |
 | `/api/aircraft/{id}/notes/` | GET, POST | Aircraft notes |
 | `/api/aircraft-notes/{id}/` | GET, PATCH, DELETE | Note operations |
+| `/api/aircraft/{id}/share_tokens/` | GET, POST | List/create share links (owner only) |
+| `/api/aircraft/{id}/share_tokens/{token_id}/` | DELETE | Revoke a share link (owner only) |
 
 ### Component Endpoints
 
@@ -194,6 +207,9 @@ All API endpoints require authentication and are accessible at `/api/`.
 | `/dashboard/` | Fleet dashboard |
 | `/aircraft/{id}/` | Aircraft detail page |
 | `/aircraft/{id}/squawks/history/` | Resolved squawks history |
+| `/shared/<token>/` | Public read-only aircraft view (no login required) |
+| `/api/shared/<token>/` | Public JSON summary (filtered by privilege level) |
+| `/api/shared/<token>/logbook-entries/` | Public paginated logbook (maintenance privilege only) |
 | `/admin/` | Django admin interface |
 | `/accounts/login/` | Login page |
 
@@ -314,8 +330,10 @@ See [examples/openshift/README.md](examples/openshift/README.md) for detailed in
 ### Core App
 
 - **Aircraft** - Central fleet inventory (UUID primary key)
-- **AircraftNote** - Notes attached to aircraft with timestamps
+- **AircraftNote** - Notes attached to aircraft with timestamps; `public` flag controls share-link visibility
 - **AircraftEvent** - Audit trail of aircraft events
+- **AircraftRole** - Per-aircraft user roles (`owner` or `pilot`)
+- **AircraftShareToken** - Share link tokens with privilege level (`status` or `maintenance`), optional expiry, and optional label
 
 ### Health App
 

@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block content %}
-<div x-data="aircraftDetail('{{ aircraft_id }}', '{{ share_token|default:"" }}')" @aircraft-updated.window="loadData()">
+<div x-data="aircraftDetail('{{ aircraft_id }}', '{{ share_token|default:"" }}', '{{ privilege_level|default:"" }}')" @aircraft-updated.window="loadData()">
     <!-- Shared View Banner (public mode only) -->
     <div x-show="isPublicView" x-cloak class="pf-v5-c-alert pf-m-info pf-m-inline" style="margin-bottom: 1rem;">
         <div class="pf-v5-c-alert__icon"><i class="fas fa-info-circle"></i></div>
@@ -93,7 +93,7 @@
                         <span class="pf-v5-c-tabs__item-text">Components</span>
                     </button>
                 </li>
-                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'logbook' }">
+                <li class="pf-v5-c-tabs__item" x-show="isMaintenance" :class="{ 'pf-m-current': activeTab === 'logbook' }">
                     <button class="pf-v5-c-tabs__link" @click="activeTab = 'logbook'">
                         <span class="pf-v5-c-tabs__item-text">Logbook</span>
                     </button>
@@ -122,7 +122,7 @@
                         </template>
                     </button>
                 </li>
-                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'major-records' }">
+                <li class="pf-v5-c-tabs__item" x-show="isMaintenance" :class="{ 'pf-m-current': activeTab === 'major-records' }">
                     <button class="pf-v5-c-tabs__link" @click="activeTab = 'major-records'">
                         <span class="pf-v5-c-tabs__item-text">Repairs &amp; Alterations</span>
                     </button>
@@ -703,8 +703,8 @@
                 </template>
             </div>
 
-            <!-- Inline Resolved Squawks (public view only) -->
-            <template x-if="isPublicView && resolvedSquawks.length > 0">
+            <!-- Inline Resolved Squawks (public maintenance view only) -->
+            <template x-if="isPublicView && isMaintenance && resolvedSquawks.length > 0">
                 <div style="margin-top: 1.5rem;">
                     <h2 style="margin-bottom: 1rem;">Resolved Squawks</h2>
                     <table class="pf-v5-c-table pf-m-grid-md">
@@ -833,7 +833,7 @@
                                     </td>
                                     <td>
                                         <div style="display: flex; gap: 0.25rem;">
-                                            <button class="pf-v5-c-button pf-m-plain"
+                                            <button class="pf-v5-c-button pf-m-plain" x-show="isMaintenance"
                                                     @click="openComplianceHistory(ad)"
                                                     title="View Compliance History">
                                                 <i class="fas fa-history"></i>
@@ -948,7 +948,7 @@
                                     </td>
                                     <td>
                                         <div style="display: flex; gap: 0.25rem;">
-                                            <button class="pf-v5-c-button pf-m-plain"
+                                            <button class="pf-v5-c-button pf-m-plain" x-show="isMaintenance"
                                                     @click="openInspectionHistory(insp)"
                                                     title="View Inspection History">
                                                 <i class="fas fa-history"></i>
@@ -1714,52 +1714,59 @@
             <h2>Sharing &amp; Access</h2>
         </div>
 
-        <!-- Public Sharing Card -->
+        <!-- Share Links Card -->
         <div class="pf-v5-c-card" style="margin-bottom: 1rem;">
-            <div class="pf-v5-c-card__title"><h3 class="pf-v5-c-card__title-text">Public Sharing</h3></div>
+            <div class="pf-v5-c-card__header">
+                <div class="pf-v5-c-card__header-main">
+                    <div class="pf-v5-c-card__title"><h3 class="pf-v5-c-card__title-text">Share Links</h3></div>
+                </div>
+                <div class="pf-v5-c-card__actions">
+                    <button class="pf-v5-c-button pf-m-primary" @click="openShareTokenModal()">
+                        <i class="fas fa-plus"></i> Create Link
+                    </button>
+                </div>
+            </div>
             <div class="pf-v5-c-card__body">
-                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-                    <label class="pf-v5-c-switch">
-                        <input class="pf-v5-c-switch__input" type="checkbox"
-                               :checked="sharingEnabled"
-                               @change="toggleSharing()"
-                               :disabled="sharingSubmitting">
-                        <span class="pf-v5-c-switch__toggle"></span>
-                        <span class="pf-v5-c-switch__label" x-text="sharingEnabled ? 'Public sharing enabled' : 'Public sharing disabled'"></span>
-                    </label>
-                </div>
-                <div x-show="!sharingEnabled" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-                    <label class="pf-v5-c-form__label" style="white-space: nowrap;">Expires after</label>
-                    <input type="number" class="pf-v5-c-form-control" x-model="sharingExpiresInDays"
-                           placeholder="No expiration"
-                           min="1" style="width: 8rem;">
-                    <span style="color: var(--pf-v5-global--Color--200); white-space: nowrap;">days (optional)</span>
-                </div>
-                <template x-if="sharingEnabled && shareUrl">
-                    <div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                            <input type="text" class="pf-v5-c-form-control" :value="shareUrl" readonly
-                                   style="flex: 1; font-family: monospace; font-size: 0.85rem;">
-                            <button class="pf-v5-c-button pf-m-secondary" @click="copyShareUrl()" title="Copy link">
-                                <i class="fas fa-copy"></i> Copy
-                            </button>
-                            <button class="pf-v5-c-button pf-m-plain" @click="regenerateToken()" title="Regenerate link"
-                                    :disabled="sharingSubmitting">
-                                <i class="fas fa-redo"></i>
-                            </button>
-                        </div>
-                        <template x-if="shareTokenExpiresAt">
-                            <p style="color: var(--pf-v5-global--Color--200); font-size: 0.85rem;">
-                                Expires: <span x-text="formatDate(shareTokenExpiresAt)"></span>
-                            </p>
-                        </template>
-                        <template x-if="!shareTokenExpiresAt">
-                            <p style="color: var(--pf-v5-global--Color--200); font-size: 0.85rem;">
-                                This link does not expire.
-                            </p>
-                        </template>
-                    </div>
+                <template x-if="shareTokens.length === 0 && shareTokensLoaded">
+                    <p style="color: var(--pf-v5-global--Color--200);">No share links created yet.</p>
                 </template>
+                <table class="pf-v5-c-table pf-m-compact" x-show="shareTokens.length > 0">
+                    <thead>
+                        <tr>
+                            <th>Label</th>
+                            <th>Access Level</th>
+                            <th>Expires</th>
+                            <th>URL</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="t in shareTokens" :key="t.id">
+                            <tr>
+                                <td x-text="t.label || '—'"></td>
+                                <td>
+                                    <span class="pf-v5-c-label"
+                                          :class="t.privilege === 'maintenance' ? 'pf-m-blue' : 'pf-m-green'">
+                                        <span class="pf-v5-c-label__content"
+                                              x-text="t.privilege === 'maintenance' ? 'Maintenance Detail' : 'Current Status'"></span>
+                                    </span>
+                                </td>
+                                <td x-text="t.expires_at ? formatDate(t.expires_at) : 'Never'"></td>
+                                <td style="max-width: 18rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    <span style="font-family: monospace; font-size: 0.8rem;" x-text="t.share_url"></span>
+                                </td>
+                                <td style="white-space: nowrap;">
+                                    <button class="pf-v5-c-button pf-m-plain" @click="copyTokenUrl(t.share_url)" title="Copy link">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                    <button class="pf-v5-c-button pf-m-plain pf-m-danger" @click="revokeShareToken(t.id)" title="Revoke link">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -1815,6 +1822,70 @@
                         </template>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Share Token Modal -->
+    <div class="pf-v5-c-backdrop" x-show="shareTokenModalOpen" x-cloak @click.self="closeShareTokenModal()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-sm" @click.stop>
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeShareTokenModal()" style="position: absolute; top: 1rem; right: 1rem;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">Create Share Link</h1>
+                </div>
+                <div class="pf-v5-c-modal-box__body">
+                    <template x-if="shareTokenError">
+                        <div class="pf-v5-c-alert pf-m-danger pf-m-inline" style="margin-bottom: 1rem;">
+                            <p class="pf-v5-c-alert__title" x-text="shareTokenError"></p>
+                        </div>
+                    </template>
+                    <div class="pf-v5-c-form__group" style="margin-bottom: 1rem;">
+                        <label class="pf-v5-c-form__label">Label <span style="color: var(--pf-v5-global--Color--200); font-weight: normal;">(optional)</span></label>
+                        <input class="pf-v5-c-form-control" type="text" x-model="shareTokenForm.label"
+                               placeholder="e.g. Annual inspection viewer" maxlength="100">
+                    </div>
+                    <div class="pf-v5-c-form__group" style="margin-bottom: 1rem;">
+                        <label class="pf-v5-c-form__label">Access Level <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span></label>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.25rem;">
+                            <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;">
+                                <input type="radio" x-model="shareTokenForm.privilege" value="status" style="margin-top: 0.2rem;">
+                                <span>
+                                    <strong>Current Status</strong><br>
+                                    <span style="color: var(--pf-v5-global--Color--200); font-size: 0.85rem;">Overview, airworthiness, active squawks, public notes, documents. No maintenance history.</span>
+                                </span>
+                            </label>
+                            <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;">
+                                <input type="radio" x-model="shareTokenForm.privilege" value="maintenance" style="margin-top: 0.2rem;">
+                                <span>
+                                    <strong>Maintenance Detail</strong><br>
+                                    <span style="color: var(--pf-v5-global--Color--200); font-size: 0.85rem;">Full maintenance history including logbook, AD history, inspection records, and major repairs.</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="pf-v5-c-form__group" style="margin-bottom: 1rem;">
+                        <label class="pf-v5-c-form__label">Expires after <span style="color: var(--pf-v5-global--Color--200); font-weight: normal;">(optional)</span></label>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input class="pf-v5-c-form-control" type="number" x-model="shareTokenForm.expires_in_days"
+                                   placeholder="No expiration" min="1" style="width: 8rem;">
+                            <span style="color: var(--pf-v5-global--Color--200); white-space: nowrap;">days</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" @click="createShareToken()" :disabled="shareTokenSubmitting || !shareTokenForm.privilege">
+                        <template x-if="shareTokenSubmitting">
+                            <span class="pf-v5-c-spinner pf-m-sm" role="progressbar">
+                                <span class="pf-v5-c-spinner__clipper"></span>
+                            </span>
+                        </template>
+                        Create Link
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeShareTokenModal()">Cancel</button>
+                </div>
             </div>
         </div>
     </div>
@@ -2898,6 +2969,12 @@
                             <div class="pf-v5-c-form__group-control">
                                 <textarea id="note-text" class="pf-v5-c-form-control" rows="5" x-model="noteForm.text" required placeholder="Enter your note..."></textarea>
                             </div>
+                        </div>
+                        <div class="pf-v5-c-form__group" style="margin-top: 0.75rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" x-model="noteForm.public">
+                                <span>Share this note publicly (visible on share links)</span>
+                            </label>
                         </div>
                     </form>
                 </div>
