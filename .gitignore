@@ -67,3 +67,6 @@ celerybeat.pid
 
 # Claude Code
 .claude/
+
+# Local notes
+TODO.md
