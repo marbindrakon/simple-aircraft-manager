@@ -790,13 +790,6 @@ class AircraftViewSet(viewsets.ModelViewSet):
             )
 
         # POST: create a new token
-        token_count = aircraft.share_tokens.count()
-        if token_count >= 10:
-            return Response(
-                {'error': 'Maximum of 10 share links per aircraft.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         privilege = request.data.get('privilege')
         if privilege not in ('status', 'maintenance'):
             return Response(
@@ -807,20 +800,31 @@ class AircraftViewSet(viewsets.ModelViewSet):
         label = request.data.get('label', '').strip()
         expires_at = None
         expires_in_days = request.data.get('expires_in_days')
-        if expires_in_days:
+        if expires_in_days is not None:
             try:
-                expires_at = timezone.now() + td(days=int(expires_in_days))
+                days = int(expires_in_days)
             except (ValueError, TypeError):
                 return Response({'error': 'expires_in_days must be an integer.'},
                                 status=status.HTTP_400_BAD_REQUEST)
+            if not (1 <= days <= 3650):
+                return Response({'error': 'expires_in_days must be between 1 and 3650.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            expires_at = timezone.now() + td(days=days)
 
-        token_obj = AircraftShareToken.objects.create(
-            aircraft=aircraft,
-            label=label,
-            privilege=privilege,
-            expires_at=expires_at,
-            created_by=request.user,
-        )
+        with transaction.atomic():
+            token_count = aircraft.share_tokens.select_for_update().count()
+            if token_count >= 10:
+                return Response(
+                    {'error': 'Maximum of 10 share links per aircraft.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            token_obj = AircraftShareToken.objects.create(
+                aircraft=aircraft,
+                label=label,
+                privilege=privilege,
+                expires_at=expires_at,
+                created_by=request.user,
+            )
         log_event(
             aircraft, 'role',
             f"Share link created: {label or privilege}",
