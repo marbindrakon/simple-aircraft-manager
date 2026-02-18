@@ -11,10 +11,10 @@ Simple Aircraft Manager is a comprehensive fleet management system designed for 
 ## Technology Stack
 
 ### Backend
-- **Django 4.2.9** - Web framework
-- **Django REST Framework 3.14.0** - RESTful API
-- **django-filter 23.5** - Advanced filtering for querysets
-- **mozilla-django-oidc 4.0.1** - OpenID Connect authentication
+- **Django 5.2.11** - Web framework
+- **Django REST Framework 3.16.1** - RESTful API
+- **django-filter 25.2** - Advanced filtering for querysets
+- **mozilla-django-oidc 5.0.2** - OpenID Connect authentication
 - **Pillow** - Image handling for documents and media
 - **Gunicorn** - Production WSGI server
 - **SQLite** - Database (development)
