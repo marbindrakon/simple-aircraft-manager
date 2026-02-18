@@ -9,9 +9,12 @@ ALLOWED_UPLOAD_CONTENT_TYPES = {
     'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff',
     'application/pdf', 'text/plain',
 }
+MAX_UPLOAD_SIZE = 512 * 1024 * 1024  # 512 MB
 
 
 def validate_uploaded_file(value):
+    if value.size > MAX_UPLOAD_SIZE:
+        raise serializers.ValidationError("File size exceeds the 512 MB limit.")
     ext = os.path.splitext(value.name)[1].lower()
     if ext not in ALLOWED_UPLOAD_EXTENSIONS:
         raise serializers.ValidationError(

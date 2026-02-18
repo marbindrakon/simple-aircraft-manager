@@ -166,7 +166,6 @@ class AircraftEventSerializer(serializers.HyperlinkedModelSerializer):
                 'category',
                 'event_name',
                 'notes',
-                'user',
                 'user_display',
                 ]
 

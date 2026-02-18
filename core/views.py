@@ -7,7 +7,7 @@ import tempfile
 import threading
 import zipfile
 from datetime import date as date_cls, timedelta as td
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from django.conf import settings
@@ -131,7 +131,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
 
         try:
             new_hours = Decimal(str(new_hours))
-        except:
+        except (ValueError, InvalidOperation, TypeError):
             return Response({'error': 'Invalid hours value'},
                           status=status.HTTP_400_BAD_REQUEST)
 
@@ -459,7 +459,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 # Add existing AD to this aircraft
                 try:
                     ad = AD.objects.get(id=ad_id)
-                except AD.DoesNotExist:
+                except (AD.DoesNotExist, ValueError):
                     return Response({'error': 'AD not found'}, status=status.HTTP_404_NOT_FOUND)
                 ad.applicable_aircraft.add(aircraft)
                 log_event(aircraft, 'ad', f"AD linked: {ad.name}", user=request.user)
@@ -488,7 +488,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
 
         try:
             ad = AD.objects.get(id=ad_id)
-        except AD.DoesNotExist:
+        except (AD.DoesNotExist, ValueError):
             return Response({'error': 'AD not found'}, status=status.HTTP_404_NOT_FOUND)
 
         ad.applicable_aircraft.remove(aircraft)
@@ -569,7 +569,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
             if type_id:
                 try:
                     insp_type = InspectionType.objects.get(id=type_id)
-                except InspectionType.DoesNotExist:
+                except (InspectionType.DoesNotExist, ValueError):
                     return Response({'error': 'InspectionType not found'}, status=status.HTTP_404_NOT_FOUND)
                 insp_type.applicable_aircraft.add(aircraft)
                 log_event(aircraft, 'inspection', f"Inspection type linked: {insp_type.name}", user=request.user)
@@ -643,6 +643,10 @@ class AircraftViewSet(viewsets.ModelViewSet):
 
         category = request.query_params.get('category')
         if category:
+            from core.models import EVENT_CATEGORIES
+            valid_categories = {c[0] for c in EVENT_CATEGORIES}
+            if category not in valid_categories:
+                return Response({'error': f"Invalid category '{category}'."}, status=status.HTTP_400_BAD_REQUEST)
             qs = qs.filter(category=category)
 
         total = qs.count()
@@ -672,7 +676,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
 
         try:
             insp_type = InspectionType.objects.get(id=type_id)
-        except InspectionType.DoesNotExist:
+        except (InspectionType.DoesNotExist, ValueError):
             return Response({'error': 'InspectionType not found'}, status=status.HTTP_404_NOT_FOUND)
 
         insp_type.applicable_aircraft.remove(aircraft)
@@ -876,8 +880,15 @@ class AircraftNoteViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.Model
 
 
 class AircraftEventViewSet(viewsets.ReadOnlyModelViewSet):
+    from rest_framework.pagination import PageNumberPagination
+
+    class _Pagination(PageNumberPagination):
+        page_size = 100
+        max_page_size = 200
+
     queryset = AircraftEvent.objects.all()
     serializer_class = AircraftEventSerializer
+    pagination_class = _Pagination
 
 @require_GET
 def healthz(request):

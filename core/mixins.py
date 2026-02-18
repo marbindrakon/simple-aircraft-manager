@@ -85,7 +85,10 @@ class EventLoggingMixin:
 
     def _resolve_aircraft(self, instance):
         """Follow a dotted path to reach the Aircraft instance."""
-        return reduce(getattr, self.aircraft_field.split('.'), instance)
+        try:
+            return reduce(getattr, self.aircraft_field.split('.'), instance)
+        except AttributeError:
+            return None
 
     def _model_label(self):
         return self.queryset.model._meta.verbose_name.capitalize()

@@ -37,19 +37,27 @@ function showNotification(message, type = 'info') {
     const typeClass = type === 'success' ? 'pf-m-success' :
                       type === 'danger' ? 'pf-m-danger' :
                       type === 'warning' ? 'pf-m-warning' : 'pf-m-info';
+    const iconClass = type === 'success' ? 'check-circle' :
+                      type === 'danger' ? 'exclamation-circle' :
+                      type === 'warning' ? 'exclamation-triangle' : 'info-circle';
 
-    const alertHTML = `
-        <div class="pf-v5-c-alert ${typeClass}" role="alert">
-            <div class="pf-v5-c-alert__icon">
-                <i class="fas fa-${type === 'success' ? 'check-circle' :
-                                   type === 'danger' ? 'exclamation-circle' :
-                                   type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
-            </div>
-            <div class="pf-v5-c-alert__description">${message}</div>
-        </div>
-    `;
+    const alert = document.createElement('div');
+    alert.className = `pf-v5-c-alert ${typeClass}`;
+    alert.setAttribute('role', 'alert');
 
-    alertContainer.innerHTML = alertHTML;
+    const iconDiv = document.createElement('div');
+    iconDiv.className = 'pf-v5-c-alert__icon';
+    const icon = document.createElement('i');
+    icon.className = `fas fa-${iconClass}`;
+    iconDiv.appendChild(icon);
+
+    const descDiv = document.createElement('div');
+    descDiv.className = 'pf-v5-c-alert__description';
+    descDiv.textContent = message;
+
+    alert.appendChild(iconDiv);
+    alert.appendChild(descDiv);
+    alertContainer.appendChild(alert);
     document.body.appendChild(alertContainer);
 
     setTimeout(() => {
