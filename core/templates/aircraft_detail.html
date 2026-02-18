@@ -487,7 +487,18 @@
         <!-- Logbook Tab -->
         <div x-show="activeTab === 'logbook'" class="pf-v5-c-page__main-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h2>Maintenance Logbook</h2>
+                <!-- Sub-tab toggle group -->
+                <div class="pf-v5-c-toggle-group">
+                    <template x-for="tab in ['ALL', 'AC', 'ENG', 'PROP', 'OTHER']" :key="tab">
+                        <div class="pf-v5-c-toggle-group__item">
+                            <button class="pf-v5-c-toggle-group__button"
+                                    :class="{ 'pf-m-selected': logbookActiveTab === tab }"
+                                    @click="switchLogbookTab(tab)"
+                                    x-text="logbookTabLabel(tab)">
+                            </button>
+                        </div>
+                    </template>
+                </div>
                 <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openLogbookModal()">
                     <i class="fas fa-plus"></i> New Entry
                 </button>
@@ -502,13 +513,43 @@
             </div>
 
             <div x-show="logbookLoaded" x-cloak>
+                <!-- Filter bar -->
+                <div style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+                    <input type="search"
+                           class="pf-v5-c-form-control"
+                           placeholder="Search entries..."
+                           x-model="logbookSearch"
+                           @input="onLogbookSearchInput()"
+                           style="flex: 1; min-width: 200px; max-width: 400px;">
+                    <select class="pf-v5-c-form-control"
+                            x-model="logbookEntryTypeFilter"
+                            @change="loadLogbookEntries(false)"
+                            style="width: auto;">
+                        <option value="">All Types</option>
+                        <option value="MAINTENANCE">Maintenance</option>
+                        <option value="INSPECTION">Inspection</option>
+                        <option value="FLIGHT">Flight</option>
+                        <option value="HOURS_UPDATE">Hours Update</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                    <span style="color: var(--pf-v5-global--Color--200); font-size: 0.875rem;"
+                          x-show="logbookTotal > 0"
+                          x-text="`${logbookTotal} entr${logbookTotal === 1 ? 'y' : 'ies'}`">
+                    </span>
+                </div>
+
                 <template x-if="logbookEntries.length === 0">
                     <div class="pf-v5-c-empty-state">
                         <div class="pf-v5-c-empty-state__content">
                             <i class="fas fa-book" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
-                            <h2 class="pf-v5-c-title pf-m-lg">No logbook entries</h2>
-                            <div class="pf-v5-c-empty-state__body">
-                                No maintenance entries have been recorded yet.
+                            <h2 class="pf-v5-c-title pf-m-lg"
+                                x-text="logbookActiveTab === 'ALL' ? 'No logbook entries' :
+                                        `No ${logbookTabLabel(logbookActiveTab)} logbook entries`">
+                            </h2>
+                            <div class="pf-v5-c-empty-state__body"
+                                 x-text="logbookSearch || logbookEntryTypeFilter
+                                         ? 'No entries match your search criteria.'
+                                         : 'No entries have been recorded yet.'">
                             </div>
                         </div>
                     </div>
@@ -522,6 +563,10 @@
                                         <div class="pf-v5-c-card__title">
                                             <span x-text="formatDate(log.date)" style="font-weight: 600;"></span>
                                             <span class="pf-v5-c-label pf-m-blue" style="margin-left: 0.5rem;" x-text="log.entry_type || log.log_type"></span>
+                                            <span class="pf-v5-c-label pf-m-grey" style="margin-left: 0.25rem;"
+                                                  x-show="logbookActiveTab === 'ALL'"
+                                                  x-text="logbookTabLabel(log.log_type)">
+                                            </span>
                                         </div>
                                     </div>
                                     <div class="pf-v5-c-card__actions" x-show="isOwner">
@@ -578,10 +623,9 @@
                                 </div>
                             </div>
                         </template>
-                        <template x-if="isPublicView && logbookHasMore">
+                        <template x-if="logbookHasMore">
                             <div style="text-align: center; padding: 1rem 0;">
-                                <button class="pf-v5-c-button pf-m-secondary"
-                                        @click="loadLogbookEntries(logbookEntries.length)">
+                                <button class="pf-v5-c-button pf-m-secondary" @click="loadMoreLogbook()">
                                     Load more
                                 </button>
                             </div>

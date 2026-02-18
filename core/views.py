@@ -1427,6 +1427,23 @@ class PublicLogbookEntriesAPI(View):
         drf_request = Request(request, parsers=[JSONParser()])
 
         qs = aircraft.logbook_entries.order_by('-date')
+
+        # Filter params (same field names the private endpoint uses)
+        log_type = request.GET.get('log_type', '').strip()
+        entry_type = request.GET.get('entry_type', '').strip()
+        search = request.GET.get('search', '').strip()
+
+        VALID_LOG_TYPES = {'AC', 'ENG', 'PROP', 'OTHER'}
+        VALID_ENTRY_TYPES = {'MAINTENANCE', 'INSPECTION', 'FLIGHT', 'HOURS_UPDATE', 'OTHER'}
+
+        if log_type in VALID_LOG_TYPES:
+            qs = qs.filter(log_type=log_type)
+        if entry_type in VALID_ENTRY_TYPES:
+            qs = qs.filter(entry_type=entry_type)
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(Q(text__icontains=search) | Q(signoff_person__icontains=search))
+
         total = qs.count()
         entries = LogbookEntrySerializer(
             qs[offset:offset + limit], many=True, context={'request': drf_request}
@@ -1456,7 +1473,7 @@ class PublicLogbookEntriesAPI(View):
                 rd for rd in rdocs if str(rd.get('id', '')) in visible_doc_ids
             ]
 
-        return JsonResponse({'results': entries, 'total': total, 'offset': offset, 'limit': limit})
+        return JsonResponse({'results': entries, 'count': total, 'offset': offset, 'limit': limit})
 
 
 def custom_logout(request):

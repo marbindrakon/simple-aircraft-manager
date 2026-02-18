@@ -2,8 +2,14 @@ from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
+
+
+class LogbookPagination(LimitOffsetPagination):
+    default_limit = 25
+    max_limit = 100
 
 from core.events import log_event
 from core.mixins import AircraftScopedMixin, EventLoggingMixin
@@ -111,6 +117,7 @@ class LogbookEntryViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.Model
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['aircraft', 'log_type', 'entry_type']
     search_fields = ['text', 'signoff_person']
+    pagination_class = LogbookPagination
 
 class SquawkViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelViewSet):
     queryset = Squawk.objects.all().order_by('-created_at')

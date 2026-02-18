@@ -3,7 +3,11 @@ function logbookMixin() {
         // Logbook state
         logbookEntries: [],
         logbookLoaded: false,
-        logbookHasMore: false,
+        logbookActiveTab: 'ALL',         // 'ALL' | 'AC' | 'ENG' | 'PROP' | 'OTHER'
+        logbookSearch: '',               // text search input
+        logbookEntryTypeFilter: '',      // '' = all entry types
+        logbookTotal: 0,                 // total matching entries reported by API
+        logbookSearchTimer: null,        // debounce handle
         logbookModalOpen: false,
         editingLogEntry: null,
         logbookSubmitting: false,
@@ -34,6 +38,10 @@ function logbookMixin() {
         // Aircraft documents (loaded on demand for related doc picker)
         aircraftDocuments: [],
         aircraftDocumentsLoaded: false,
+
+        get logbookHasMore() {
+            return this.logbookEntries.length < this.logbookTotal;
+        },
 
         get availableAdsForLogbook() {
             const selectedIds = this.logbookAssociations.ads.map(a => a.ad_id);
@@ -115,29 +123,61 @@ function logbookMixin() {
             }
         },
 
-        async loadLogbookEntries(offset = 0) {
+        async loadLogbookEntries(append = false) {
+            const offset = append ? this.logbookEntries.length : 0;
+            if (!append) {
+                this.logbookEntries = [];
+                this.logbookTotal = 0;
+            }
+
             try {
+                let url;
                 if (this.isPublicView) {
-                    const response = await fetch(
-                        `/api/shared/${this._publicShareToken}/logbook-entries/?offset=${offset}&limit=50`
-                    );
-                    const data = await response.json();
-                    const newEntries = data.results || [];
-                    this.logbookEntries = offset === 0
-                        ? newEntries
-                        : [...this.logbookEntries, ...newEntries];
-                    this.logbookHasMore = (offset + newEntries.length) < data.total;
+                    const params = new URLSearchParams({ offset, limit: 25 });
+                    if (this.logbookActiveTab !== 'ALL') params.set('log_type', this.logbookActiveTab);
+                    if (this.logbookEntryTypeFilter) params.set('entry_type', this.logbookEntryTypeFilter);
+                    if (this.logbookSearch.trim()) params.set('search', this.logbookSearch.trim());
+                    url = `/api/shared/${this._publicShareToken}/logbook-entries/?${params}`;
                 } else {
-                    const response = await fetch(`/api/logbook-entries/?aircraft=${this.aircraftId}`);
-                    const data = await response.json();
-                    this.logbookEntries = data.results || data;
-                    this.logbookHasMore = false;
+                    const params = new URLSearchParams({ aircraft: this.aircraftId, offset, limit: 25 });
+                    if (this.logbookActiveTab !== 'ALL') params.set('log_type', this.logbookActiveTab);
+                    if (this.logbookEntryTypeFilter) params.set('entry_type', this.logbookEntryTypeFilter);
+                    if (this.logbookSearch.trim()) params.set('search', this.logbookSearch.trim());
+                    url = `/api/logbook-entries/?${params}`;
                 }
+
+                const response = await fetch(url);
+                const data = await response.json();
+                const newEntries = data.results || [];
+                this.logbookEntries = append
+                    ? [...this.logbookEntries, ...newEntries]
+                    : newEntries;
+                this.logbookTotal = data.count ?? 0;
                 this.logbookLoaded = true;
             } catch (error) {
                 console.error('Error loading logbook entries:', error);
                 showNotification('Failed to load logbook entries', 'danger');
             }
+        },
+
+        loadMoreLogbook() {
+            this.loadLogbookEntries(true);
+        },
+
+        switchLogbookTab(tab) {
+            this.logbookActiveTab = tab;
+            this.logbookSearch = '';
+            this.logbookEntryTypeFilter = '';
+            this.loadLogbookEntries(false);
+        },
+
+        onLogbookSearchInput() {
+            clearTimeout(this.logbookSearchTimer);
+            this.logbookSearchTimer = setTimeout(() => this.loadLogbookEntries(false), 300);
+        },
+
+        logbookTabLabel(tab) {
+            return { ALL: 'All', AC: 'Airframe', ENG: 'Engine', PROP: 'Propeller', OTHER: 'Other' }[tab] ?? tab;
         },
 
         async loadCollectionsForModal() {
