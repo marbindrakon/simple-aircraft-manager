@@ -1,0 +1,38 @@
+name: Build and publish documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/user-guide/**'
+      - 'docs/screenshots/**'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'docs/user-guide/conf.py'
+
+      - name: Install Sphinx
+        run: pip install sphinx alabaster
+
+      - name: Build documentation
+        run: sphinx-build -b html docs/user-guide docs/user-guide/_build/html -W
+
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/user-guide/_build/html
+          publish_branch: gh-pages
