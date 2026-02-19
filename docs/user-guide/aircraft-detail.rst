@@ -10,7 +10,7 @@ is organized into a tabbed interface with the following sections:
 - :doc:`squawks`
 - :doc:`ads`
 - :doc:`inspections`
-- Repairs & Alterations (:doc:`major-records`)
+- :doc:`major-records`
 - :doc:`oil-and-fuel`
 - :doc:`documents`
 - :doc:`sharing-and-access` (owners only)

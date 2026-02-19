@@ -53,11 +53,10 @@ See [examples/openshift/](examples/openshift/) for a complete OpenShift/Kubernet
 
 ## Documentation
 
-- [Features](docs/features.md) — Detailed feature documentation
-- [Configuration](docs/configuration.md) — Environment variables and settings
-- [API Reference](docs/api-reference.md) — REST API endpoints
-- [Data Model](docs/data-model.md) — Database models and relationships
-- [Architecture](docs/architecture.md) — Tech stack, project structure, and contributing guide
+Full documentation is available at **[docs.simple-aircraft.app](https://docs.simple-aircraft.app)**, including the user guide and developer reference.
+
+- [User Guide](https://docs.simple-aircraft.app) — Getting started, feature walkthroughs
+- [Developer Reference](https://docs.simple-aircraft.app) — Architecture, API reference, configuration, data model
 
 ## License
 
