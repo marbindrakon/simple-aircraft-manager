@@ -11,10 +11,13 @@ Use this checklist when deploying Simple Aircraft Manager to your OpenShift/Kube
 - [ ] Container image built and pushed to accessible registry
 - [ ] Domain/hostname decided for the application
 
-### Build and Push Container
-- [ ] Built container image: `podman build -t <registry>/<image>:tag -f Containerfile .`
-- [ ] Pushed to registry: `podman push <registry>/<image>:tag`
-- [ ] Registry is accessible from cluster (auth configured if private)
+### Container Image
+- [ ] Using pre-built GHCR image (`ghcr.io/marbindrakon/simple-aircraft-manager:latest`) — no action needed
+- [ ] **Or**, building a custom image:
+  - [ ] Built: `podman build -t <registry>/<image>:tag -f Containerfile .`
+  - [ ] Pushed: `podman push <registry>/<image>:tag`
+  - [ ] Updated both `image` fields in `08-deployment.yaml`
+  - [ ] Registry is accessible from cluster (auth configured if private)
 
 ## 📝 Manifest Customization
 
@@ -74,8 +77,7 @@ Use this checklist when deploying Simple Aircraft Manager to your OpenShift/Kube
 - [ ] Adjust `storage` size based on media upload needs
 
 ### 08-deployment.yaml
-- [ ] **Required:** Update `image` in both `initContainers` and `containers.sam`
-  - `image: your-registry/simple-aircraft-manager:latest`
+- [ ] Image is pre-set to `ghcr.io/marbindrakon/simple-aircraft-manager:latest` — update only if using a custom build
 - [ ] Review and adjust resource limits:
   - [ ] `containers.sam.resources`
   - [ ] `containers.nginx.resources`

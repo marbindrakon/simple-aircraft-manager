@@ -63,12 +63,15 @@ ANTHROPIC_API_KEY: "sk-ant-..."
 python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'
 ```
 
-### 3. Update Container Image
+### 3. Container Image
 
-In `08-deployment.yaml`, change:
+The pre-built image is published automatically to GHCR on every commit to `main`:
+
 ```yaml
-image: quay.io/your-org/simple-aircraft-manager:latest
+image: ghcr.io/marbindrakon/simple-aircraft-manager:latest
 ```
+
+This is already set in `08-deployment.yaml`. To use a custom build instead, update both `image` fields (init container and main container) to point to your registry.
 
 ### 4. Configure OIDC (Optional)
 

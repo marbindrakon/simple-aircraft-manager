@@ -22,8 +22,7 @@ spec:
       # Runs before main containers start
       initContainers:
       - name: collect-static
-        # IMPORTANT: Update to your container registry and image
-        image: quay.io/your-org/simple-aircraft-manager:latest
+        image: ghcr.io/marbindrakon/simple-aircraft-manager:latest
         imagePullPolicy: Always  # Always pull to get latest image
         command: ['sh', '-c', 'cp -r /opt/app-root/src/staticfiles/. /mnt/static/']
         volumeMounts:
@@ -33,8 +32,7 @@ spec:
       containers:
       # Main Container: Django Application (Gunicorn)
       - name: sam
-        # IMPORTANT: Update to your container registry and image
-        image: quay.io/your-org/simple-aircraft-manager:latest
+        image: ghcr.io/marbindrakon/simple-aircraft-manager:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
