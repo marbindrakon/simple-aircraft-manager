@@ -91,5 +91,5 @@ Editing and Deleting
   collection assignment.
 - Click the **trash** icon to delete a document and all its pages.
 - Collection editing and deletion is available via the icons in the collection
-  card header. Deleting a collection does not delete the documents inside it --
-  they become uncollected.
+  card header. **Deleting a collection also permanently deletes all documents
+  and pages inside it.** This cannot be undone.
