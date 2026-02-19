@@ -1,13 +1,13 @@
 <!doctype html>
 <html class="no-js" lang="en" data-content_root="./">
-  <head>
-<meta charset="utf-8">
+  <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="#">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="prev" title="API Reference" href="api-reference.html">
 
     <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
-<meta name="robots" content="noindex" />
-<title>Search - Simple Aircraft Manager</title><link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
+        <title>Data Model - Simple Aircraft Manager</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
     
@@ -172,7 +172,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -184,7 +184,7 @@
   
   <span class="sidebar-brand-text">Simple Aircraft Manager</span>
   
-</a><form class="sidebar-search-container" method="get" action="#" role="search">
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
   <input type="hidden" name="check_keywords" value="yes">
   <input type="hidden" name="area" value="default">
@@ -209,12 +209,12 @@
 <li class="toctree-l1"><a class="reference internal" href="user-guide/airworthiness.html">Airworthiness Status</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Developer Reference</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="features.html">Features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
 <li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api-reference.html">API Reference</a></li>
-<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data Model</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Data Model</a></li>
 </ul>
 
 </div>
@@ -234,7 +234,13 @@
           <span>Back to top</span>
         </a>
         <div class="content-icon-container">
-          <div class="theme-toggle-container theme-toggle-content">
+          <div class="view-this-page">
+  <a class="muted-link" href="_sources/data-model.md.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
             <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
               <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
               <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
@@ -242,22 +248,222 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          
-<noscript>
-<div class="admonition error">
-  <p class="admonition-title">Error</p>
-  <p>
-    Please activate JavaScript to enable the search functionality.
-  </p>
+          <section id="data-model">
+<h1>Data Model<a class="headerlink" href="#data-model" title="Link to this heading">¶</a></h1>
+<section id="core-app">
+<h2>Core App<a class="headerlink" href="#core-app" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Model</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Aircraft</span></code></p></td>
+<td><p>Central fleet inventory (UUID primary key)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">AircraftNote</span></code></p></td>
+<td><p>Notes attached to aircraft with timestamps; <code class="docutils literal notranslate"><span class="pre">public</span></code> flag controls share-link visibility</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AircraftEvent</span></code></p></td>
+<td><p>Audit trail of all changes to aircraft data</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">AircraftRole</span></code></p></td>
+<td><p>Per-aircraft user roles (<code class="docutils literal notranslate"><span class="pre">owner</span></code> or <code class="docutils literal notranslate"><span class="pre">pilot</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AircraftShareToken</span></code></p></td>
+<td><p>Share link tokens with privilege level (<code class="docutils literal notranslate"><span class="pre">status</span></code> or <code class="docutils literal notranslate"><span class="pre">maintenance</span></code>), optional expiry, and optional label</p></td>
+</tr>
+</tbody>
+</table>
 </div>
-</noscript>
-
-<div id="search-results"></div>
+</section>
+<section id="health-app">
+<h2>Health App<a class="headerlink" href="#health-app" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Model</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ComponentType</span></code></p></td>
+<td><p>Component categories (consumable flag)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Component</span></code></p></td>
+<td><p>Parts with TBO, inspection, and replacement tracking; supports parent-child hierarchy</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">DocumentCollection</span></code></p></td>
+<td><p>Logical document groupings</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Document</span></code></p></td>
+<td><p>Maintenance documentation by type</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">DocumentImage</span></code></p></td>
+<td><p>Individual pages/images within documents</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">LogbookEntry</span></code></p></td>
+<td><p>Maintenance log entries with hours, dates, and file attachments</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Squawk</span></code></p></td>
+<td><p>Maintenance defects with priority levels and optional component link</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">InspectionType</span></code></p></td>
+<td><p>Recurring inspection requirements with hour/day intervals</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">InspectionRecord</span></code></p></td>
+<td><p>Inspection completion records</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">AD</span></code></p></td>
+<td><p>Airworthiness Directives with recurrence settings</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ADCompliance</span></code></p></td>
+<td><p>AD compliance records</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">MajorRecord</span></code></p></td>
+<td><p>Major repair and alteration records</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ConsumeableRecord</span></code></p></td>
+<td><p>Oil/fuel consumption records</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="relationships">
+<h2>Relationships<a class="headerlink" href="#relationships" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Aircraft (central hub)
+├── AircraftNote (1:N)
+├── AircraftEvent (1:N)
+├── AircraftRole (1:N) → User
+├── AircraftShareToken (1:N)
+├── Component (1:N)
+│   ├── ComponentType (N:1)
+│   ├── Parent Component (self-reference)
+│   └── Squawk (1:N, optional link)
+├── Squawk (1:N)
+├── LogbookEntry (1:N)
+├── Document (1:N)
+│   ├── DocumentCollection (N:1, optional)
+│   └── DocumentImage (1:N)
+├── InspectionType (1:N)
+├── InspectionRecord (1:N)
+├── AD (1:N)
+├── ADCompliance (1:N) → AD
+├── MajorRecord (1:N)
+└── ConsumeableRecord (1:N)
+</pre></div>
+</div>
+</section>
+<section id="component-hours-fields">
+<h2>Component Hours Fields<a class="headerlink" href="#component-hours-fields" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Purpose</p></th>
+<th class="head"><p>Reset on service?</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">hours_in_service</span></code></p></td>
+<td><p>Hours since last replacement</p></td>
+<td><p>Yes — <code class="docutils literal notranslate"><span class="pre">replacement_critical</span></code> only</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">hours_since_overhaul</span></code></p></td>
+<td><p>Hours since last overhaul/rebuild</p></td>
+<td><p>No — only on major overhaul</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="component-critical-flags">
+<h2>Component Critical Flags<a class="headerlink" href="#component-critical-flags" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Flag</p></th>
+<th class="head"><p>Tracked via</p></th>
+<th class="head"><p>Purpose</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">replacement_critical</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">replacement_hours</span></code> + <code class="docutils literal notranslate"><span class="pre">hours_in_service</span></code></p></td>
+<td><p>Periodic replacement (oil, filters)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tbo_critical</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">tbo_hours</span></code> + <code class="docutils literal notranslate"><span class="pre">hours_since_overhaul</span></code></p></td>
+<td><p>Time between overhauls (engines, props)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">inspection_critical</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">InspectionType</span></code> records</p></td>
+<td><p>Requires periodic inspections</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="squawk-priorities">
+<h2>Squawk Priorities<a class="headerlink" href="#squawk-priorities" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Value</p></th>
+<th class="head"><p>Label</p></th>
+<th class="head"><p>Color</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>Ground Aircraft</p></td>
+<td><p>Red</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Fix Soon</p></td>
+<td><p>Orange</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>Fix at Next Inspection</p></td>
+<td><p>Blue</p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>Fix Eventually</p></td>
+<td><p>Grey</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="share-token-privilege-levels">
+<h2>Share Token Privilege Levels<a class="headerlink" href="#share-token-privilege-levels" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Level</p></th>
+<th class="head"><p>Data Visible</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">status</span></code></p></td>
+<td><p>Overview, airworthiness, active squawks, public notes, current AD/inspection status, oil/fuel, public documents</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">maintenance</span></code></p></td>
+<td><p>Everything in <code class="docutils literal notranslate"><span class="pre">status</span></code> + full history (logbook, AD/inspection history, resolved squawks, major records)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</section>
 
         </article>
       </div>
@@ -265,7 +471,17 @@
         
         <div class="related-pages">
           
-          
+          <a class="prev-page" href="api-reference.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">API Reference</div>
+                
+              </div>
+            </a>
         </div>
         <div class="bottom-of-page">
           <div class="left-details">
@@ -284,8 +500,33 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Data Model</a><ul>
+<li><a class="reference internal" href="#core-app">Core App</a></li>
+<li><a class="reference internal" href="#health-app">Health App</a></li>
+<li><a class="reference internal" href="#relationships">Relationships</a></li>
+<li><a class="reference internal" href="#component-hours-fields">Component Hours Fields</a></li>
+<li><a class="reference internal" href="#component-critical-flags">Component Critical Flags</a></li>
+<li><a class="reference internal" href="#squawk-priorities">Squawk Priorities</a></li>
+<li><a class="reference internal" href="#share-token-privilege-levels">Share Token Privilege Levels</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
@@ -294,8 +535,5 @@
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
-    
-<script src="_static/searchtools.js"></script>
-<script src="_static/language_data.js"></script>
-<script src="searchindex.js"></script></body>
+    </body>
 </html>

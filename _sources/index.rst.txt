@@ -1,26 +1,36 @@
-Simple Aircraft Manager User Guide
-====================================
+Simple Aircraft Manager
+=======================
 
-Simple Aircraft Manager is a web application for tracking aircraft maintenance,
-flight hours, and regulatory compliance. It provides a centralized place to manage
-your fleet's airworthiness status, component life limits, maintenance logbooks,
-Airworthiness Directives, inspections, and more.
+Simple Aircraft Manager is an open-source, self-hosted solution for tracking
+aircraft maintenance, flight hours, and regulatory compliance for small fleets
+and individual owners.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents
+   :caption: User Guide
 
-   getting-started
-   dashboard
-   aircraft-detail
-   components
-   squawks
-   logbook
-   ads
-   inspections
-   oil-and-fuel
-   documents
-   major-records
-   sharing-and-access
-   logbook-import
-   airworthiness
+   user-guide/index
+   user-guide/getting-started
+   user-guide/dashboard
+   user-guide/aircraft-detail
+   user-guide/components
+   user-guide/squawks
+   user-guide/logbook
+   user-guide/ads
+   user-guide/inspections
+   user-guide/oil-and-fuel
+   user-guide/documents
+   user-guide/major-records
+   user-guide/sharing-and-access
+   user-guide/logbook-import
+   user-guide/airworthiness
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Developer Reference
+
+   features
+   architecture
+   configuration
+   api-reference
+   data-model
