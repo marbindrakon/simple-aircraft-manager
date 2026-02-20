@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import permissions
 
 from core.models import Aircraft, AircraftRole
@@ -97,6 +98,34 @@ class IsAircraftPilotOrAbove(permissions.BasePermission):
         if action in PILOT_WRITE_ACTIONS:
             return True  # pilot+ can do these
         return ROLE_HIERARCHY.get(role, 0) >= ROLE_HIERARCHY.get('owner', 0)
+
+
+def user_can_create_aircraft(user):
+    """
+    Return True if the user is permitted to create or import aircraft.
+
+    Controlled by the AIRCRAFT_CREATE_PERMISSION setting:
+      'any'    — any authenticated user (default)
+      'owners' — users who already own at least one aircraft (plus admins)
+      'admin'  — staff/superusers only
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_staff or user.is_superuser:
+        return True
+    setting = getattr(settings, 'AIRCRAFT_CREATE_PERMISSION', 'any')
+    if setting == 'admin':
+        return False
+    if setting == 'owners':
+        return AircraftRole.objects.filter(user=user, role='owner').exists()
+    return True  # 'any'
+
+
+class CanCreateAircraft(permissions.BasePermission):
+    """DRF permission enforcing AIRCRAFT_CREATE_PERMISSION."""
+
+    def has_permission(self, request, view):
+        return user_can_create_aircraft(request.user)
 
 
 class IsPublicShareOrAuthenticated(permissions.BasePermission):

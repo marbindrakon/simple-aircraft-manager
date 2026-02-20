@@ -1,0 +1,218 @@
+<!-- Aircraft Import Modal -->
+<div x-data="importModal()" x-cloak>
+    <div class="pf-v5-c-backdrop" x-show="modalOpen" @click.self="maybeClose()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-lg" @click.stop style="max-height: 90vh; display: flex; flex-direction: column;">
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close"
+                        @click="maybeClose()"
+                        style="position: absolute; top: 1rem; right: 1rem;"
+                        :disabled="importing">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">Import Aircraft</h1>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body" style="overflow-y: auto; flex: 1;">
+
+                    <!-- File picker (shown before import starts) -->
+                    <div x-show="!importing && !done">
+                        <p style="margin-bottom: 1rem; color: var(--pf-v5-global--Color--200);">
+                            Select a <code>.sam.zip</code> archive exported from Simple Aircraft Manager.
+                            All records and file attachments will be imported and you will become the owner.
+                        </p>
+
+                        <div class="pf-v5-c-form__group" style="margin-bottom: 1rem;">
+                            <label class="pf-v5-c-form__label" for="import-archive-file">
+                                <span class="pf-v5-c-form__label-text">Archive file</span>
+                                <span class="pf-v5-c-form__label-required" aria-hidden="true"> *</span>
+                            </label>
+                            <input id="import-archive-file"
+                                   x-ref="archiveInput"
+                                   type="file"
+                                   class="pf-v5-c-form-control"
+                                   accept=".zip,.sam.zip"
+                                   @change="onArchiveChange($event)">
+                            <p x-show="selectedArchive"
+                               style="margin-top: 0.35rem; color: var(--pf-v5-global--success-color--100); font-size: 0.875rem;">
+                                <i class="fas fa-check"></i>
+                                <span x-text="selectedArchive ? selectedArchive.name : ''"></span>
+                            </p>
+                        </div>
+
+                        <!-- Upload progress bar (shown while XHR upload is in flight) -->
+                        <div x-show="uploading" style="margin-bottom: 1rem;">
+                            <p style="margin-bottom: 0.4rem; font-size: 0.875rem;">Uploading…</p>
+                            <div class="pf-v5-c-progress" role="progressbar"
+                                 :aria-valuenow="uploadPercent" aria-valuemin="0" aria-valuemax="100">
+                                <div class="pf-v5-c-progress__bar">
+                                    <div class="pf-v5-c-progress__indicator"
+                                         :style="'width:' + uploadPercent + '%'"></div>
+                                </div>
+                            </div>
+                            <p style="font-size: 0.8rem; color: var(--pf-v5-global--Color--200); margin-top: 0.2rem;"
+                               x-text="uploadPercent + '%'"></p>
+                        </div>
+
+                        <!-- Tail number conflict prompt -->
+                        <div x-show="conflictTailNumber"
+                             class="pf-v5-c-alert pf-m-warning" style="margin-top: 1rem;">
+                            <div class="pf-v5-c-alert__icon">
+                                <i class="fas fa-triangle-exclamation"></i>
+                            </div>
+                            <p class="pf-v5-c-alert__title">Tail number conflict</p>
+                            <div class="pf-v5-c-alert__description">
+                                <p style="margin-bottom: 0.6rem;">
+                                    An aircraft with tail number
+                                    <strong x-text="conflictTailNumber"></strong>
+                                    already exists. Enter a different tail number to continue
+                                    without re-uploading.
+                                </p>
+                                <div style="display: flex; gap: 0.5rem; align-items: flex-end;">
+                                    <div style="flex: 1;">
+                                        <label class="pf-v5-c-form__label" for="alt-tail-modal">
+                                            <span class="pf-v5-c-form__label-text">New tail number</span>
+                                        </label>
+                                        <input id="alt-tail-modal" class="pf-v5-c-form-control" type="text"
+                                               x-model="altTailNumber"
+                                               placeholder="e.g. N12345-2">
+                                    </div>
+                                    <button class="pf-v5-c-button pf-m-primary"
+                                            type="button"
+                                            :disabled="!altTailNumber.trim()"
+                                            @click="startImport()">
+                                        Retry
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Import running / complete -->
+                    <div x-show="importing || done">
+
+                        <!-- Status header -->
+                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                            <template x-if="importing">
+                                <span class="pf-v5-c-spinner pf-m-md" role="progressbar" aria-label="Importing">
+                                    <span class="pf-v5-c-spinner__clipper"></span>
+                                    <span class="pf-v5-c-spinner__lead-ball"></span>
+                                    <span class="pf-v5-c-spinner__tail-ball"></span>
+                                </span>
+                            </template>
+                            <template x-if="done && !failed">
+                                <i class="fas fa-circle-check"
+                                   style="font-size: 1.3rem; color: var(--pf-v5-global--success-color--100);"></i>
+                            </template>
+                            <template x-if="failed">
+                                <i class="fas fa-circle-xmark"
+                                   style="font-size: 1.3rem; color: var(--pf-v5-global--danger-color--100);"></i>
+                            </template>
+                            <span class="pf-v5-c-title pf-m-lg"
+                                  x-text="importing ? 'Importing…' : (failed ? 'Import failed' : 'Import complete')"></span>
+                        </div>
+
+                        <!-- Success summary -->
+                        <template x-if="done && !failed && result">
+                            <div style="margin-bottom: 1rem;">
+                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                                    <template x-for="(val, key) in result.counts" :key="key">
+                                        <span x-show="val > 0" class="pf-v5-c-label pf-m-green">
+                                            <span class="pf-v5-c-label__content"
+                                                  x-text="val + ' ' + key.replace(/_/g, ' ')"></span>
+                                        </span>
+                                    </template>
+                                    <span x-show="result.warnings && result.warnings.length > 0"
+                                          class="pf-v5-c-label pf-m-gold">
+                                        <span class="pf-v5-c-label__content">
+                                            <i class="fas fa-triangle-exclamation" style="margin-right: 0.25rem;"></i>
+                                            <span x-text="result.warnings.length + ' warning(s)'"></span>
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Event log -->
+                        <div class="pf-v5-c-card">
+                            <div class="pf-v5-c-card__header">
+                                <div class="pf-v5-c-card__header-main">
+                                    <span class="pf-v5-c-card__title-text" style="font-size: 0.875rem;">
+                                        <i class="fas fa-terminal" style="margin-right: 0.3rem;"></i>
+                                        Progress log
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="pf-v5-c-card__body" style="padding: 0;">
+                                <div x-ref="eventLog"
+                                     style="background: #1e1e1e; color: #d4d4d4; font-family: monospace;
+                                            font-size: 0.78rem; line-height: 1.6; max-height: 280px;
+                                            overflow-y: auto; padding: 0.6rem 0.9rem;">
+                                    <template x-for="(ev, idx) in events" :key="idx">
+                                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.1rem;">
+                                            <span style="flex-shrink: 0; width: 1rem; text-align: center;">
+                                                <i :class="'fas ' + eventIcon(ev)"
+                                                   :style="ev.type === 'error'    ? 'color: #f85149'
+                                                           : ev.type === 'warning'  ? 'color: #d29922'
+                                                           : ev.type === 'complete' ? 'color: #56d364'
+                                                           : 'color: #8b949e'"></i>
+                                            </span>
+                                            <span x-text="ev.message"
+                                                  style="flex: 1; white-space: pre-wrap; word-break: break-word;"></span>
+                                        </div>
+                                    </template>
+                                    <template x-if="importing">
+                                        <div style="color: #8b949e;">
+                                            <i class="fas fa-ellipsis"></i>
+                                            <span style="margin-left: 0.4rem;">Processing…</span>
+                                        </div>
+                                    </template>
+                                    <template x-if="events.length === 0 && !importing">
+                                        <div style="color: #8b949e; font-style: italic;">No events yet.</div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div><!-- end importing/done section -->
+                </div><!-- end modal body -->
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <!-- Before import: submit button -->
+                    <template x-if="!importing && !done">
+                        <button class="pf-v5-c-button pf-m-primary"
+                                type="button"
+                                :disabled="!canSubmit"
+                                @click="startImport()">
+                            <i class="fas fa-upload" style="margin-right: 0.4rem;"></i>
+                            Import Archive
+                        </button>
+                    </template>
+                    <!-- After success: view aircraft link -->
+                    <template x-if="done && !failed && result">
+                        <a :href="'/aircraft/' + result.aircraft_id + '/'"
+                           class="pf-v5-c-button pf-m-primary">
+                            <i class="fas fa-plane" style="margin-right: 0.4rem;"></i>
+                            View <span x-text="result.tail_number"></span>
+                        </a>
+                    </template>
+                    <!-- After success: import another -->
+                    <template x-if="done && !failed">
+                        <button class="pf-v5-c-button pf-m-secondary"
+                                type="button"
+                                @click="reset()">
+                            Import another
+                        </button>
+                    </template>
+                    <button class="pf-v5-c-button pf-m-link"
+                            type="button"
+                            @click="maybeClose()"
+                            :disabled="importing">
+                        <span x-text="done ? 'Close' : 'Cancel'"></span>
+                    </button>
+                </footer>
+            </div>
+        </div>
+    </div>
+</div>

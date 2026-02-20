@@ -143,6 +143,19 @@ LOGIN_REDIRECT_URL = '/dashboard'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Aircraft creation permission: 'any', 'owners', or 'admin'
+AIRCRAFT_CREATE_PERMISSION = os.environ.get('AIRCRAFT_CREATE_PERMISSION', 'any')
+
+# Aircraft import/export settings
+IMPORT_STAGING_DIR = os.environ.get(
+    'IMPORT_STAGING_DIR',
+    os.path.join(BASE_DIR, 'import_staging')
+)
+IMPORT_MAX_ARCHIVE_SIZE = int(os.environ.get(
+    'IMPORT_MAX_ARCHIVE_SIZE',
+    str(10 * 1024 * 1024 * 1024)  # 10 GiB
+))
+
 # Logbook import AI model configuration
 LOGBOOK_IMPORT_MODELS = [
     {

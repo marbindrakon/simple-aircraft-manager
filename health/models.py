@@ -349,7 +349,7 @@ class ADCompliance(models.Model):
 
 
 class ImportJob(models.Model):
-    """Track background logbook import jobs."""
+    """Track background import jobs (logbook or aircraft)."""
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('running', 'Running'),
@@ -358,7 +358,11 @@ class ImportJob(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    aircraft = models.ForeignKey(core_models.Aircraft, on_delete=models.CASCADE, related_name='import_jobs')
+    # aircraft is null for aircraft-import jobs until the import completes
+    aircraft = models.ForeignKey(core_models.Aircraft, on_delete=models.CASCADE, related_name='import_jobs',
+                                 null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                             null=True, blank=True, related_name='import_jobs')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     events = models.JSONField(default=list)
     result = models.JSONField(null=True, blank=True)
@@ -366,7 +370,9 @@ class ImportJob(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"ImportJob {self.id} ({self.status}) - {self.aircraft.tail_number}"
+        if self.aircraft:
+            return f"ImportJob {self.id} ({self.status}) - {self.aircraft.tail_number}"
+        return f"ImportJob {self.id} ({self.status})"
 
 
 class ConsumableRecord(models.Model):

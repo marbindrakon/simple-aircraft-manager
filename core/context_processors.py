@@ -19,19 +19,28 @@ def oidc_settings(request):
 
 def user_role_context(request):
     """
-    Expose whether the current user is an owner of any aircraft.
-    Used to conditionally show owner-only navigation items (e.g. Tools).
+    Expose whether the current user is an owner of any aircraft, and whether
+    they are permitted to create/import aircraft (per AIRCRAFT_CREATE_PERMISSION).
     """
     user_is_owner = False
+    can_create_aircraft = False
     if request.user.is_authenticated:
         if request.user.is_staff or request.user.is_superuser:
             user_is_owner = True
+            can_create_aircraft = True
         else:
             from core.models import AircraftRole
             user_is_owner = AircraftRole.objects.filter(
                 user=request.user, role='owner'
             ).exists()
-    return {'user_is_owner': user_is_owner}
+            setting = getattr(settings, 'AIRCRAFT_CREATE_PERMISSION', 'any')
+            if setting == 'admin':
+                can_create_aircraft = False
+            elif setting == 'owners':
+                can_create_aircraft = user_is_owner
+            else:  # 'any'
+                can_create_aircraft = True
+    return {'user_is_owner': user_is_owner, 'can_create_aircraft': can_create_aircraft}
 
 
 def theme_context(request):
