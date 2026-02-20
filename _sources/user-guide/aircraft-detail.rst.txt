@@ -23,7 +23,7 @@ Page Header
 The header displays:
 
 - **Tail number** and make/model.
-- **Airworthiness status badge** -- same color-coded indicator as the dashboard.
+- **Airworthiness status badge** -- same color-coded indicator as the Aircraft page.
 - **Current flight hours**.
 - **Update Hours** button (visible to owners and pilots) -- opens a modal to
   log new flight time. Disabled when the aircraft is grounded.
@@ -35,7 +35,7 @@ The header displays:
 Updating Flight Hours
 ---------------------
 
-1. Click **Update Hours** in the page header (or from the dashboard card).
+1. Click **Update Hours** in the page header (or from the aircraft card).
 2. Enter the new **total hours** (Hobbs or tach time).
 3. Click **Save**.
 

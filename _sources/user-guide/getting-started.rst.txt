@@ -17,12 +17,12 @@ Simple Aircraft Manager supports two authentication methods:
 
 .. TODO: Screenshot of the login page showing both SSO and local login options
 
-After logging in, you are taken to the :doc:`dashboard`.
+After logging in, you are taken to the :doc:`Aircraft Fleet page <dashboard>`.
 
 Creating Your First Aircraft
 -----------------------------
 
-1. From the dashboard, click the **New Aircraft** button in the top right.
+1. From the Aircraft page, click the **New Aircraft** button in the top right.
 2. Fill in the required fields:
 
    - **Tail Number** -- The aircraft registration (e.g., N12345).
@@ -30,7 +30,7 @@ Creating Your First Aircraft
    - **Model** -- The aircraft model (e.g., 172S).
 
 3. Optionally upload a **photo** of the aircraft. This will be displayed on the
-   dashboard card and the aircraft detail page.
+   aircraft card and the aircraft detail page.
 4. Click **Save**.
 
 You are automatically assigned as the **Owner** of any aircraft you create.

@@ -11,8 +11,8 @@ hours, and signoff information.
 Accessing the Import Page
 -------------------------
 
-Navigate to the Logbook Import page from the navigation menu. This feature is
-available to aircraft owners.
+Click **Import Logbooks** in the navigation bar to access this page. This
+feature is available to aircraft owners.
 
 .. note::
 

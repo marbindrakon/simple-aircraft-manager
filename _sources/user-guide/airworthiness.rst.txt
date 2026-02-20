@@ -79,10 +79,10 @@ each issue with:
 
 .. TODO: Screenshot of the Airworthiness Issues card with explanatory annotations
 
-Dashboard Indicators
---------------------
+Aircraft Page Indicators
+------------------------
 
-On the :doc:`dashboard`, each aircraft card shows:
+On the :doc:`Aircraft page <dashboard>`, each aircraft card shows:
 
 - The **airworthiness badge** with icon and text.
 - **Issue counts** -- separate counts for grounding (red) and upcoming (orange)
