@@ -67,7 +67,10 @@ function showNotification(message, type = 'info') {
 
 // Date formatting
 function formatDate(dateString) {
-    return new Date(dateString).toLocaleDateString();
+    if (!dateString) return '';
+    // Parse YYYY-MM-DD as local date to avoid UTC midnight timezone shift
+    const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString();
 }
 
 // Number formatting
