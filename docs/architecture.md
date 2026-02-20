@@ -37,13 +37,18 @@ simple-aircraft-manager/
 │   └── wsgi.py
 ├── core/                        # Core aircraft management
 │   ├── models.py                # Aircraft, AircraftNote, AircraftEvent, roles, share tokens
-│   ├── views.py                 # API ViewSets + template views + public sharing
+│   ├── views.py                 # API ViewSets + template views + public sharing + import
 │   ├── serializers.py           # DRF serializers
 │   ├── permissions.py           # RBAC permission classes
 │   ├── mixins.py                # AircraftScopedMixin, EventLoggingMixin
 │   ├── events.py                # Event logging (log_event)
+│   ├── export.py                # Aircraft export — builds manifest + streams .sam.zip
+│   ├── import_export.py         # Aircraft import — validation, ID remapping, background runner
 │   ├── oidc.py                  # OIDC backend + logout URL builder
-│   ├── context_processors.py    # Template context (OIDC_ENABLED)
+│   ├── context_processors.py    # Template context (OIDC_ENABLED, AIRCRAFT_CREATE_PERMISSION)
+│   ├── management/commands/
+│   │   ├── export_aircraft.py   # CLI export command
+│   │   └── import_aircraft.py   # CLI import command
 │   ├── templates/
 │   │   ├── base.html            # Base template with PatternFly + Alpine.js
 │   │   ├── dashboard.html       # Fleet dashboard
@@ -97,6 +102,67 @@ Shared utilities in `utils.js` (loaded globally via `base.html`): `getCookie`, `
 4. Component replacement intervals
 
 Thresholds: overdue → RED; within 10 hours / 30 days → ORANGE.
+
+## Aircraft Import / Export
+
+### Archive format (`.sam.zip`)
+
+A `.sam.zip` file is a standard ZIP archive containing:
+
+| Path | Description |
+|------|-------------|
+| `manifest.json` | All aircraft data (JSON, ≤ 50 MB) |
+| `attachments/<original_storage_path>` | Attached files (pictures, document images, squawk attachments) |
+
+### Manifest schema
+
+`manifest.json` is a JSON object. The `schema_version` field controls compatibility.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `schema_version` | int | Archive schema version (currently `1`) |
+| `exported_at` | ISO 8601 string | Export timestamp |
+| `source_instance` | string | `ALLOWED_HOSTS[0]` of the exporting instance |
+| `aircraft` | object | Aircraft fields |
+| `component_types` | array | Component type definitions used by this aircraft |
+| `components` | array | All components (parent-child relationships preserved) |
+| `document_collections` | array | Document collections |
+| `documents` | array | Documents |
+| `document_images` | array | Document images with `attachments/…` paths |
+| `squawks` | array | Squawks with `attachments/…` paths |
+| `inspection_types` | array | Inspection type definitions |
+| `inspection_records` | array | Inspection compliance records |
+| `ads` | array | Airworthiness Directives |
+| `ad_compliances` | array | AD compliance records |
+| `consumable_records` | array | Oil and fuel records |
+| `major_records` | array | Major repair/alteration records |
+| `notes` | array | Aircraft notes |
+
+All UUIDs are serialized as strings. Decimal values (hours, quantities) are serialized as strings to avoid float precision loss. Missing files are flagged with `"_missing": true` on the containing object — they are omitted from the archive but do not block export.
+
+### Schema versioning
+
+`CURRENT_SCHEMA_VERSION = 1` is defined in `core/import_export.py`. The importer rejects any archive whose `schema_version` is greater than `CURRENT_SCHEMA_VERSION`. Older versions (lower numbers) are accepted.
+
+When a new schema version is needed (e.g., new required fields, renamed keys):
+
+1. Bump `SCHEMA_VERSION` in `core/export.py` and `CURRENT_SCHEMA_VERSION` in `core/import_export.py` to the same value.
+2. Add migration logic in `run_aircraft_import_job` for archives with older `schema_version` values.
+3. Update `KNOWN_MANIFEST_KEYS` if top-level keys changed.
+
+### Import pipeline
+
+1. **`validate_archive_quick()`** (synchronous, in-view) — ZIP safety checks (zip bomb, symlinks, path traversal), manifest parsing, schema version check, tail-number conflict detection.
+2. **`run_aircraft_import_job()`** (background thread) — full validation, record creation inside a `transaction.atomic()` block with rollback on error, file extraction, and job status updates.
+3. **ID remapping** — all UUIDs from the manifest are re-keyed to fresh UUIDs on the target instance. Cross-references (e.g., `component_id` on a squawk) are resolved via in-memory maps built during import.
+
+### Security checks
+
+- Zip bomb: total uncompressed size vs. `IMPORT_MAX_ARCHIVE_SIZE`; compression ratio ≤ 100:1
+- Symlink entries rejected
+- Path traversal: all entry names are NFC-normalized; `..` components and absolute paths rejected
+- Magic-byte validation for all attached files (jpg, png, gif, webp, bmp, tiff, pdf)
+- Per-entity record count limits (configurable via `_DEFAULT_LIMITS` in `core/import_export.py`)
 
 ## Content Security Policy
 

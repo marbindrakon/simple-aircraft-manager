@@ -21,6 +21,7 @@ python -c 'from django.core.management.utils import get_random_secret_key; print
 | `DJANGO_DEBUG` | `False` | Enable debug mode |
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | — | Trusted origins for CSRF (e.g., `https://app.example.com`) |
 | `TZ` | `UTC` | Timezone |
+| `AIRCRAFT_CREATE_PERMISSION` | `any` | Who can create or import aircraft: `any` (all authenticated users), `owners` (existing owners + admins), or `admin` (admins only) |
 
 ## Database
 
@@ -40,6 +41,15 @@ python -c 'from django.core.management.utils import get_random_secret_key; print
 | `DJANGO_SUPERUSER_USERNAME` | — | Create superuser on startup if set |
 | `DJANGO_SUPERUSER_PASSWORD` | — | Superuser password |
 | `DJANGO_SUPERUSER_EMAIL` | `admin@example.com` | Superuser email |
+
+## Aircraft Import / Export (Optional)
+
+Controls behaviour for the `.sam.zip` import/export feature.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `IMPORT_STAGING_DIR` | `<BASE_DIR>/import_staging` | Temporary directory for staged upload files while import validation and processing runs |
+| `IMPORT_MAX_ARCHIVE_SIZE` | `10737418240` (10 GiB) | Maximum allowed uncompressed archive size in bytes. Archives exceeding this limit are rejected during validation. |
 
 ## OIDC Authentication (Optional)
 
