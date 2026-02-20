@@ -283,26 +283,29 @@ function adsMixin() {
                     parseFloat(this.aircraft.flight_time) + parseFloat(ad.recurring_hours)
                 ).toFixed(1);
             }
+            this.pickerInit('complianceForm', 'logbook_entry_id', '');
             this.complianceModalOpen = true;
         },
 
         async openEditComplianceModal(record) {
             this.editingComplianceRecord = record;
             this.selectedAd = this.selectedAdForHistory;
+            const existingId = record.logbook_entry ? this.extractIdFromUrl(record.logbook_entry) : '';
             this.complianceForm = {
                 date_complied: record.date_complied,
                 compliance_notes: record.compliance_notes || '',
                 permanent: record.permanent,
                 next_due_at_time: record.next_due_at_time || '',
                 aircraft_hours: record.aircraft_hours_at_compliance || '',
-                logbook_entry_id: record.logbook_entry ? this.extractIdFromUrl(record.logbook_entry) : '',
+                logbook_entry_id: existingId,
             };
-            if (!this.logbookLoaded) await this.loadLogbookEntries();
+            await this.pickerInit('complianceForm', 'logbook_entry_id', existingId);
             this.complianceModalOpen = true;
         },
 
         closeComplianceModal() {
             this.complianceModalOpen = false;
+            this.pickerBrowseOpen = false;
             this.selectedAd = null;
             this.editingComplianceRecord = null;
         },

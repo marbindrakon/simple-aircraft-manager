@@ -216,7 +216,7 @@ function inspectionsMixin() {
                 aircraft_hours: this.aircraft ? parseFloat(this.aircraft.flight_time || 0).toFixed(1) : '',
                 logbook_entry_id: '',
             };
-            if (!this.logbookLoaded) this.loadLogbookEntries();
+            this.pickerInit('inspectionForm', 'logbook_entry_id', '');
             this.inspectionModalOpen = true;
         },
 
@@ -230,12 +230,13 @@ function inspectionsMixin() {
                 aircraft_hours: record.aircraft_hours != null ? parseFloat(record.aircraft_hours).toFixed(1) : '',
                 logbook_entry_id: lbId,
             };
-            if (!this.logbookLoaded) await this.loadLogbookEntries();
+            await this.pickerInit('inspectionForm', 'logbook_entry_id', lbId);
             this.inspectionModalOpen = true;
         },
 
         closeInspectionModal() {
             this.inspectionModalOpen = false;
+            this.pickerBrowseOpen = false;
             this.editingInspectionRecord = null;
             this.selectedInspectionType = null;
         },

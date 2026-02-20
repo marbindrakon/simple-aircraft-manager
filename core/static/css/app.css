@@ -655,3 +655,8 @@ html.pf-v5-theme-dark .loading-spinner {
     border-color: rgba(255, 255, 255, 0.2);
     border-left-color: var(--pf-v5-global--primary-color--100);
 }
+
+/* Logbook picker dropdown results */
+.logbook-picker-result:hover {
+    background: var(--pf-v5-global--BackgroundColor--200);
+}

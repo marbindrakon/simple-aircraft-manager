@@ -570,6 +570,9 @@
                                         </div>
                                     </div>
                                     <div class="pf-v5-c-card__actions" x-show="isOwner">
+                                        <button class="pf-v5-c-button pf-m-plain" @click="openLinkPicker(log)" title="Link to record">
+                                            <i class="fas fa-link"></i>
+                                        </button>
                                         <button class="pf-v5-c-button pf-m-plain" @click="editLogEntry(log)" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
@@ -1339,12 +1342,48 @@
                                 <span class="pf-v5-c-form__label-text">Logbook Entry</span>
                             </label>
                             <div class="pf-v5-c-form__group-control">
-                                <select class="pf-v5-c-form-control" x-model="majorRecordForm.logbook_entry">
-                                    <option value="">-- None --</option>
-                                    <template x-for="entry in logbookEntries" :key="entry.id">
-                                        <option :value="entry.id" x-text="formatDate(entry.date) + ' - ' + (entry.text || '').substring(0, 60)"></option>
-                                    </template>
-                                </select>
+                                <!-- Selected entry chip -->
+                                <template x-if="pickerSelectedEntry">
+                                    <div style="display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 3px; background: var(--pf-v5-global--BackgroundColor--100);">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                                <span style="font-weight: 500;" x-text="formatDate(pickerSelectedEntry.date)"></span>
+                                                <span x-show="pickerSelectedEntry.aircraft_hours_at_entry" style="color: var(--pf-v5-global--Color--200);" x-text="'· ' + formatHours(pickerSelectedEntry.aircraft_hours_at_entry)"></span>
+                                                <span class="pf-v5-c-label pf-m-compact pf-m-blue" x-show="pickerSelectedEntry.entry_type"><span class="pf-v5-c-label__content" x-text="pickerSelectedEntry.entry_type"></span></span>
+                                            </div>
+                                            <div style="margin-top: 0.25rem; font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="(pickerSelectedEntry.text || '').substring(0, 80)"></div>
+                                            <div x-show="pickerSelectedEntry.signoff_person" style="margin-top: 0.125rem; font-size: 0.85em; color: var(--pf-v5-global--Color--200);">
+                                                <i class="fas fa-user"></i> <span x-text="pickerSelectedEntry.signoff_person"></span>
+                                            </div>
+                                        </div>
+                                        <button class="pf-v5-c-button pf-m-plain" type="button" @click="pickerClear()" title="Clear selection"><i class="fas fa-times"></i></button>
+                                    </div>
+                                </template>
+                                <!-- Search row (shown when no entry selected) -->
+                                <template x-if="!pickerSelectedEntry">
+                                    <div>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <input type="text" class="pf-v5-c-form-control" placeholder="Search by date, text, mechanic..." x-model="pickerSearchQuery" @input="pickerOnInput()" @focus="pickerSearchQuery.trim() && pickerDoSearch()" @keydown.escape="pickerDropdownOpen = false; pickerSearchQuery = ''" style="flex: 1;">
+                                            <button class="pf-v5-c-button pf-m-secondary" type="button" @click="pickerOpenBrowse()">Browse</button>
+                                        </div>
+                                        <!-- Inline results -->
+                                        <div x-show="pickerDropdownOpen" style="border: 1px solid var(--pf-v5-global--BorderColor--100); border-top: 0; border-radius: 0 0 3px 3px; background: var(--pf-v5-global--BackgroundColor--100); max-height: 200px; overflow-y: auto; margin-top: -1px;">
+                                            <div x-show="pickerSearchLoading" style="padding: 0.75rem; text-align: center; color: var(--pf-v5-global--Color--200);"><i class="fas fa-spinner fa-spin"></i> Searching...</div>
+                                            <div x-show="!pickerSearchLoading && pickerSearchResults.length === 0" style="padding: 0.75rem; color: var(--pf-v5-global--Color--200);">No entries found</div>
+                                            <template x-for="entry in pickerSearchResults" :key="entry.id">
+                                                <div class="logbook-picker-result" @click="pickerSelectEntry(entry)" style="padding: 0.5rem 0.75rem; cursor: pointer; border-bottom: 1px solid var(--pf-v5-global--BorderColor--200);">
+                                                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                                        <span style="font-weight: 500;" x-text="formatDate(entry.date)"></span>
+                                                        <span x-show="entry.aircraft_hours_at_entry" style="color: var(--pf-v5-global--Color--200); font-size: 0.9em;" x-text="'· ' + formatHours(entry.aircraft_hours_at_entry)"></span>
+                                                        <span class="pf-v5-c-label pf-m-compact pf-m-blue" x-show="entry.entry_type"><span class="pf-v5-c-label__content" x-text="entry.entry_type"></span></span>
+                                                    </div>
+                                                    <div style="font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="(entry.text || '').substring(0, 80)"></div>
+                                                    <div x-show="entry.signoff_person" style="font-size: 0.85em; color: var(--pf-v5-global--Color--200);"><i class="fas fa-user"></i> <span x-text="entry.signoff_person"></span></div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
                             </div>
                         </div>
 
@@ -3344,22 +3383,56 @@
                             </div>
                         </template>
 
-                        <!-- Logbook entry section (edit only) -->
-                        <template x-if="editingComplianceRecord">
-                            <div class="pf-v5-c-form__group" style="border-top: 1px solid var(--pf-v5-global--BorderColor--100); padding-top: 1rem; margin-top: 0.5rem;">
-                                <label class="pf-v5-c-form__label" for="compliance-logbook-entry">
-                                    <span class="pf-v5-c-form__label-text">Logbook Entry</span>
-                                </label>
-                                <div class="pf-v5-c-form__group-control">
-                                    <select id="compliance-logbook-entry" class="pf-v5-c-form-control" x-model="complianceForm.logbook_entry_id">
-                                        <option value="">— None —</option>
-                                        <template x-for="entry in logbookEntries" :key="entry.id">
-                                            <option :value="entry.id" x-text="logbookEntryLabel(entry)"></option>
-                                        </template>
-                                    </select>
-                                </div>
+                        <!-- Logbook Entry -->
+                        <div class="pf-v5-c-form__group" style="border-top: 1px solid var(--pf-v5-global--BorderColor--100); padding-top: 1rem; margin-top: 0.5rem;">
+                            <label class="pf-v5-c-form__label">
+                                <span class="pf-v5-c-form__label-text">Logbook Entry</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <!-- Selected entry chip -->
+                                <template x-if="pickerSelectedEntry">
+                                    <div style="display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 3px; background: var(--pf-v5-global--BackgroundColor--100);">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                                <span style="font-weight: 500;" x-text="formatDate(pickerSelectedEntry.date)"></span>
+                                                <span x-show="pickerSelectedEntry.aircraft_hours_at_entry" style="color: var(--pf-v5-global--Color--200);" x-text="'· ' + formatHours(pickerSelectedEntry.aircraft_hours_at_entry)"></span>
+                                                <span class="pf-v5-c-label pf-m-compact pf-m-blue" x-show="pickerSelectedEntry.entry_type"><span class="pf-v5-c-label__content" x-text="pickerSelectedEntry.entry_type"></span></span>
+                                            </div>
+                                            <div style="margin-top: 0.25rem; font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="(pickerSelectedEntry.text || '').substring(0, 80)"></div>
+                                            <div x-show="pickerSelectedEntry.signoff_person" style="margin-top: 0.125rem; font-size: 0.85em; color: var(--pf-v5-global--Color--200);">
+                                                <i class="fas fa-user"></i> <span x-text="pickerSelectedEntry.signoff_person"></span>
+                                            </div>
+                                        </div>
+                                        <button class="pf-v5-c-button pf-m-plain" type="button" @click="pickerClear()" title="Clear selection"><i class="fas fa-times"></i></button>
+                                    </div>
+                                </template>
+                                <!-- Search row (shown when no entry selected) -->
+                                <template x-if="!pickerSelectedEntry">
+                                    <div>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <input type="text" class="pf-v5-c-form-control" placeholder="Search by date, text, mechanic..." x-model="pickerSearchQuery" @input="pickerOnInput()" @focus="pickerSearchQuery.trim() && pickerDoSearch()" @keydown.escape="pickerDropdownOpen = false; pickerSearchQuery = ''" style="flex: 1;">
+                                            <button class="pf-v5-c-button pf-m-secondary" type="button" @click="pickerOpenBrowse()">Browse</button>
+                                        </div>
+                                        <!-- Inline results -->
+                                        <div x-show="pickerDropdownOpen" style="border: 1px solid var(--pf-v5-global--BorderColor--100); border-top: 0; border-radius: 0 0 3px 3px; background: var(--pf-v5-global--BackgroundColor--100); max-height: 200px; overflow-y: auto; margin-top: -1px;">
+                                            <div x-show="pickerSearchLoading" style="padding: 0.75rem; text-align: center; color: var(--pf-v5-global--Color--200);"><i class="fas fa-spinner fa-spin"></i> Searching...</div>
+                                            <div x-show="!pickerSearchLoading && pickerSearchResults.length === 0" style="padding: 0.75rem; color: var(--pf-v5-global--Color--200);">No entries found</div>
+                                            <template x-for="entry in pickerSearchResults" :key="entry.id">
+                                                <div class="logbook-picker-result" @click="pickerSelectEntry(entry)" style="padding: 0.5rem 0.75rem; cursor: pointer; border-bottom: 1px solid var(--pf-v5-global--BorderColor--200);">
+                                                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                                        <span style="font-weight: 500;" x-text="formatDate(entry.date)"></span>
+                                                        <span x-show="entry.aircraft_hours_at_entry" style="color: var(--pf-v5-global--Color--200); font-size: 0.9em;" x-text="'· ' + formatHours(entry.aircraft_hours_at_entry)"></span>
+                                                        <span class="pf-v5-c-label pf-m-compact pf-m-blue" x-show="entry.entry_type"><span class="pf-v5-c-label__content" x-text="entry.entry_type"></span></span>
+                                                    </div>
+                                                    <div style="font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="(entry.text || '').substring(0, 80)"></div>
+                                                    <div x-show="entry.signoff_person" style="font-size: 0.85em; color: var(--pf-v5-global--Color--200);"><i class="fas fa-user"></i> <span x-text="entry.signoff_person"></span></div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
                             </div>
-                        </template>
+                        </div>
                     </form>
                 </div>
 
@@ -3519,16 +3592,52 @@
                             </div>
                         </div>
                         <div class="pf-v5-c-form__group">
-                            <label class="pf-v5-c-form__label" for="inspection-logbook-entry">
+                            <label class="pf-v5-c-form__label">
                                 <span class="pf-v5-c-form__label-text">Logbook Entry (optional)</span>
                             </label>
                             <div class="pf-v5-c-form__group-control">
-                                <select id="inspection-logbook-entry" class="pf-v5-c-form-control" x-model="inspectionForm.logbook_entry_id">
-                                    <option value="">— None —</option>
-                                    <template x-for="entry in logbookEntries" :key="entry.id">
-                                        <option :value="entry.id" x-text="logbookEntryLabel(entry)"></option>
-                                    </template>
-                                </select>
+                                <!-- Selected entry chip -->
+                                <template x-if="pickerSelectedEntry">
+                                    <div style="display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 3px; background: var(--pf-v5-global--BackgroundColor--100);">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                                <span style="font-weight: 500;" x-text="formatDate(pickerSelectedEntry.date)"></span>
+                                                <span x-show="pickerSelectedEntry.aircraft_hours_at_entry" style="color: var(--pf-v5-global--Color--200);" x-text="'· ' + formatHours(pickerSelectedEntry.aircraft_hours_at_entry)"></span>
+                                                <span class="pf-v5-c-label pf-m-compact pf-m-blue" x-show="pickerSelectedEntry.entry_type"><span class="pf-v5-c-label__content" x-text="pickerSelectedEntry.entry_type"></span></span>
+                                            </div>
+                                            <div style="margin-top: 0.25rem; font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="(pickerSelectedEntry.text || '').substring(0, 80)"></div>
+                                            <div x-show="pickerSelectedEntry.signoff_person" style="margin-top: 0.125rem; font-size: 0.85em; color: var(--pf-v5-global--Color--200);">
+                                                <i class="fas fa-user"></i> <span x-text="pickerSelectedEntry.signoff_person"></span>
+                                            </div>
+                                        </div>
+                                        <button class="pf-v5-c-button pf-m-plain" type="button" @click="pickerClear()" title="Clear selection"><i class="fas fa-times"></i></button>
+                                    </div>
+                                </template>
+                                <!-- Search row (shown when no entry selected) -->
+                                <template x-if="!pickerSelectedEntry">
+                                    <div>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <input type="text" class="pf-v5-c-form-control" placeholder="Search by date, text, mechanic..." x-model="pickerSearchQuery" @input="pickerOnInput()" @focus="pickerSearchQuery.trim() && pickerDoSearch()" @keydown.escape="pickerDropdownOpen = false; pickerSearchQuery = ''" style="flex: 1;">
+                                            <button class="pf-v5-c-button pf-m-secondary" type="button" @click="pickerOpenBrowse()">Browse</button>
+                                        </div>
+                                        <!-- Inline results -->
+                                        <div x-show="pickerDropdownOpen" style="border: 1px solid var(--pf-v5-global--BorderColor--100); border-top: 0; border-radius: 0 0 3px 3px; background: var(--pf-v5-global--BackgroundColor--100); max-height: 200px; overflow-y: auto; margin-top: -1px;">
+                                            <div x-show="pickerSearchLoading" style="padding: 0.75rem; text-align: center; color: var(--pf-v5-global--Color--200);"><i class="fas fa-spinner fa-spin"></i> Searching...</div>
+                                            <div x-show="!pickerSearchLoading && pickerSearchResults.length === 0" style="padding: 0.75rem; color: var(--pf-v5-global--Color--200);">No entries found</div>
+                                            <template x-for="entry in pickerSearchResults" :key="entry.id">
+                                                <div class="logbook-picker-result" @click="pickerSelectEntry(entry)" style="padding: 0.5rem 0.75rem; cursor: pointer; border-bottom: 1px solid var(--pf-v5-global--BorderColor--200);">
+                                                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                                        <span style="font-weight: 500;" x-text="formatDate(entry.date)"></span>
+                                                        <span x-show="entry.aircraft_hours_at_entry" style="color: var(--pf-v5-global--Color--200); font-size: 0.9em;" x-text="'· ' + formatHours(entry.aircraft_hours_at_entry)"></span>
+                                                        <span class="pf-v5-c-label pf-m-compact pf-m-blue" x-show="entry.entry_type"><span class="pf-v5-c-label__content" x-text="entry.entry_type"></span></span>
+                                                    </div>
+                                                    <div style="font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="(entry.text || '').substring(0, 80)"></div>
+                                                    <div x-show="entry.signoff_person" style="font-size: 0.85em; color: var(--pf-v5-global--Color--200);"><i class="fas fa-user"></i> <span x-text="entry.signoff_person"></span></div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     </form>
@@ -3890,6 +3999,202 @@
         </div>
     </div>
 
+    <!-- Logbook Picker Browse Modal (stacked over compliance/inspection/major record modals) -->
+    <div class="pf-v5-c-backdrop" x-show="pickerBrowseOpen" x-cloak @click.self="pickerBrowseOpen = false" style="z-index: 1200;">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-lg" @click.stop style="max-height: 90vh; overflow-y: auto;">
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="pickerBrowseOpen = false" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">Browse Logbook Entries</h1>
+                </header>
+                <div class="pf-v5-c-modal-box__body">
+                    <!-- Filter row -->
+                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <input type="text" class="pf-v5-c-form-control" placeholder="Search by date, text, mechanic..." x-model="pickerBrowseSearch" @input="pickerBrowseApplyFilters()" style="flex: 1; min-width: 200px;">
+                        <select class="pf-v5-c-form-control" x-model="pickerBrowseLogType" @change="pickerBrowseApplyFiltersImmediate()" style="width: auto;">
+                            <option value="">All Books</option>
+                            <option value="AC">Airframe</option>
+                            <option value="ENG">Engine</option>
+                            <option value="PROP">Propeller</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                        <select class="pf-v5-c-form-control" x-model="pickerBrowseEntryType" @change="pickerBrowseApplyFiltersImmediate()" style="width: auto;">
+                            <option value="">All Types</option>
+                            <option value="MAINTENANCE">Maintenance</option>
+                            <option value="INSPECTION">Inspection</option>
+                            <option value="REPAIR">Repair</option>
+                            <option value="OVERHAUL">Overhaul</option>
+                            <option value="ALTERATION">Alteration</option>
+                            <option value="AD_COMPLIANCE">AD Compliance</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                    </div>
+                    <!-- Loading -->
+                    <div x-show="pickerBrowseLoading && pickerBrowseResults.length === 0" style="text-align: center; padding: 2rem;">
+                        <div class="loading-spinner" style="width: 2rem; height: 2rem; margin: 0 auto;"></div>
+                        <p style="margin-top: 0.5rem; color: var(--pf-v5-global--Color--200);">Loading...</p>
+                    </div>
+                    <!-- Empty state -->
+                    <div x-show="!pickerBrowseLoading && pickerBrowseResults.length === 0" style="text-align: center; padding: 2rem; color: var(--pf-v5-global--Color--200);">
+                        <i class="fas fa-book" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                        <p>No logbook entries found.</p>
+                    </div>
+                    <!-- Result list -->
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <template x-for="entry in pickerBrowseResults" :key="entry.id">
+                            <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.75rem; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 3px; background: var(--pf-v5-global--BackgroundColor--100);">
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.25rem;">
+                                        <span style="font-weight: 600;" x-text="formatDate(entry.date)"></span>
+                                        <span x-show="entry.aircraft_hours_at_entry" style="color: var(--pf-v5-global--Color--200);" x-text="formatHours(entry.aircraft_hours_at_entry)"></span>
+                                        <span class="pf-v5-c-label pf-m-compact pf-m-blue" x-show="entry.entry_type"><span class="pf-v5-c-label__content" x-text="entry.entry_type"></span></span>
+                                        <span class="pf-v5-c-label pf-m-compact pf-m-grey" x-show="entry.log_type"><span class="pf-v5-c-label__content" x-text="entry.log_type"></span></span>
+                                    </div>
+                                    <p x-text="entry.text" style="margin: 0; font-size: 0.9em;"></p>
+                                    <div x-show="entry.signoff_person" style="margin-top: 0.25rem; font-size: 0.85em; color: var(--pf-v5-global--Color--200);">
+                                        <i class="fas fa-user"></i> <span x-text="entry.signoff_person"></span>
+                                        <template x-if="entry.signoff_location">
+                                            <span> — <span x-text="entry.signoff_location"></span></span>
+                                        </template>
+                                    </div>
+                                </div>
+                                <button class="pf-v5-c-button pf-m-secondary pf-m-sm" type="button" @click="pickerSelectEntry(entry)">Select</button>
+                            </div>
+                        </template>
+                    </div>
+                    <!-- Load more -->
+                    <div x-show="pickerBrowseHasMore" style="text-align: center; margin-top: 1rem;">
+                        <button class="pf-v5-c-button pf-m-secondary" type="button" @click="pickerBrowseLoadMore()" :disabled="pickerBrowseLoading">
+                            <span x-show="!pickerBrowseLoading">Load More</span>
+                            <span x-show="pickerBrowseLoading"><i class="fas fa-spinner fa-spin"></i> Loading...</span>
+                        </button>
+                    </div>
+                    <p x-show="pickerBrowseTotal > 0" style="margin-top: 0.75rem; text-align: center; font-size: 0.85em; color: var(--pf-v5-global--Color--200);">
+                        Showing <span x-text="pickerBrowseResults.length"></span> of <span x-text="pickerBrowseTotal"></span> entries
+                    </p>
+                </div>
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-link" type="button" @click="pickerBrowseOpen = false">Cancel</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logbook Link Picker Modal (logbook-first workflow) -->
+    <div class="pf-v5-c-backdrop" x-show="linkPickerOpen" x-cloak @click.self="linkPickerOpen = false" style="z-index: 1000;">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-lg" @click.stop style="max-height: 90vh; overflow-y: auto;">
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="linkPickerOpen = false" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">Link Entry to Record</h1>
+                </header>
+                <div class="pf-v5-c-modal-box__body">
+                    <!-- Entry being linked -->
+                    <template x-if="linkPickerEntry">
+                        <div style="padding: 0.75rem; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 3px; background: var(--pf-v5-global--BackgroundColor--200); margin-bottom: 1.25rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.25rem;">
+                                <span style="font-weight: 600;" x-text="formatDate(linkPickerEntry.date)"></span>
+                                <span x-show="linkPickerEntry.aircraft_hours_at_entry" style="color: var(--pf-v5-global--Color--200);" x-text="formatHours(linkPickerEntry.aircraft_hours_at_entry)"></span>
+                                <span class="pf-v5-c-label pf-m-compact pf-m-blue" x-show="linkPickerEntry.entry_type"><span class="pf-v5-c-label__content" x-text="linkPickerEntry.entry_type"></span></span>
+                            </div>
+                            <p x-text="(linkPickerEntry.text || '').substring(0, 120)" style="margin: 0; font-size: 0.9em;"></p>
+                        </div>
+                    </template>
+                    <!-- Tabs -->
+                    <nav class="pf-v5-c-tabs" style="margin-bottom: 1rem;">
+                        <ul class="pf-v5-c-tabs__list">
+                            <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': linkPickerTab === 'inspections' }">
+                                <button class="pf-v5-c-tabs__link" @click="linkPickerTab = 'inspections'">
+                                    <span class="pf-v5-c-tabs__item-text">Inspections (<span x-text="linkableInspections.length"></span>)</span>
+                                </button>
+                            </li>
+                            <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': linkPickerTab === 'ads' }">
+                                <button class="pf-v5-c-tabs__link" @click="linkPickerTab = 'ads'">
+                                    <span class="pf-v5-c-tabs__item-text">AD Compliance (<span x-text="linkableAdCompliances.length"></span>)</span>
+                                </button>
+                            </li>
+                            <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': linkPickerTab === 'major_records' }">
+                                <button class="pf-v5-c-tabs__link" @click="linkPickerTab = 'major_records'">
+                                    <span class="pf-v5-c-tabs__item-text">Major Records (<span x-text="linkableMajorRecords.length"></span>)</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </nav>
+                    <!-- Inspections tab -->
+                    <div x-show="linkPickerTab === 'inspections'">
+                        <div x-show="!inspectionsLoaded" style="text-align: center; padding: 1.5rem; color: var(--pf-v5-global--Color--200);"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+                        <div x-show="inspectionsLoaded && linkableInspections.length === 0" style="text-align: center; padding: 1.5rem; color: var(--pf-v5-global--Color--200);">
+                            All inspection records already have a logbook entry linked.
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <template x-for="record in linkableInspections" :key="record.id">
+                                <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 3px;">
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-weight: 500;" x-text="record.label"></div>
+                                        <div style="font-size: 0.85em; color: var(--pf-v5-global--Color--200);">
+                                            <span x-text="formatDate(record.date)"></span>
+                                            <template x-if="record.hours"><span> · <span x-text="formatHours(record.hours)"></span></span></template>
+                                        </div>
+                                    </div>
+                                    <button class="pf-v5-c-button pf-m-primary pf-m-sm" type="button" @click="linkEntryTo(record)" :disabled="linkPickerSubmitting">Link</button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <!-- AD Compliance tab -->
+                    <div x-show="linkPickerTab === 'ads'">
+                        <div x-show="!adsLoaded" style="text-align: center; padding: 1.5rem; color: var(--pf-v5-global--Color--200);"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+                        <div x-show="adsLoaded && linkableAdCompliances.length === 0" style="text-align: center; padding: 1.5rem; color: var(--pf-v5-global--Color--200);">
+                            All AD compliance records already have a logbook entry linked.
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <template x-for="record in linkableAdCompliances" :key="record.id">
+                                <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 3px;">
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-weight: 500;" x-text="record.label"></div>
+                                        <div style="font-size: 0.85em; color: var(--pf-v5-global--Color--200);">
+                                            <span x-text="formatDate(record.date)"></span>
+                                            <template x-if="record.hours"><span> · <span x-text="formatHours(record.hours)"></span></span></template>
+                                        </div>
+                                    </div>
+                                    <button class="pf-v5-c-button pf-m-primary pf-m-sm" type="button" @click="linkEntryTo(record)" :disabled="linkPickerSubmitting">Link</button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <!-- Major Records tab -->
+                    <div x-show="linkPickerTab === 'major_records'">
+                        <div x-show="!majorRecordsLoaded" style="text-align: center; padding: 1.5rem; color: var(--pf-v5-global--Color--200);"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+                        <div x-show="majorRecordsLoaded && linkableMajorRecords.length === 0" style="text-align: center; padding: 1.5rem; color: var(--pf-v5-global--Color--200);">
+                            All major repair/alteration records already have a logbook entry linked.
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <template x-for="record in linkableMajorRecords" :key="record.id">
+                                <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 3px;">
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-weight: 500;" x-text="record.label"></div>
+                                        <div style="font-size: 0.85em; color: var(--pf-v5-global--Color--200);">
+                                            <span x-text="formatDate(record.date)"></span>
+                                            <template x-if="record.hours"><span> · <span x-text="formatHours(record.hours)"></span></span></template>
+                                        </div>
+                                    </div>
+                                    <button class="pf-v5-c-button pf-m-primary pf-m-sm" type="button" @click="linkEntryTo(record)" :disabled="linkPickerSubmitting">Link</button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-link" type="button" @click="linkPickerOpen = false">Close</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
     <!-- Aircraft Modal -->
     {% include 'includes/aircraft_modal.html' %}
 </div>
@@ -3903,6 +4208,8 @@
 <script src="{% static 'js/aircraft-detail-oil.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-fuel.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-logbook.js' %}"></script>
+<script src="{% static 'js/aircraft-detail-logbook-picker.js' %}"></script>
+<script src="{% static 'js/aircraft-detail-logbook-link.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-ads.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-inspections.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-major-records.js' %}"></script>

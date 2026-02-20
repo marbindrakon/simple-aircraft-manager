@@ -64,13 +64,16 @@ function majorRecordsMixin() {
                 aircraft_hours: this.aircraft ? parseFloat(this.aircraft.flight_time || 0).toFixed(1) : '',
                 notes: '',
             };
-            if (!this.logbookLoaded) this.loadLogbookEntries();
+            this.pickerInit('majorRecordForm', 'logbook_entry', '');
             if (!this.documentsLoaded) this.loadDocuments();
             this.majorRecordModalOpen = true;
         },
 
-        editMajorRecord(record) {
+        async editMajorRecord(record) {
             this.editingMajorRecord = record;
+            const lbId = record.logbook_entry
+                ? (this.extractIdFromUrl(record.logbook_entry) || record.logbook_entry)
+                : '';
             this.majorRecordForm = {
                 record_type: record.record_type,
                 title: record.title,
@@ -82,17 +85,18 @@ function majorRecordsMixin() {
                 stc_number: record.stc_number || '',
                 stc_holder: record.stc_holder || '',
                 stc_document: record.stc_document || '',
-                logbook_entry: record.logbook_entry || '',
+                logbook_entry: lbId,
                 aircraft_hours: record.aircraft_hours != null ? parseFloat(record.aircraft_hours).toFixed(1) : '',
                 notes: record.notes || '',
             };
-            if (!this.logbookLoaded) this.loadLogbookEntries();
+            await this.pickerInit('majorRecordForm', 'logbook_entry', lbId);
             if (!this.documentsLoaded) this.loadDocuments();
             this.majorRecordModalOpen = true;
         },
 
         closeMajorRecordModal() {
             this.majorRecordModalOpen = false;
+            this.pickerBrowseOpen = false;
             this.editingMajorRecord = null;
         },
 

@@ -7,6 +7,8 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
         oilMixin(),
         fuelMixin(),
         logbookMixin(),
+        logbookPickerMixin(),
+        logbookLinkMixin(),
         adsMixin(),
         inspectionsMixin(),
         majorRecordsMixin(),
