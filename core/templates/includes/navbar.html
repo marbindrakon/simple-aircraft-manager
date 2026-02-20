@@ -1,11 +1,6 @@
 {% load static %}
 <header class="pf-v5-c-page__header">
     <div class="pf-v5-c-page__header-brand">
-        <div class="pf-v5-c-page__header-brand-toggle">
-            <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Navigation toggle" aria-expanded="false">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
         <a href="/" class="pf-v5-c-page__header-brand-link">
             <div class="pf-v5-c-brand">
                 <span style="font-size: 1.5rem; font-weight: 700; color: white;">Simple Aircraft Manager</span>
@@ -16,16 +11,13 @@
         <nav class="pf-v5-c-nav pf-m-horizontal" aria-label="Global">
             <ul class="pf-v5-c-nav__list">
                 <li class="pf-v5-c-nav__item">
-                    <a href="/dashboard" class="pf-v5-c-nav__link">Dashboard</a>
+                    <a href="{% url 'dashboard' %}" class="pf-v5-c-nav__link {% if request.resolver_match.url_name == 'dashboard' %}pf-m-current{% endif %}">Aircraft</a>
                 </li>
                 {% if user_is_owner %}
                 <li class="pf-v5-c-nav__item">
-                    <a href="{% url 'logbook-import' %}" class="pf-v5-c-nav__link {% if request.resolver_match.url_name == 'logbook-import' %}pf-m-current{% endif %}">Tools</a>
+                    <a href="{% url 'logbook-import' %}" class="pf-v5-c-nav__link {% if request.resolver_match.url_name == 'logbook-import' %}pf-m-current{% endif %}">Import Logbooks</a>
                 </li>
                 {% endif %}
-                <li class="pf-v5-c-nav__item">
-                    <a href="/api/" class="pf-v5-c-nav__link">API</a>
-                </li>
             </ul>
         </nav>
     </div>
@@ -40,11 +32,19 @@
                     </span>
                 </button>
                 <ul class="pf-v5-c-dropdown__menu" hidden id="user-dropdown-menu">
+                    <li>
+                        <a class="pf-v5-c-dropdown__menu-item" href="https://docs.simple-aircraft.app" target="_blank" rel="noopener noreferrer">Documentation</a>
+                    </li>
+                    <li>
+                        <a class="pf-v5-c-dropdown__menu-item" href="/api/">API</a>
+                    </li>
                     {% if user.is_superuser %}
+                    <li class="pf-v5-c-dropdown__separator" role="separator"></li>
                     <li>
                         <a class="pf-v5-c-dropdown__menu-item" href="/admin/">Admin</a>
                     </li>
                     {% endif %}
+                    <li class="pf-v5-c-dropdown__separator" role="separator"></li>
                     <li>
                         <a class="pf-v5-c-dropdown__menu-item" href="/accounts/logout/">Logout</a>
                     </li>

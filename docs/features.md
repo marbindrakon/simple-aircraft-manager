@@ -1,10 +1,10 @@
 # Features
 
-## Dashboard
+## Aircraft Fleet
 
 - Fleet overview with aircraft cards and thumbnail images
 - Color-coded airworthiness status badges (Green/Orange/Red)
-- Quick access to update hours from the dashboard
+- Quick access to update hours from the aircraft page
 - Issue count summaries per aircraft
 - Oil and fuel consumption charts (Chart.js)
 

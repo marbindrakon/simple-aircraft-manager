@@ -1,8 +1,8 @@
-Dashboard
-=========
+Aircraft Fleet
+==============
 
-The dashboard is the main landing page after login. It shows all aircraft you
-have access to as a grid of cards.
+The Aircraft page is the main landing page after login. It shows all aircraft
+you have access to as a grid of cards.
 
 .. TODO: Screenshot of the dashboard with multiple aircraft cards showing different airworthiness states (green, orange, red)
 
@@ -39,5 +39,5 @@ Each card has two buttons at the bottom:
 Adding a New Aircraft
 ---------------------
 
-Click the **New Aircraft** button in the top right corner of the dashboard.
+Click the **New Aircraft** button in the top right corner of the Aircraft page.
 See :doc:`getting-started` for details on the fields.
