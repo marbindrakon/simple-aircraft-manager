@@ -306,6 +306,10 @@
 <td><p><code class="docutils literal notranslate"><span class="pre">UTC</span></code></p></td>
 <td><p>Timezone</p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">AIRCRAFT_CREATE_PERMISSION</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">any</span></code></p></td>
+<td><p>Who can create or import aircraft: <code class="docutils literal notranslate"><span class="pre">any</span></code> (all authenticated users), <code class="docutils literal notranslate"><span class="pre">owners</span></code> (existing owners + admins), or <code class="docutils literal notranslate"><span class="pre">admin</span></code> (admins only)</p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -371,6 +375,30 @@
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">DJANGO_SUPERUSER_EMAIL</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">admin&#64;example.com</span></code></p></td>
 <td><p>Superuser email</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="aircraft-import-export-optional">
+<h2>Aircraft Import / Export (Optional)<a class="headerlink" href="#aircraft-import-export-optional" title="Link to this heading">¶</a></h2>
+<p>Controls behaviour for the <code class="docutils literal notranslate"><span class="pre">.sam.zip</span></code> import/export feature.</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Variable</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">IMPORT_STAGING_DIR</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&lt;BASE_DIR&gt;/import_staging</span></code></p></td>
+<td><p>Temporary directory for staged upload files while import validation and processing runs</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">IMPORT_MAX_ARCHIVE_SIZE</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">10737418240</span></code> (10 GiB)</p></td>
+<td><p>Maximum allowed uncompressed archive size in bytes. Archives exceeding this limit are rejected during validation.</p></td>
 </tr>
 </tbody>
 </table>
@@ -531,6 +559,7 @@
 <li><a class="reference internal" href="#general">General</a></li>
 <li><a class="reference internal" href="#database">Database</a></li>
 <li><a class="reference internal" href="#superuser-auto-creation">Superuser Auto-Creation</a></li>
+<li><a class="reference internal" href="#aircraft-import-export-optional">Aircraft Import / Export (Optional)</a></li>
 <li><a class="reference internal" href="#oidc-authentication-optional">OIDC Authentication (Optional)</a></li>
 <li><a class="reference internal" href="#ai-logbook-import-optional">AI Logbook Import (Optional)</a></li>
 <li><a class="reference internal" href="#testing-configuration">Testing Configuration</a></li>

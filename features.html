@@ -394,6 +394,45 @@
 <li><p>Public views are fully read-only; no account required</p></li>
 </ul>
 </section>
+<section id="aircraft-import-export">
+<h2>Aircraft Import / Export<a class="headerlink" href="#aircraft-import-export" title="Link to this heading">¶</a></h2>
+<p>Transfer complete aircraft records between Simple Aircraft Manager instances using a <code class="docutils literal notranslate"><span class="pre">.sam.zip</span></code> archive.</p>
+<section id="export">
+<h3>Export<a class="headerlink" href="#export" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Available from the <strong>Sharing &amp; Access</strong> tab of the aircraft detail page (owner/admin only)</p></li>
+<li><p>Downloads a <code class="docutils literal notranslate"><span class="pre">.sam.zip</span></code> containing <code class="docutils literal notranslate"><span class="pre">manifest.json</span></code> (all aircraft data) plus attached files (pictures, document images, squawk attachments)</p></li>
+<li><p>Files missing from storage are noted in the manifest but do not block export</p></li>
+</ul>
+</section>
+<section id="import">
+<h3>Import<a class="headerlink" href="#import" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Dashboard</strong> — click the import button next to “New Aircraft” to upload a <code class="docutils literal notranslate"><span class="pre">.sam.zip</span></code></p></li>
+<li><p>Archive is validated before import begins: zip bomb detection, path traversal checks, magic-byte file verification, schema version check, and tail number conflict detection</p></li>
+<li><p>If the tail number already exists, you can provide an alternate tail number before confirming</p></li>
+<li><p>Import runs in the background; progress and any warnings are shown in the UI</p></li>
+<li><p>All internal IDs are remapped — the imported aircraft gets fresh UUIDs</p></li>
+<li><p>Rolls back cleanly if an error occurs mid-import</p></li>
+</ul>
+</section>
+<section id="cli">
+<h3>CLI<a class="headerlink" href="#cli" title="Link to this heading">¶</a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Export</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>export_aircraft<span class="w"> </span>N12345
+python<span class="w"> </span>manage.py<span class="w"> </span>export_aircraft<span class="w"> </span>N12345<span class="w"> </span>-o<span class="w"> </span>/tmp/n12345.sam.zip
+
+<span class="c1"># Import (dry run — validates without creating records)</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>import_aircraft<span class="w"> </span>/tmp/n12345.sam.zip<span class="w"> </span>--owner<span class="w"> </span>alice<span class="w"> </span>--dry-run
+
+<span class="c1"># Import</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>import_aircraft<span class="w"> </span>/tmp/n12345.sam.zip<span class="w"> </span>--owner<span class="w"> </span>alice
+python<span class="w"> </span>manage.py<span class="w"> </span>import_aircraft<span class="w"> </span>/tmp/n12345.sam.zip<span class="w"> </span>--owner<span class="w"> </span>alice<span class="w"> </span>--tail-number<span class="w"> </span>N99999
+</pre></div>
+</div>
+<p>See <a class="reference internal" href="configuration.html"><span class="std std-doc">configuration.md</span></a> for <code class="docutils literal notranslate"><span class="pre">AIRCRAFT_CREATE_PERMISSION</span></code> and import size settings.</p>
+</section>
+</section>
 <section id="role-based-access-control">
 <h2>Role-Based Access Control<a class="headerlink" href="#role-based-access-control" title="Link to this heading">¶</a></h2>
 <p>Three roles per aircraft:</p>
@@ -432,15 +471,21 @@
 <td><p>Yes</p></td>
 <td><p>No</p></td>
 </tr>
-<tr class="row-odd"><td><p>Create aircraft (auto-assigned owner)</p></td>
-<td><p>Yes</p></td>
-<td><p>Yes</p></td>
-<td><p>Yes</p></td>
+<tr class="row-odd"><td><p>Create / import aircraft</p></td>
+<td><p>Configurable — see <code class="docutils literal notranslate"><span class="pre">AIRCRAFT_CREATE_PERMISSION</span></code></p></td>
+<td><p></p></td>
+<td><p></p></td>
 </tr>
 </tbody>
 </table>
 </div>
 <p><strong>Admin</strong> = Django staff/superuser, bypasses all per-aircraft checks.</p>
+<p><code class="docutils literal notranslate"><span class="pre">AIRCRAFT_CREATE_PERMISSION</span></code> controls who can create or import aircraft instance-wide:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">any</span></code> (default) — any authenticated user</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">owners</span></code> — only users who already own at least one aircraft, plus admins</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">admin</span></code> — admins only</p></li>
+</ul>
 </section>
 <section id="oidc-authentication">
 <h2>OIDC Authentication<a class="headerlink" href="#oidc-authentication" title="Link to this heading">¶</a></h2>
@@ -539,6 +584,12 @@
 <li><a class="reference internal" href="#documents">Documents</a></li>
 <li><a class="reference internal" href="#notes">Notes</a></li>
 <li><a class="reference internal" href="#public-sharing">Public Sharing</a></li>
+<li><a class="reference internal" href="#aircraft-import-export">Aircraft Import / Export</a><ul>
+<li><a class="reference internal" href="#export">Export</a></li>
+<li><a class="reference internal" href="#import">Import</a></li>
+<li><a class="reference internal" href="#cli">CLI</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#role-based-access-control">Role-Based Access Control</a></li>
 <li><a class="reference internal" href="#oidc-authentication">OIDC Authentication</a></li>
 <li><a class="reference internal" href="#oil-fuel-tracking">Oil &amp; Fuel Tracking</a></li>

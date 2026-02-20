@@ -105,6 +105,42 @@ Automatic status calculation with color-coded badges:
 - Revoke individual links without affecting others
 - Public views are fully read-only; no account required
 
+## Aircraft Import / Export
+
+Transfer complete aircraft records between Simple Aircraft Manager instances using a `.sam.zip` archive.
+
+### Export
+
+- Available from the **Sharing & Access** tab of the aircraft detail page (owner/admin only)
+- Downloads a `.sam.zip` containing `manifest.json` (all aircraft data) plus attached files (pictures, document images, squawk attachments)
+- Files missing from storage are noted in the manifest but do not block export
+
+### Import
+
+- **Dashboard** — click the import button next to "New Aircraft" to upload a `.sam.zip`
+- Archive is validated before import begins: zip bomb detection, path traversal checks, magic-byte file verification, schema version check, and tail number conflict detection
+- If the tail number already exists, you can provide an alternate tail number before confirming
+- Import runs in the background; progress and any warnings are shown in the UI
+- All internal IDs are remapped — the imported aircraft gets fresh UUIDs
+- Rolls back cleanly if an error occurs mid-import
+
+### CLI
+
+```bash
+# Export
+python manage.py export_aircraft N12345
+python manage.py export_aircraft N12345 -o /tmp/n12345.sam.zip
+
+# Import (dry run — validates without creating records)
+python manage.py import_aircraft /tmp/n12345.sam.zip --owner alice --dry-run
+
+# Import
+python manage.py import_aircraft /tmp/n12345.sam.zip --owner alice
+python manage.py import_aircraft /tmp/n12345.sam.zip --owner alice --tail-number N99999
+```
+
+See [configuration.md](configuration.md) for `AIRCRAFT_CREATE_PERMISSION` and import size settings.
+
 ## Role-Based Access Control
 
 Three roles per aircraft:
@@ -116,9 +152,14 @@ Three roles per aircraft:
 | Edit/delete squawks, notes | Yes | Yes | No |
 | CRUD components, logbook, ADs, inspections, documents | Yes | Yes | No |
 | Edit/delete aircraft, manage roles & sharing | Yes | Yes | No |
-| Create aircraft (auto-assigned owner) | Yes | Yes | Yes |
+| Create / import aircraft | Configurable — see `AIRCRAFT_CREATE_PERMISSION` |
 
 **Admin** = Django staff/superuser, bypasses all per-aircraft checks.
+
+`AIRCRAFT_CREATE_PERMISSION` controls who can create or import aircraft instance-wide:
+- `any` (default) — any authenticated user
+- `owners` — only users who already own at least one aircraft, plus admins
+- `admin` — admins only
 
 ## OIDC Authentication
 
