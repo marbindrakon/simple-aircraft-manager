@@ -71,6 +71,39 @@ Each logbook entry is displayed as a card showing:
 - **Attached document** link (if any) -- click to view the scanned page.
 - **Related documents** links -- click to view linked documents.
 
+.. _logbook-link-picker:
+
+Linking an Entry to a Record
+-----------------------------
+
+If a logbook entry documents work that corresponds to an AD compliance, an
+inspection, or a major repair/alteration, you can link them together so that
+the maintenance record cross-references the logbook entry.
+
+**From the logbook card (owners only):**
+
+1. Click the **link** icon |link-icon| on a logbook entry card.
+2. A modal opens showing unlinked records grouped into three tabs:
+
+   - **Inspections** -- Inspection records with no logbook entry linked yet.
+   - **AD Compliance** -- The most recent AD compliance record per AD that has
+     no logbook entry linked yet.
+   - **Major Records** -- Major repairs and alterations with no logbook entry
+     linked yet.
+
+3. Click **Link** next to the record you want to associate. The record is
+   immediately updated and the tab count reflects the change.
+
+.. note::
+
+   Only the *latest* compliance record per AD appears in the AD Compliance tab.
+   To link a logbook entry to an older compliance record, edit that record
+   directly from the ADs tab compliance history.
+
+.. |link-icon| raw:: html
+
+   <i class="fas fa-link" style="font-size:0.85em;"></i>
+
 Loading More Entries
 --------------------
 
