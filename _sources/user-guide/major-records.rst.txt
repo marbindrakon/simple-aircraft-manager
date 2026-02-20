@@ -51,7 +51,7 @@ Adding a Record
    - **Date Performed** -- When the work was done.
    - **Component** -- Optionally link to a specific component.
    - **Performed By** -- The person or shop.
-   - **Logbook Entry** -- Optionally link to an existing logbook entry.
+   - **Logbook Entry** -- Optionally link to a logbook entry (see below).
    - **Form 337 Document** -- Optionally link to a Form 337 document.
 
    For alterations, additional fields are available:
@@ -61,6 +61,21 @@ Adding a Record
    - **STC Document** -- Optionally link to the STC document.
 
 3. Click **Save**.
+
+Linking a Logbook Entry
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The **Logbook Entry** field is a search picker rather than a plain dropdown,
+making it practical even when the aircraft has hundreds of logbook entries:
+
+- **Search** -- Type a date, text snippet, or mechanic name. Results appear
+  inline; click one to select it.
+- **Browse** -- Click **Browse** to open a full browser with text search and
+  Log Book / Entry Type filters. Click **Select** on any result.
+- **Clear** -- Click **×** on the selected entry chip to remove the link.
+
+You can also link entries from the logbook tab using the
+:ref:`logbook link picker <logbook-link-picker>`.
 
 .. TODO: Screenshot of the Add Repair modal with fields filled in
 

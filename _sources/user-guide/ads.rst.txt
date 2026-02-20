@@ -66,6 +66,8 @@ When you comply with an AD:
    - **Notes** -- Details about what was done.
    - **Permanent** -- Check this if the compliance action permanently resolves
      the AD (e.g., replacing the affected part with a non-affected part).
+   - **Logbook Entry** -- Optionally link the compliance record to a logbook
+     entry (see below).
 
 3. Click **Save**.
 
@@ -76,6 +78,21 @@ every 12 months from a compliance date of January 15, the next due date is the
 end of January the following year.
 
 .. TODO: Screenshot of the Record Compliance modal
+
+Linking a Logbook Entry to a Compliance Record
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The **Logbook Entry** field in the compliance modal is a search picker rather
+than a plain dropdown. To associate a logbook entry:
+
+- **Search** -- Type a date, text snippet, or mechanic name into the search
+  field. Results appear below as you type; click one to select it.
+- **Browse** -- Click **Browse** to open a full browser with text search and
+  Log Book / Entry Type filters. Click **Select** on any result.
+- **Clear** -- Click **×** on the selected entry chip to remove the link.
+
+You can also link entries from the logbook tab using the
+:ref:`logbook link picker <logbook-link-picker>`.
 
 Viewing Compliance History
 --------------------------

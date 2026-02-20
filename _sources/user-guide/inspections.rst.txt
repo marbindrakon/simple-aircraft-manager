@@ -60,6 +60,8 @@ When an inspection is completed:
    - **Date** -- When the inspection was completed.
    - **Hours** -- Aircraft hours at the time of inspection.
    - **Notes** -- Details about the inspection.
+   - **Logbook Entry** -- Optionally link the inspection record to a logbook
+     entry (see below).
 
 3. Click **Save**.
 
@@ -67,6 +69,20 @@ The system automatically calculates the next due date/hours based on the
 inspection type's recurring interval.
 
 .. TODO: Screenshot of the Record Inspection modal
+
+Linking a Logbook Entry to an Inspection Record
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The **Logbook Entry** field is a search picker rather than a plain dropdown:
+
+- **Search** -- Type a date, text snippet, or mechanic name. Results appear
+  inline; click one to select it.
+- **Browse** -- Click **Browse** to open a full browser with text search and
+  Log Book / Entry Type filters. Click **Select** on any result.
+- **Clear** -- Click **×** on the selected entry chip to remove the link.
+
+You can also link entries from the logbook tab using the
+:ref:`logbook link picker <logbook-link-picker>`.
 
 Viewing Inspection History
 --------------------------
