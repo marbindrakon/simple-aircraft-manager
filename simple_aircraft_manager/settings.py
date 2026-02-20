@@ -80,6 +80,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.oidc_settings',
                 'core.context_processors.user_role_context',
+                'core.context_processors.theme_context',
             ],
         },
     },

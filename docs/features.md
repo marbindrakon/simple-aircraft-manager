@@ -1,5 +1,11 @@
 # Features
 
+## Dark Theme
+
+- Light, Dark, and System (follows OS preference) themes available
+- Select from the user menu (top-right dropdown)
+- Preference is stored in a browser cookie and applied server-side — no flash on page load
+
 ## Aircraft Fleet
 
 - Fleet overview with aircraft cards and thumbnail images

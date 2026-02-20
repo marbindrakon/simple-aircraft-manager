@@ -32,3 +32,13 @@ def user_role_context(request):
                 user=request.user, role='owner'
             ).exists()
     return {'user_is_owner': user_is_owner}
+
+
+def theme_context(request):
+    pref = request.COOKIES.get('theme_pref', 'system')
+    if pref not in ('light', 'dark', 'system'):
+        pref = 'system'
+    return {
+        'theme_pref': pref,
+        'html_theme_class': 'pf-v5-theme-dark' if pref == 'dark' else '',
+    }

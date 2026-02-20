@@ -616,3 +616,42 @@
     color: var(--pf-v5-global--warning-color--200);
     font-weight: 500;
 }
+
+/* ========================================
+   Theme Toggle
+   ======================================== */
+
+/* Public page cycling button icons */
+.theme-icon { display: none; }
+html[data-theme-pref="light"] .theme-icon-light { display: inline-flex; }
+html[data-theme-pref="dark"] .theme-icon-dark { display: inline-flex; }
+html[data-theme-pref="system"] .theme-icon-system { display: inline-flex; }
+
+/* Dropdown theme option layout */
+.theme-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.theme-option-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+.theme-option-check {
+    display: none;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+html[data-theme-pref="light"] .theme-check-light { display: inline-flex; }
+html[data-theme-pref="dark"] .theme-check-dark { display: inline-flex; }
+html[data-theme-pref="system"] .theme-check-system { display: inline-flex; }
+
+/* Dark mode: loading spinner track */
+html.pf-v5-theme-dark .loading-spinner {
+    border-color: rgba(255, 255, 255, 0.2);
+    border-left-color: var(--pf-v5-global--primary-color--100);
+}
