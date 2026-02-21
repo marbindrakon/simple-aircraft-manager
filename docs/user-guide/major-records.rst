@@ -25,10 +25,10 @@ The repairs table shows:
 - **Date** -- When the repair was performed.
 - **Component** -- The affected component, if linked.
 - **Performed By** -- The person or shop that performed the repair.
-- **Related** -- Links to associated records:
-
-  - **Logbook** -- Click to view the related logbook entry.
-  - **Form 337** -- Click to view the attached Form 337 document.
+- **Actions** -- Edit and delete buttons (owners only), plus a **paperclip
+  icon** that appears when the record has linked files. Click the paperclip to
+  open a popup with links to the associated logbook entry and/or Form 337
+  document. Click the icon again (or anywhere outside the popup) to dismiss it.
 
 Major Alterations
 -----------------
@@ -37,7 +37,9 @@ The alterations table includes the same fields as repairs, plus:
 
 - **STC #** -- The Supplemental Type Certificate number, if applicable.
 - **STC Holder** -- The STC holder's name.
-- **Related** -- May also include a link to the STC document.
+
+The paperclip popup for alterations may also include a link to the STC
+document when one is attached.
 
 Adding a Record
 ---------------
