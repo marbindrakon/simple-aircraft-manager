@@ -198,8 +198,8 @@ IMPORT_MAX_ARCHIVE_SIZE = int(os.environ.get(
 # Logbook import AI model configuration
 LOGBOOK_IMPORT_MODELS = [
     {
-        'id': 'claude-sonnet-4-5-20250929',
-        'name': 'Sonnet 4.5 (recommended)',
+        'id': 'claude-sonnet-4-6',
+        'name': 'Sonnet 4.6 (recommended)',
         'provider': 'anthropic',
     },
     {
@@ -222,7 +222,7 @@ if _extra_models_json:
     LOGBOOK_IMPORT_MODELS += _json.loads(_extra_models_json)
 
 LOGBOOK_IMPORT_DEFAULT_MODEL = os.environ.get(
-    'LOGBOOK_IMPORT_DEFAULT_MODEL', 'claude-sonnet-4-5-20250929'
+    'LOGBOOK_IMPORT_DEFAULT_MODEL', 'claude-sonnet-4-6'
 )
 
 # Ollama connection (only needed if any model uses provider=ollama)

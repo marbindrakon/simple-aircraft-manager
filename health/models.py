@@ -145,6 +145,10 @@ class DocumentImage(models.Model):
             allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'pdf', 'txt']
         )],
     )
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
 
     def __str__(self):
         ret_string = "Doc Image"

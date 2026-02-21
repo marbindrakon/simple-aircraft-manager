@@ -20,6 +20,7 @@ Event types:
 """
 
 import base64
+import io
 import json
 import logging
 import os
@@ -72,6 +73,18 @@ Field guidelines:
 - confidence: "high" (clearly legible), "medium" (some guesswork), "low" (mostly illegible)
 - non_logbook_pages: 0-based indices of pages that are forms, tags, or non-entry pages
 - unparseable_pages: 0-based indices of pages too illegible to extract anything useful
+
+OVERLAP PAGE HANDLING:
+The first page in this batch may overlap with the last page of the previous batch.
+When "Previously extracted entries" context is provided in the user message, use it
+to avoid duplicates:
+- SKIP any entry marked Status: COMPLETE that matches by date, signoff, and substantially
+  the same text — do not extract it again.
+- COMPLETE any entry marked Status: CONTINUES. Extract the full combined entry:
+  incorporate the text from the context block for the portion before these pages,
+  then append what you read from the current pages. Set page_start to 0 (the overlap
+  page in this request).
+- EXTRACT normally any entry not represented in the context block at all.
 """
 
 # JSON schema for structured output — guarantees valid, parseable responses.
@@ -159,7 +172,7 @@ def run_import(
     collection_name: str,
     doc_name: str,
     doc_type: str = 'LOG',
-    model: str = 'claude-sonnet-4-5-20250929',
+    model: str = 'claude-sonnet-4-6',
     provider: str = 'anthropic',
     upload_only: bool = False,
     log_type_override: Optional[str] = None,
@@ -332,6 +345,83 @@ def _ev(kind: str, message: str) -> dict:
     return {'type': kind, 'message': message}
 
 
+def _get_image_bytes(path: Path, max_px: int = 1568) -> bytes:
+    """
+    Read an image file and return bytes suitable for base64 encoding.
+
+    If the longest side exceeds max_px, resize proportionally using LANCZOS
+    resampling. Output format:
+      - PNG input  → PNG output (preserves any transparency)
+      - Everything else → JPEG (avoids TIFF/BMP/GIF encoding edge cases and
+        reduces payload size)
+
+    Returns original file bytes unchanged if no resize is needed AND the
+    format is already JPEG or PNG (avoids re-encoding overhead).
+    """
+    from PIL import Image
+
+    suffix = path.suffix.lower()
+    is_png = suffix == '.png'
+
+    with Image.open(path) as img:
+        w, h = img.size
+        longest = max(w, h)
+
+        needs_resize = longest > max_px
+        needs_encode = needs_resize or suffix not in ('.jpg', '.jpeg', '.png')
+
+        if not needs_encode:
+            with open(path, 'rb') as fh:
+                return fh.read()
+
+        if needs_resize:
+            scale = max_px / longest
+            new_w = max(1, int(w * scale))
+            new_h = max(1, int(h * scale))
+            img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+
+        buf = io.BytesIO()
+        if is_png:
+            img.save(buf, format='PNG')
+        else:
+            if img.mode not in ('RGB', 'L'):
+                img = img.convert('RGB')
+            img.save(buf, format='JPEG', quality=85, optimize=True)
+
+        return buf.getvalue()
+
+
+def _format_prior_context(entries: list, overlap_page_idx: int) -> str:
+    """
+    Format recently extracted entries as carry-forward context for the next batch.
+
+    overlap_page_idx: absolute index of the prior batch's last page. Entries whose
+    page_end >= this index are marked CONTINUES (may be cut off at batch boundary);
+    others are marked COMPLETE.
+    """
+    if not entries:
+        return ''
+
+    lines = ['Previously extracted entries from the last overlap page:']
+    for i, e in enumerate(entries, 1):
+        date = e.get('date') or 'unknown date'
+        log_type = e.get('log_type') or '?'
+        entry_type = e.get('entry_type') or '?'
+        signoff = e.get('signoff_person') or ''
+        text = (e.get('text') or '').strip()
+
+        header = f"  {i}. [{date}] {log_type}/{entry_type}"
+        if signoff:
+            header += f" — signed by {signoff}"
+        lines.append(header)
+        lines.append(f"     Text: {text}")
+
+        status = 'CONTINUES' if (e.get('page_end') or 0) >= overlap_page_idx else 'COMPLETE'
+        lines.append(f"     Status: {status}")
+
+    return '\n'.join(lines)
+
+
 def _extract_all_entries(
     provider, provider_client, image_paths, model, batch_size,
     all_entries, non_logbook_pages, unparseable_pages,
@@ -343,17 +433,18 @@ def _extract_all_entries(
     and proactively shrinks future batch sizes when approaching the limit.
     """
     log = logging.getLogger(__name__)
-    seen_keys: Set[tuple] = set()
+    seen_key_index: dict = {}       # key → index in all_entries (for keep-longer dedup)
+    prior_context_text: Optional[str] = None   # carry-forward for next batch
 
-    # Work queue: list of (batch_offset, batch_files) to process.
+    # Work queue: list of (batch_offset, batch_files, is_split) to process.
     # Starts with the initial batches, but truncated batches get split
-    # and re-queued.
-    work_queue = list(_make_batches(image_paths, batch_size))
+    # and re-queued with is_split=True.
+    work_queue = [(off, files, False) for off, files in _make_batches(image_paths, batch_size)]
     batch_num = 0
     total_estimate = len(work_queue)
 
     while work_queue:
-        batch_offset, batch_files = work_queue.pop(0)
+        batch_offset, batch_files, is_split_batch = work_queue.pop(0)
         batch_num += 1
 
         yield {
@@ -367,7 +458,9 @@ def _extract_all_entries(
         }
 
         try:
-            result = _call_model(provider, provider_client, batch_files, model)
+            ctx = prior_context_text if not is_split_batch else None
+            result = _call_model(provider, provider_client, batch_files, model,
+                                 prior_context_text=ctx)
         except Exception:
             log.exception("AI API error in batch %d (provider: %s)", batch_num, provider)
             yield _ev('error', f"AI API error in batch {batch_num}. See server logs for details.")
@@ -384,10 +477,9 @@ def _extract_all_entries(
                 continue
 
             half = max(1, len(batch_files) // 2)
-            sub_a = (batch_offset, batch_files[:half])
-            # Overlap by 1 between the two halves
             sub_b_start = half - 1
-            sub_b = (batch_offset + sub_b_start, batch_files[sub_b_start:])
+            sub_a = (batch_offset, batch_files[:half], True)
+            sub_b = (batch_offset + sub_b_start, batch_files[sub_b_start:], True)
 
             yield _ev('warning',
                       f"Batch {batch_num} truncated ({len(batch_files)} images) — "
@@ -411,7 +503,7 @@ def _extract_all_entries(
                       f"shrinking remaining batches to {new_size} images")
             # Re-batch the remaining images from the work queue
             remaining_offsets_files = []
-            for off, files in work_queue:
+            for off, files, _ in work_queue:
                 for i, f in enumerate(files):
                     remaining_offsets_files.append((off + i, f))
             # Deduplicate by offset (overlap pages may appear twice)
@@ -428,7 +520,7 @@ def _extract_all_entries(
                 chunk = deduped[i:i + new_size]
                 chunk_offset = chunk[0][0]
                 chunk_files = [f for _, f in chunk]
-                new_queue.append((chunk_offset, chunk_files))
+                new_queue.append((chunk_offset, chunk_files, False))
             work_queue = new_queue
             total_estimate = batch_num + len(work_queue)
 
@@ -437,6 +529,8 @@ def _extract_all_entries(
         entries = data.get('entries') or []
         yield _ev('info', f"  → {len(entries)} entries extracted from batch {batch_num}")
 
+        batch_entries_added = []
+
         for entry in entries:
             ps = entry.get('page_start', 0)
             pe = entry.get('page_end', ps)
@@ -444,15 +538,31 @@ def _extract_all_entries(
             entry['page_end'] = batch_offset + pe
 
             key = (entry.get('date'), (entry.get('text') or '')[:80].strip())
-            if key in seen_keys:
+            new_text_len = len((entry.get('text') or '').strip())
+
+            if key in seen_key_index:
+                existing_idx = seen_key_index[key]
+                existing_text_len = len((all_entries[existing_idx].get('text') or '').strip())
+                if new_text_len > existing_text_len:
+                    all_entries[existing_idx] = entry
                 continue
-            seen_keys.add(key)
+
+            seen_key_index[key] = len(all_entries)
             all_entries.append(entry)
+            batch_entries_added.append(entry)
 
         for local_idx in data.get('non_logbook_pages') or []:
             non_logbook_pages.add(batch_offset + local_idx)
         for local_idx in data.get('unparseable_pages') or []:
             unparseable_pages.add(batch_offset + local_idx)
+
+        # Update carry-forward context for the next non-split batch
+        if not is_split_batch and batch_entries_added:
+            overlap_page_idx = batch_offset + len(batch_files) - 1
+            n_ctx = min(3, len(batch_entries_added))
+            prior_context_text = _format_prior_context(
+                batch_entries_added[-n_ctx:], overlap_page_idx
+            )
 
 
 def _make_batches(image_paths: List[Path], batch_size: int):
@@ -471,20 +581,33 @@ def _make_batches(image_paths: List[Path], batch_size: int):
     return batches
 
 
-def _call_model(provider: str, provider_client, batch_files: List[Path], model: str) -> dict:
+def _call_model(
+    provider: str,
+    provider_client,
+    batch_files: List[Path],
+    model: str,
+    prior_context_text: Optional[str] = None,
+) -> dict:
     """
     Dispatch to the correct provider function.
     Returns dict with keys: 'data', 'truncated', 'output_tokens'.
     """
     if provider == 'anthropic':
-        return _call_anthropic(provider_client, batch_files, model)
+        return _call_anthropic(provider_client, batch_files, model,
+                               prior_context_text=prior_context_text)
     elif provider == 'ollama':
-        return _call_ollama(provider_client, batch_files, model)
+        return _call_ollama(provider_client, batch_files, model,
+                            prior_context_text=prior_context_text)
     else:
         raise ValueError(f"Unknown provider: {provider}")
 
 
-def _call_anthropic(client, batch_files: List[Path], model: str) -> dict:
+def _call_anthropic(
+    client,
+    batch_files: List[Path],
+    model: str,
+    prior_context_text: Optional[str] = None,
+) -> dict:
     """
     Send a batch of images to the Anthropic API; return dict with keys:
       'data'          — parsed JSON response
@@ -495,18 +618,16 @@ def _call_anthropic(client, batch_files: List[Path], model: str) -> dict:
     """
     import anthropic
 
-    _MEDIA_TYPES = {
-        '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
-        '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp',
-        '.tiff': 'image/tiff',
-    }
-
     content = []
+
+    if prior_context_text:
+        content.append({'type': 'text', 'text': prior_context_text})
+
     for local_idx, image_path in enumerate(batch_files):
         content.append({'type': 'text', 'text': f"Page {local_idx} ({image_path.name}):"})
-        with open(image_path, 'rb') as fh:
-            image_b64 = base64.standard_b64encode(fh.read()).decode('utf-8')
-        media_type = _MEDIA_TYPES.get(image_path.suffix.lower(), 'image/jpeg')
+        image_bytes = _get_image_bytes(image_path)
+        image_b64 = base64.standard_b64encode(image_bytes).decode('utf-8')
+        media_type = 'image/png' if image_path.suffix.lower() == '.png' else 'image/jpeg'
         content.append({
             'type': 'image',
             'source': {'type': 'base64', 'media_type': media_type, 'data': image_b64},
@@ -572,7 +693,12 @@ def _call_anthropic(client, batch_files: List[Path], model: str) -> dict:
     }
 
 
-def _call_ollama(base_url: str, batch_files: List[Path], model: str) -> dict:
+def _call_ollama(
+    base_url: str,
+    batch_files: List[Path],
+    model: str,
+    prior_context_text: Optional[str] = None,
+) -> dict:
     """
     Send a batch of images to a local Ollama instance; return dict with keys:
       'data'          — parsed JSON response
@@ -586,17 +712,21 @@ def _call_ollama(base_url: str, batch_files: List[Path], model: str) -> dict:
     images = []
     image_labels = []
     for local_idx, image_path in enumerate(batch_files):
-        with open(image_path, 'rb') as fh:
-            image_b64 = base64.standard_b64encode(fh.read()).decode('utf-8')
+        image_bytes = _get_image_bytes(image_path)
+        image_b64 = base64.standard_b64encode(image_bytes).decode('utf-8')
         images.append(image_b64)
         image_labels.append(f"Page {local_idx} ({image_path.name})")
 
-    user_text = (
+    base_instruction = (
         f"These are {len(batch_files)} logbook page image(s), "
         f"indexed 0\u2013{len(batch_files) - 1}. "
         f"Page labels: {', '.join(image_labels)}. "
         "Extract all logbook entries and return the JSON as specified."
     )
+    if prior_context_text:
+        user_text = f"{prior_context_text}\n\n{base_instruction}"
+    else:
+        user_text = base_instruction
 
     payload = {
         "model": model,
@@ -675,7 +805,7 @@ def _upload_images(
         if tags:
             notes += f" [{', '.join(tags)}]"
 
-        doc_image = DocumentImage(document=document, notes=notes)
+        doc_image = DocumentImage(document=document, notes=notes, order=idx)
         with open(image_path, 'rb') as fh:
             doc_image.image.save(image_path.name, File(fh), save=True)
 
