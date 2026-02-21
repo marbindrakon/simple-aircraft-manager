@@ -94,11 +94,37 @@ function logbookPickerMixin() {
         },
 
         // Select an entry: write its ID to the target form field and show chip.
+        // Also pre-fills date and hours in the compliance / inspection forms (Flow B).
         pickerSelectEntry(entry) {
             this.pickerSelectedEntry = entry;
             if (this.pickerTargetForm && this.pickerTargetField) {
                 this[this.pickerTargetForm][this.pickerTargetField] = entry.id;
             }
+
+            // Pre-fill date and hours for compliance / inspection modals
+            if (this.pickerTargetForm === 'complianceForm') {
+                if (entry.date) this.complianceForm.date_complied = entry.date;
+                if (entry.aircraft_hours_at_entry != null) {
+                    const hrs = parseFloat(entry.aircraft_hours_at_entry);
+                    this.complianceForm.aircraft_hours = hrs.toFixed(1);
+                    // Recompute next_due_at_time for recurring ADs
+                    if (this.selectedAd && this.selectedAd.recurring && this.selectedAd.recurring_hours > 0) {
+                        this.complianceForm.next_due_at_time = (
+                            hrs + parseFloat(this.selectedAd.recurring_hours)
+                        ).toFixed(1);
+                    }
+                }
+                // Pre-fill compliance notes if the field is still empty
+                if (!this.complianceForm.compliance_notes && entry.text) {
+                    this.complianceForm.compliance_notes = entry.text;
+                }
+            } else if (this.pickerTargetForm === 'inspectionForm') {
+                if (entry.date) this.inspectionForm.date = entry.date;
+                if (entry.aircraft_hours_at_entry != null) {
+                    this.inspectionForm.aircraft_hours = parseFloat(entry.aircraft_hours_at_entry).toFixed(1);
+                }
+            }
+
             this.pickerDropdownOpen = false;
             this.pickerBrowseOpen = false;
             this.pickerSearchQuery = '';

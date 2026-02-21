@@ -593,5 +593,179 @@ function logbookMixin() {
         removeExistingRelatedDoc(idx) {
             this.logbookExistingRelatedDocs.splice(idx, 1);
         },
+
+        // ── Create Compliance Records from Logbook Entry (Flow A) ──────────────
+
+        createRecordsModalOpen: false,
+        createRecordsLoading: false,
+        createRecordsSubmitting: false,
+        createRecordsEntry: null,
+        createRecordsDate: '',
+        createRecordsHours: '',
+        createRecordsAdSearch: '',
+        createRecordsSelections: { inspections: [], ads: [] },
+
+        get createRecordsFilteredAds() {
+            const q = this.createRecordsAdSearch.trim().toLowerCase();
+            if (!q) return this.createRecordsSelections.ads;
+            return this.createRecordsSelections.ads.filter(ad =>
+                ad.name.toLowerCase().includes(q) ||
+                ad.short_description.toLowerCase().includes(q)
+            );
+        },
+
+        get createRecordsTotalChecked() {
+            return this.createRecordsSelections.inspections.filter(i => i.checked).length +
+                   this.createRecordsSelections.ads.filter(a => a.checked).length;
+        },
+
+        async openCreateRecordsModal(entry) {
+            this.createRecordsEntry = entry;
+            this.createRecordsDate = entry.date || '';
+            this.createRecordsHours = entry.aircraft_hours_at_entry
+                ? parseFloat(entry.aircraft_hours_at_entry).toFixed(1)
+                : '';
+            this.createRecordsAdSearch = '';
+            this.createRecordsSelections = { inspections: [], ads: [] };
+            this.createRecordsLoading = true;
+            this.createRecordsModalOpen = true;
+
+            // Load inspections and ADs in parallel if not already loaded
+            const loadPromises = [];
+            if (!this.inspectionsLoaded) loadPromises.push(this.loadInspections());
+            if (!this.adsLoaded) loadPromises.push(this.loadAds());
+            if (loadPromises.length > 0) await Promise.all(loadPromises);
+
+            // Pre-check all inspections when entry type is INSPECTION
+            const preCheckInspections = entry.entry_type === 'INSPECTION';
+            const hours = this.createRecordsHours ? parseFloat(this.createRecordsHours) : null;
+
+            this.createRecordsSelections = {
+                inspections: this.inspectionTypes.map(it => ({
+                    id: it.id,
+                    name: it.name,
+                    checked: preCheckInspections,
+                })),
+                ads: this.applicableAds.map(ad => ({
+                    id: ad.id,
+                    name: ad.name,
+                    short_description: ad.short_description,
+                    recurring: ad.recurring,
+                    recurring_hours: parseFloat(ad.recurring_hours) || 0,
+                    checked: false,
+                    permanent: false,
+                    next_due_at_time: '',
+                    compliance_notes: '',
+                })),
+            };
+            this.createRecordsLoading = false;
+        },
+
+        closeCreateRecordsModal() {
+            this.createRecordsModalOpen = false;
+            this.createRecordsEntry = null;
+            this.createRecordsSelections = { inspections: [], ads: [] };
+            this.createRecordsDate = '';
+            this.createRecordsHours = '';
+            this.createRecordsAdSearch = '';
+            this.createRecordsLoading = false;
+        },
+
+        onCreateRecordsAdChecked(adItem) {
+            // Auto-fill next_due_at_time when first checking a recurring AD
+            if (adItem.checked && adItem.recurring && adItem.recurring_hours > 0 &&
+                    this.createRecordsHours && !adItem.next_due_at_time) {
+                adItem.next_due_at_time = (
+                    parseFloat(this.createRecordsHours) + adItem.recurring_hours
+                ).toFixed(1);
+            }
+        },
+
+        async submitCreateRecords() {
+            if (this.createRecordsSubmitting) return;
+            const checkedInspections = this.createRecordsSelections.inspections.filter(i => i.checked);
+            const checkedAds = this.createRecordsSelections.ads.filter(a => a.checked);
+            if (checkedInspections.length === 0 && checkedAds.length === 0) {
+                showNotification('Select at least one inspection or AD to record', 'warning');
+                return;
+            }
+            if (!this.createRecordsDate) {
+                showNotification('Date is required', 'warning');
+                return;
+            }
+
+            this.createRecordsSubmitting = true;
+            try {
+                const promises = [];
+
+                for (const insp of checkedInspections) {
+                    const data = {
+                        inspection_type: insp.id,
+                        date: this.createRecordsDate,
+                        logbook_entry: this.createRecordsEntry.id,
+                    };
+                    if (this.createRecordsHours) {
+                        data.aircraft_hours = parseFloat(this.createRecordsHours);
+                    }
+                    promises.push(apiRequest(`/api/aircraft/${this.aircraftId}/inspections/`, {
+                        method: 'POST',
+                        body: JSON.stringify(data),
+                    }));
+                }
+
+                for (const ad of checkedAds) {
+                    const data = {
+                        ad: ad.id,
+                        date_complied: this.createRecordsDate,
+                        compliance_notes: ad.compliance_notes || this.createRecordsEntry.text || '',
+                        permanent: ad.permanent || false,
+                        next_due_at_time: ad.permanent ? 0 : (parseFloat(ad.next_due_at_time) || 0),
+                        logbook_entry: this.createRecordsEntry.id,
+                    };
+                    if (this.createRecordsHours) {
+                        data.aircraft_hours_at_compliance = parseFloat(this.createRecordsHours);
+                    }
+                    promises.push(apiRequest(`/api/aircraft/${this.aircraftId}/compliance/`, {
+                        method: 'POST',
+                        body: JSON.stringify(data),
+                    }));
+                }
+
+                const results = await Promise.allSettled(promises);
+                const failures = results.filter(r => r.status === 'rejected' || (r.value && !r.value.ok));
+                const successes = results.length - failures.length;
+
+                if (failures.length > 0) {
+                    showNotification(
+                        `${successes} record(s) created, ${failures.length} failed — check the inspections and ADs tabs`,
+                        'warning'
+                    );
+                } else {
+                    const total = results.length;
+                    showNotification(
+                        `${total} compliance record${total !== 1 ? 's' : ''} created`,
+                        'success'
+                    );
+                }
+
+                // Refresh affected tabs
+                if (checkedInspections.length > 0) {
+                    this.inspectionsLoaded = false;
+                    await this.loadInspections();
+                }
+                if (checkedAds.length > 0) {
+                    this.adsLoaded = false;
+                    await this.loadAds();
+                }
+                await this.loadData();
+
+                this.closeCreateRecordsModal();
+            } catch (error) {
+                console.error('Error creating compliance records:', error);
+                showNotification('Error creating records', 'danger');
+            } finally {
+                this.createRecordsSubmitting = false;
+            }
+        },
     };
 }

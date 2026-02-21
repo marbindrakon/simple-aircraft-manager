@@ -570,7 +570,10 @@
                                         </div>
                                     </div>
                                     <div class="pf-v5-c-card__actions" x-show="isOwner">
-                                        <button class="pf-v5-c-button pf-m-plain" @click="openLinkPicker(log)" title="Link to record">
+                                        <button class="pf-v5-c-button pf-m-plain" @click="openCreateRecordsModal(log)" title="Create compliance records from this entry">
+                                            <i class="fas fa-clipboard-check"></i>
+                                        </button>
+                                        <button class="pf-v5-c-button pf-m-plain" @click="openLinkPicker(log)" title="Link to existing record">
                                             <i class="fas fa-link"></i>
                                         </button>
                                         <button class="pf-v5-c-button pf-m-plain" @click="editLogEntry(log)" title="Edit">
@@ -3386,6 +3389,9 @@
                             <label class="pf-v5-c-form__label">
                                 <span class="pf-v5-c-form__label-text">Logbook Entry</span>
                             </label>
+                            <p style="font-size: 0.85em; color: var(--pf-v5-global--Color--200); margin: 0 0 0.5rem;" x-show="!pickerSelectedEntry && !editingComplianceRecord">
+                                Selecting an entry will pre-fill the date, hours, and notes above.
+                            </p>
                             <div class="pf-v5-c-form__group-control">
                                 <!-- Selected entry chip -->
                                 <template x-if="pickerSelectedEntry">
@@ -3593,6 +3599,9 @@
                             <label class="pf-v5-c-form__label">
                                 <span class="pf-v5-c-form__label-text">Logbook Entry (optional)</span>
                             </label>
+                            <p style="font-size: 0.85em; color: var(--pf-v5-global--Color--200); margin: 0 0 0.5rem;" x-show="!pickerSelectedEntry && !editingInspectionRecord">
+                                Selecting an entry will pre-fill the date and hours above.
+                            </p>
                             <div class="pf-v5-c-form__group-control">
                                 <!-- Selected entry chip -->
                                 <template x-if="pickerSelectedEntry">
@@ -3647,6 +3656,161 @@
                         <span x-show="inspectionSubmitting">Saving...</span>
                     </button>
                     <button class="pf-v5-c-button pf-m-link" @click="closeInspectionModal()">Cancel</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Compliance Records from Logbook Entry Modal -->
+    <div class="pf-v5-c-backdrop" x-show="createRecordsModalOpen" x-cloak @click.self="!createRecordsSubmitting && closeCreateRecordsModal()" style="z-index: 1100;">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-lg" @click.stop style="max-height: 90vh; overflow-y: auto;">
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeCreateRecordsModal()" :disabled="createRecordsSubmitting" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">Create Compliance Records</h1>
+                    <template x-if="createRecordsEntry">
+                        <div class="pf-v5-c-modal-box__description">
+                            From logbook entry:
+                            <strong x-text="formatDate(createRecordsEntry.date)"></strong>
+                            <template x-if="createRecordsEntry.aircraft_hours_at_entry">
+                                <span> · <span x-text="formatHours(createRecordsEntry.aircraft_hours_at_entry)"></span></span>
+                            </template>
+                            <span style="color: var(--pf-v5-global--Color--200);"> — </span>
+                            <span style="color: var(--pf-v5-global--Color--200);" x-text="(createRecordsEntry.text || '').substring(0, 80) + (createRecordsEntry.text?.length > 80 ? '…' : '')"></span>
+                        </div>
+                    </template>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+
+                    <!-- Loading spinner while tab data loads -->
+                    <div x-show="createRecordsLoading" style="text-align: center; padding: 2rem 0; color: var(--pf-v5-global--Color--200);">
+                        <div class="loading-spinner" style="width: 2rem; height: 2rem; margin: 0 auto;"></div>
+                        <p style="margin-top: 0.5rem;">Loading...</p>
+                    </div>
+
+                    <!-- Empty state: no applicable inspections or ADs on this aircraft -->
+                    <template x-if="!createRecordsLoading && createRecordsSelections.inspections.length === 0 && createRecordsSelections.ads.length === 0">
+                        <div class="pf-v5-c-empty-state">
+                            <div class="pf-v5-c-empty-state__content">
+                                <i class="fas fa-info-circle" style="font-size: 2.5rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                                <h2 class="pf-v5-c-title pf-m-md">No applicable inspections or ADs</h2>
+                                <div class="pf-v5-c-empty-state__body">
+                                    Add inspection types or ADs from their respective tabs before creating records.
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Main form -->
+                    <template x-if="!createRecordsLoading && (createRecordsSelections.inspections.length > 0 || createRecordsSelections.ads.length > 0)">
+                        <div class="pf-v5-c-form">
+
+                            <!-- Date / Hours row — editable in case entry lacks hours -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div class="pf-v5-c-form__group">
+                                    <label class="pf-v5-c-form__label">
+                                        <span class="pf-v5-c-form__label-text">Date</span>
+                                        <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                                    </label>
+                                    <div class="pf-v5-c-form__group-control">
+                                        <input type="date" class="pf-v5-c-form-control" x-model="createRecordsDate" required>
+                                    </div>
+                                </div>
+                                <div class="pf-v5-c-form__group">
+                                    <label class="pf-v5-c-form__label">
+                                        <span class="pf-v5-c-form__label-text">Aircraft Hours</span>
+                                    </label>
+                                    <div class="pf-v5-c-form__group-control">
+                                        <input type="number" step="0.1" min="0" class="pf-v5-c-form-control" x-model="createRecordsHours" placeholder="e.g. 1234.5">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Inspections checklist -->
+                            <template x-if="createRecordsSelections.inspections.length > 0">
+                                <div style="margin-bottom: 1.25rem;">
+                                    <div style="font-weight: 600; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--pf-v5-global--BorderColor--100);">
+                                        <i class="fas fa-clipboard-list" style="color: var(--pf-v5-global--Color--200); margin-right: 0.4rem;"></i>Inspections
+                                    </div>
+                                    <template x-for="insp in createRecordsSelections.inspections" :key="insp.id">
+                                        <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.25rem; border-bottom: 1px solid var(--pf-v5-global--BorderColor--200);">
+                                            <input type="checkbox" x-model="insp.checked" :id="`cr-insp-${insp.id}`" style="flex-shrink: 0;">
+                                            <label :for="`cr-insp-${insp.id}`" style="cursor: pointer; flex: 1; margin: 0;" x-text="insp.name"></label>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <!-- ADs checklist -->
+                            <template x-if="createRecordsSelections.ads.length > 0">
+                                <div>
+                                    <div style="font-weight: 600; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--pf-v5-global--BorderColor--100); display: flex; align-items: center; gap: 0.75rem;">
+                                        <span><i class="fas fa-exclamation-triangle" style="color: var(--pf-v5-global--Color--200); margin-right: 0.4rem;"></i>Airworthiness Directives</span>
+                                        <input type="text" class="pf-v5-c-form-control" placeholder="Filter ADs…"
+                                               x-model="createRecordsAdSearch"
+                                               style="width: 200px; font-weight: normal; font-size: 0.875rem;">
+                                    </div>
+                                    <template x-if="createRecordsFilteredAds.length === 0">
+                                        <div style="color: var(--pf-v5-global--Color--200); font-size: 0.9em; padding: 0.5rem 0.25rem;">No ADs match filter</div>
+                                    </template>
+                                    <template x-for="ad in createRecordsFilteredAds" :key="ad.id">
+                                        <div style="border-bottom: 1px solid var(--pf-v5-global--BorderColor--200);">
+                                            <!-- AD row -->
+                                            <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.5rem 0.25rem;">
+                                                <input type="checkbox" x-model="ad.checked" :id="`cr-ad-${ad.id}`" @change="onCreateRecordsAdChecked(ad)" style="flex-shrink: 0; margin-top: 0.2rem;">
+                                                <label :for="`cr-ad-${ad.id}`" style="cursor: pointer; flex: 1; margin: 0;">
+                                                    <span style="font-weight: 500;" x-text="ad.name"></span>
+                                                    <span style="color: var(--pf-v5-global--Color--200);"> — </span>
+                                                    <span style="color: var(--pf-v5-global--Color--200); font-size: 0.9em;" x-text="ad.short_description"></span>
+                                                </label>
+                                            </div>
+                                            <!-- Expanded fields when checked -->
+                                            <template x-if="ad.checked">
+                                                <div style="padding: 0.5rem 1.75rem 0.75rem; background: var(--pf-v5-global--BackgroundColor--200); border-radius: 3px; margin-bottom: 0.25rem;">
+                                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                                        <input type="checkbox" x-model="ad.permanent" :id="`cr-ad-perm-${ad.id}`">
+                                                        <label :for="`cr-ad-perm-${ad.id}`" style="cursor: pointer; font-size: 0.9em; margin: 0;">Permanent compliance (no recurrence)</label>
+                                                    </div>
+                                                    <template x-if="!ad.permanent">
+                                                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                                                            <label style="font-size: 0.9em; white-space: nowrap; color: var(--pf-v5-global--Color--200);">Next due at (hrs):</label>
+                                                            <input type="number" step="0.1" min="0" class="pf-v5-c-form-control" x-model="ad.next_due_at_time" placeholder="Optional" style="width: 130px;">
+                                                        </div>
+                                                    </template>
+                                                    <div>
+                                                        <label style="font-size: 0.9em; color: var(--pf-v5-global--Color--200); display: block; margin-bottom: 0.25rem;">Compliance notes (optional):</label>
+                                                        <textarea class="pf-v5-c-form-control" rows="2" x-model="ad.compliance_notes" style="font-size: 0.9em;"
+                                                                  :placeholder="(createRecordsEntry?.text || '').substring(0, 80)"></textarea>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+
+                        </div>
+                    </template>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <template x-if="!createRecordsLoading && (createRecordsSelections.inspections.length > 0 || createRecordsSelections.ads.length > 0)">
+                        <button class="pf-v5-c-button pf-m-primary"
+                                @click="submitCreateRecords()"
+                                :disabled="createRecordsSubmitting || createRecordsTotalChecked === 0">
+                            <span x-show="!createRecordsSubmitting">
+                                Create
+                                <span x-show="createRecordsTotalChecked > 0" x-text="createRecordsTotalChecked"></span>
+                                Record<span x-show="createRecordsTotalChecked !== 1">s</span>
+                            </span>
+                            <span x-show="createRecordsSubmitting">Creating...</span>
+                        </button>
+                    </template>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeCreateRecordsModal()" :disabled="createRecordsSubmitting">Cancel</button>
                 </footer>
             </div>
         </div>
