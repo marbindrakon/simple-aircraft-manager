@@ -13,6 +13,15 @@ function logbookImport() {
         logTypeOverride: '',
         fileMode: 'images',   // 'images' | 'archive'
 
+        // ── Append mode ──────────────────────────────────────────────────────
+        appendMode: false,
+        appendCollectionId: '',
+        appendDocumentId: '',
+        existingCollections: [],
+        existingDocuments: [],
+        collectionsLoading: false,
+        documentsLoading: false,
+
         init() {
             // Read the default model from the server-rendered select element
             const modelSelect = document.getElementById('model-select');
@@ -35,6 +44,7 @@ function logbookImport() {
         // ── Computed ─────────────────────────────────────────────────────────
         get canSubmit() {
             if (!this.aircraftId || this.importing) return false;
+            if (this.appendMode && !this.appendDocumentId) return false;
             if (this.fileMode === 'images') return this.selectedImages.length > 0;
             return this.selectedArchive !== null;
         },
@@ -109,6 +119,58 @@ function logbookImport() {
             }
         },
 
+        // ── Append mode helpers ───────────────────────────────────────────────
+        onAircraftChange() {
+            this.appendCollectionId = '';
+            this.appendDocumentId = '';
+            this.existingCollections = [];
+            this.existingDocuments = [];
+            if (this.appendMode && this.aircraftId) {
+                this.loadCollections();
+            }
+        },
+
+        onAppendModeChange() {
+            this.appendCollectionId = '';
+            this.appendDocumentId = '';
+            this.existingCollections = [];
+            this.existingDocuments = [];
+            if (this.appendMode && this.aircraftId) {
+                this.loadCollections();
+            }
+        },
+
+        async loadCollections() {
+            this.collectionsLoading = true;
+            try {
+                const resp = await fetch(`/api/document-collections/?aircraft=${this.aircraftId}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    this.existingCollections = data.results || data;
+                }
+            } finally {
+                this.collectionsLoading = false;
+            }
+        },
+
+        async onCollectionChange() {
+            this.appendDocumentId = '';
+            this.existingDocuments = [];
+            if (!this.appendCollectionId) return;
+            this.documentsLoading = true;
+            try {
+                const resp = await fetch(
+                    `/api/documents/?aircraft=${this.aircraftId}&collection=${this.appendCollectionId}`
+                );
+                if (resp.ok) {
+                    const data = await resp.json();
+                    this.existingDocuments = data.results || data;
+                }
+            } finally {
+                this.documentsLoading = false;
+            }
+        },
+
         // ── Import ────────────────────────────────────────────────────────────
         _pollTimer: null,
         _jobId: null,
@@ -132,6 +194,9 @@ function logbookImport() {
             formData.append('upload_only', this.uploadOnly ? 'true' : 'false');
             formData.append('log_type_override', this.logTypeOverride);
             formData.append('file_mode', this.fileMode);
+            if (this.appendMode && this.appendDocumentId) {
+                formData.append('append_to_document_id', this.appendDocumentId);
+            }
 
             if (this.fileMode === 'images') {
                 const input = this.$refs.imageInput;
@@ -233,6 +298,11 @@ function logbookImport() {
             this.fatalError = null;
             this.selectedImages = [];
             this.selectedArchive = null;
+            this.appendMode = false;
+            this.appendCollectionId = '';
+            this.appendDocumentId = '';
+            this.existingCollections = [];
+            this.existingDocuments = [];
             if (this.$refs.imageInput) this.$refs.imageInput.value = '';
             if (this.$refs.archiveInput) this.$refs.archiveInput.value = '';
         },

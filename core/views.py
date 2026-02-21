@@ -972,6 +972,18 @@ class LogbookImportView(LoginRequiredMixin, View):
 
             opts = self._parse_options(request)
 
+            append_doc_id = opts.get('append_to_document_id')
+            if append_doc_id:
+                from health.models import Document
+                try:
+                    Document.objects.get(pk=append_doc_id, aircraft=aircraft)
+                except (Document.DoesNotExist, ValueError):
+                    return JsonResponse(
+                        {'type': 'error',
+                         'message': 'Document not found or does not belong to this aircraft.'},
+                        status=400,
+                    )
+
             from health.models import ImportJob
             job = ImportJob.objects.create(aircraft=aircraft, status='pending')
 
@@ -992,6 +1004,7 @@ class LogbookImportView(LoginRequiredMixin, View):
                     'upload_only': opts['upload_only'],
                     'log_type_override': opts['log_type_override'] or None,
                     'batch_size': opts['batch_size'],
+                    'append_to_document_id': append_doc_id,
                 },
                 daemon=True,
             )
@@ -1213,6 +1226,7 @@ class LogbookImportView(LoginRequiredMixin, View):
             'upload_only': upload_only,
             'log_type_override': request.POST.get('log_type_override', ''),
             'batch_size': batch_size,
+            'append_to_document_id': request.POST.get('append_to_document_id', '').strip() or None,
         }
 
 

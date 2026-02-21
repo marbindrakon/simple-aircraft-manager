@@ -130,7 +130,7 @@
                 <span class="pf-v5-c-form__label-required" aria-hidden="true"> *</span>
               </label>
               <select id="aircraft-select" class="pf-v5-c-form-control"
-                      x-model="aircraftId" required>
+                      x-model="aircraftId" @change="onAircraftChange()" required>
                 <option value="">— Select aircraft —</option>
                 {% for ac in aircraft_list %}
                 <option value="{{ ac.id }}">{{ ac.tail_number }} — {{ ac.make }} {{ ac.model }}</option>
@@ -138,26 +138,95 @@
               </select>
             </div>
 
-            <!-- Collection name -->
-            <div class="pf-v5-c-form__group" style="margin-bottom: 1rem;">
-              <label class="pf-v5-c-form__label" for="collection-name">
-                <span class="pf-v5-c-form__label-text">Collection name</span>
+            <!-- Append mode toggle -->
+            <div style="margin-bottom: 1rem;">
+              <label class="pf-v5-c-check">
+                <input class="pf-v5-c-check__input" type="checkbox"
+                       id="append-mode" x-model="appendMode" @change="onAppendModeChange()">
+                <span class="pf-v5-c-check__label">Append to existing document</span>
+                <span class="pf-v5-c-check__description">
+                  Add new pages to an existing document instead of creating a new one.
+                </span>
               </label>
-              <input id="collection-name" class="pf-v5-c-form-control" type="text"
-                     x-model="collectionName" placeholder="e.g. Airframe Log #4">
-              <p class="pf-v5-c-form__helper-text">
-                Groups this import with related documents. Auto-filled from filename.
-              </p>
             </div>
 
-            <!-- Document name -->
-            <div class="pf-v5-c-form__group">
-              <label class="pf-v5-c-form__label" for="doc-name">
-                <span class="pf-v5-c-form__label-text">Document name</span>
-              </label>
-              <input id="doc-name" class="pf-v5-c-form-control" type="text"
-                     x-model="docName" placeholder="Defaults to collection name">
-            </div>
+            <!-- Append mode: cascaded collection → document dropdowns -->
+            <div x-show="appendMode">
+
+              <!-- Collection dropdown -->
+              <div class="pf-v5-c-form__group" style="margin-bottom: 1rem;">
+                <label class="pf-v5-c-form__label">
+                  <span class="pf-v5-c-form__label-text">Collection</span>
+                  <span class="pf-v5-c-form__label-required" aria-hidden="true"> *</span>
+                </label>
+                <template x-if="collectionsLoading">
+                  <p class="pf-v5-c-form__helper-text">Loading…</p>
+                </template>
+                <template x-if="!collectionsLoading">
+                  <select class="pf-v5-c-form-control"
+                          x-model="appendCollectionId" @change="onCollectionChange()">
+                    <option value="">— Select collection —</option>
+                    <template x-for="col in existingCollections" :key="col.id">
+                      <option :value="col.id" x-text="col.name"></option>
+                    </template>
+                  </select>
+                </template>
+                <p x-show="!collectionsLoading && existingCollections.length === 0 && aircraftId"
+                   class="pf-v5-c-form__helper-text pf-m-warning">
+                  No collections found for this aircraft.
+                </p>
+              </div>
+
+              <!-- Document dropdown (shown once collection is selected) -->
+              <div class="pf-v5-c-form__group" x-show="appendCollectionId">
+                <label class="pf-v5-c-form__label">
+                  <span class="pf-v5-c-form__label-text">Document</span>
+                  <span class="pf-v5-c-form__label-required" aria-hidden="true"> *</span>
+                </label>
+                <template x-if="documentsLoading">
+                  <p class="pf-v5-c-form__helper-text">Loading…</p>
+                </template>
+                <template x-if="!documentsLoading">
+                  <select class="pf-v5-c-form-control" x-model="appendDocumentId">
+                    <option value="">— Select document —</option>
+                    <template x-for="doc in existingDocuments" :key="doc.id">
+                      <option :value="doc.id" x-text="doc.name"></option>
+                    </template>
+                  </select>
+                </template>
+                <p x-show="!documentsLoading && existingDocuments.length === 0 && appendCollectionId"
+                   class="pf-v5-c-form__helper-text pf-m-warning">
+                  No documents in this collection.
+                </p>
+              </div>
+
+            </div><!-- end append mode dropdowns -->
+
+            <!-- New document: collection + doc name text inputs (hidden in append mode) -->
+            <div x-show="!appendMode">
+
+              <!-- Collection name -->
+              <div class="pf-v5-c-form__group" style="margin-bottom: 1rem;">
+                <label class="pf-v5-c-form__label" for="collection-name">
+                  <span class="pf-v5-c-form__label-text">Collection name</span>
+                </label>
+                <input id="collection-name" class="pf-v5-c-form-control" type="text"
+                       x-model="collectionName" placeholder="e.g. Airframe Log #4">
+                <p class="pf-v5-c-form__helper-text">
+                  Groups this import with related documents. Auto-filled from filename.
+                </p>
+              </div>
+
+              <!-- Document name -->
+              <div class="pf-v5-c-form__group">
+                <label class="pf-v5-c-form__label" for="doc-name">
+                  <span class="pf-v5-c-form__label-text">Document name</span>
+                </label>
+                <input id="doc-name" class="pf-v5-c-form-control" type="text"
+                       x-model="docName" placeholder="Defaults to collection name">
+              </div>
+
+            </div><!-- end new document inputs -->
 
           </div>
         </div>

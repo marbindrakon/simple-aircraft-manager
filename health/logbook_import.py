@@ -177,6 +177,7 @@ def run_import(
     upload_only: bool = False,
     log_type_override: Optional[str] = None,
     batch_size: int = 10,
+    append_to_document_id=None,
 ) -> Iterator[dict]:
     """
     Generator.  Yields progress event dicts and creates DB records as a side effect.
@@ -194,24 +195,31 @@ def run_import(
     if upload_only:
         yield _ev('info', 'Upload-only mode — skipping transcription')
         with transaction.atomic():
-            collection, created = DocumentCollection.objects.get_or_create(
-                aircraft=aircraft,
-                name=collection_name,
-                defaults={'description': f'Imported {len(image_paths)} images'},
-            )
-            yield _ev('info', f"{'Created' if created else 'Using existing'} collection: {collection.name}")
+            if append_to_document_id:
+                document = Document.objects.get(pk=append_to_document_id)
+                collection = document.collection
+                page_offset = DocumentImage.objects.filter(document=document).count()
+                yield _ev('info', f"Appending to document: {document.name} (offset: {page_offset} pages)")
+            else:
+                collection, created = DocumentCollection.objects.get_or_create(
+                    aircraft=aircraft,
+                    name=collection_name,
+                    defaults={'description': f'Imported {len(image_paths)} images'},
+                )
+                yield _ev('info', f"{'Created' if created else 'Using existing'} collection: {collection.name}")
 
-            document = Document.objects.create(
-                aircraft=aircraft,
-                collection=collection,
-                doc_type=doc_type,
-                name=doc_name,
-                description=f'Imported {len(image_paths)} pages.',
-            )
-            yield _ev('info', f"Created document: {document.name}")
+                document = Document.objects.create(
+                    aircraft=aircraft,
+                    collection=collection,
+                    doc_type=doc_type,
+                    name=doc_name,
+                    description=f'Imported {len(image_paths)} pages.',
+                )
+                yield _ev('info', f"Created document: {document.name}")
+                page_offset = 0
 
             yield _ev('info', f"Uploading {len(image_paths)} image(s)…")
-            yield from _upload_images(document, image_paths, set(), set())
+            yield from _upload_images(document, image_paths, set(), set(), page_offset=page_offset)
 
         yield {
             'type': 'complete',
@@ -268,33 +276,41 @@ def run_import(
         yield _ev('warning', f"Unparseable pages: {sorted(unparseable_pages)}")
 
     with transaction.atomic():
-        collection, created = DocumentCollection.objects.get_or_create(
-            aircraft=aircraft,
-            name=collection_name,
-            defaults={'description': f'Imported {len(image_paths)} images'},
-        )
-        yield _ev('info', f"{'Created' if created else 'Using existing'} collection: {collection.name}")
+        if append_to_document_id:
+            document = Document.objects.get(pk=append_to_document_id)
+            collection = document.collection
+            page_offset = DocumentImage.objects.filter(document=document).count()
+            yield _ev('info', f"Appending to document: {document.name} (offset: {page_offset} pages)")
+        else:
+            collection, created = DocumentCollection.objects.get_or_create(
+                aircraft=aircraft,
+                name=collection_name,
+                defaults={'description': f'Imported {len(image_paths)} images'},
+            )
+            yield _ev('info', f"{'Created' if created else 'Using existing'} collection: {collection.name}")
 
-        document = Document.objects.create(
-            aircraft=aircraft,
-            collection=collection,
-            doc_type=doc_type,
-            name=doc_name,
-            description=(
-                f'Imported {len(image_paths)} pages. '
-                f'Contains {len(all_entries)} logbook entries.'
-            ),
-        )
-        yield _ev('info', f"Created document: {document.name}")
+            document = Document.objects.create(
+                aircraft=aircraft,
+                collection=collection,
+                doc_type=doc_type,
+                name=doc_name,
+                description=(
+                    f'Imported {len(image_paths)} pages. '
+                    f'Contains {len(all_entries)} logbook entries.'
+                ),
+            )
+            yield _ev('info', f"Created document: {document.name}")
+            page_offset = 0
 
         yield _ev('info', f"Uploading {len(image_paths)} image(s)…")
-        yield from _upload_images(document, image_paths, non_logbook_pages, unparseable_pages)
+        yield from _upload_images(document, image_paths, non_logbook_pages, unparseable_pages,
+                                  page_offset=page_offset)
 
         yield _ev('info', "Creating logbook entries…")
         entries_created = 0
         entries_skipped = 0
         for entry in all_entries:
-            err = _create_single_entry(aircraft, document, entry)
+            err = _create_single_entry(aircraft, document, entry, page_offset=page_offset)
             if err is None:
                 entries_created += 1
                 yield {
@@ -791,6 +807,7 @@ def _upload_images(
     image_paths: List[Path],
     non_logbook_pages: Set[int],
     unparseable_pages: Set[int],
+    page_offset: int = 0,
 ) -> Iterator[dict]:
     """Generator: uploads images and yields 'image' progress events."""
     total = len(image_paths)
@@ -801,11 +818,11 @@ def _upload_images(
         if idx in unparseable_pages:
             tags.append('unparseable')
 
-        notes = f"Page {idx + 1} of {total}: {image_path.name}"
+        notes = f"Page {page_offset + idx + 1} ({image_path.name})"
         if tags:
             notes += f" [{', '.join(tags)}]"
 
-        doc_image = DocumentImage(document=document, notes=notes, order=idx)
+        doc_image = DocumentImage(document=document, notes=notes, order=page_offset + idx)
         with open(image_path, 'rb') as fh:
             doc_image.image.save(image_path.name, File(fh), save=True)
 
@@ -819,7 +836,7 @@ def _upload_images(
         }
 
 
-def _create_single_entry(aircraft, document: Document, entry: dict) -> Optional[str]:
+def _create_single_entry(aircraft, document: Document, entry: dict, page_offset: int = 0) -> Optional[str]:
     """
     Create one LogbookEntry from an extracted entry dict.
     Returns None on success, or an error string describing why it was skipped.
@@ -852,10 +869,10 @@ def _create_single_entry(aircraft, document: Document, entry: dict) -> Optional[
     if confidence != 'high' and notes_text:
         text = f"{text}\n[Import note ({confidence} confidence): {notes_text}]"
 
-    # Convert 0-based page_start index to 1-based page_number
+    # Convert 0-based page_start index to 1-based page_number, applying offset
     page_number = entry.get('page_start')
     if page_number is not None:
-        page_number = page_number + 1
+        page_number = page_offset + page_number + 1
 
     LogbookEntry.objects.create(
         aircraft=aircraft,
