@@ -1313,23 +1313,35 @@ class PublicAircraftSummaryAPI(View):
                 type_dict['inspection_history'] = InspectionRecordNestedSerializer(all_records, many=True).data
             inspections_data.append(type_dict)
 
-        # Build document collections and uncollected documents (shared only)
-        # A document is publicly visible if:
-        #   - document.shared == True (explicit override), OR
-        #   - document.shared is None AND collection.shared == True (inherits from collection)
+        # Build document collections and uncollected documents (shared only).
+        # Visibility levels: 'status' (all share links), 'maintenance' (maintenance tokens only).
+        # A document's effective visibility: use doc.visibility if set, else inherit from collection.
+        def _doc_visible(doc_vis, col_vis):
+            effective = doc_vis if doc_vis is not None else col_vis
+            if not effective or effective == 'private':
+                return False
+            if effective == 'maintenance':
+                return privilege == 'maintenance'
+            return True  # 'status' — visible to all share links
+
         all_collections = DocumentCollection.objects.filter(aircraft=aircraft).prefetch_related('documents__images')
         collections = []
         for col in all_collections:
+            if col.visibility == 'private':
+                continue
+            if col.visibility == 'maintenance' and privilege != 'maintenance':
+                continue
             visible_docs = [
                 d for d in col.documents.all()
-                if d.shared is True or (d.shared is None and col.shared)
+                if _doc_visible(d.visibility, col.visibility)
             ]
             if visible_docs:
                 col._visible_documents = visible_docs
                 collections.append(col)
-        uncollected_docs = Document.objects.filter(
-            aircraft=aircraft, collection__isnull=True, shared=True
-        ).prefetch_related('images')
+        uncollected_qs = Document.objects.filter(
+            aircraft=aircraft, collection__isnull=True
+        ).exclude(visibility__isnull=True).exclude(visibility='private').prefetch_related('images')
+        uncollected_docs = [d for d in uncollected_qs if _doc_visible(d.visibility, None)]
 
         # Major records and linked logbook entries: maintenance privilege only
         if privilege == 'maintenance':
@@ -1497,15 +1509,19 @@ class PublicLogbookEntriesAPI(View):
             qs[offset:offset + limit], many=True, context={'request': drf_request}
         ).data
 
-        # Apply the same log_image_shared annotation used in the summary endpoint
+        # Apply the same log_image_shared annotation used in the summary endpoint.
+        # This endpoint is maintenance-privilege only, so both 'status' and 'maintenance' docs are visible.
         all_collections = DocumentCollection.objects.filter(aircraft=aircraft).prefetch_related('documents')
         visible_doc_ids = set()
         for col in all_collections:
-            if col.shared:
+            if col.visibility in ('status', 'maintenance'):
                 for d in col.documents.all():
-                    if d.shared is True or d.shared is None:
+                    effective = d.visibility if d.visibility is not None else col.visibility
+                    if effective in ('status', 'maintenance'):
                         visible_doc_ids.add(str(d.id))
-        uncollected = Document.objects.filter(aircraft=aircraft, collection__isnull=True, shared=True)
+        uncollected = Document.objects.filter(
+            aircraft=aircraft, collection__isnull=True, visibility__in=('status', 'maintenance')
+        )
         for d in uncollected:
             visible_doc_ids.add(str(d.id))
 

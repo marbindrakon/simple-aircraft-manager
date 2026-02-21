@@ -374,63 +374,52 @@ function documentsMixin() {
             }
         },
 
-        async toggleCollectionSharing(collection) {
+        async setCollectionVisibility(collection, value) {
+            // value: 'private' | 'status' | 'maintenance'
             try {
-                const response = await fetch(`/api/document-collections/${collection.id}/`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken'),
-                    },
-                    body: JSON.stringify({ shared: !collection.shared }),
-                });
-
-                if (response.ok) {
-                    collection.shared = !collection.shared;
-                    showNotification(
-                        collection.shared ? 'Collection shared publicly' : 'Collection set to private',
-                        'success'
-                    );
-                } else {
-                    showNotification('Failed to update sharing', 'danger');
-                }
+                await apiRequest(`/api/document-collections/${collection.id}/`, { method: 'PATCH', body: JSON.stringify({ visibility: value }) });
+                collection.visibility = value;
+                const labels = {
+                    private: 'Private',
+                    status: 'Visible to all share links',
+                    maintenance: 'Maintenance links only',
+                };
+                showNotification(`Collection: ${labels[value]}`, 'success');
             } catch (error) {
-                console.error('Error toggling collection sharing:', error);
-                showNotification('Error updating sharing', 'danger');
+                console.error('Error updating collection visibility:', error);
+                showNotification('Failed to update collection visibility', 'danger');
             }
         },
 
         async toggleDocumentSharing(doc) {
-            // Cycle: null (inherit) → true (shared) → false (hidden) → null
+            // For docs in a collection: null (inherit) → status → maintenance → private → null
+            // For uncollected docs (no collection_id): status → maintenance → private → status
+            const hasCollection = !!doc.collection_id;
             let newValue;
-            if (doc.shared === null || doc.shared === undefined) {
-                newValue = true;
-            } else if (doc.shared === true) {
-                newValue = false;
+            if (doc.visibility === null || doc.visibility === undefined) {
+                newValue = 'status';
+            } else if (doc.visibility === 'status') {
+                newValue = 'maintenance';
+            } else if (doc.visibility === 'maintenance') {
+                newValue = 'private';
             } else {
-                newValue = null;
+                // 'private'
+                newValue = hasCollection ? null : 'status';
             }
 
             try {
-                const response = await fetch(`/api/documents/${doc.id}/`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken'),
-                    },
-                    body: JSON.stringify({ shared: newValue }),
-                });
-
-                if (response.ok) {
-                    doc.shared = newValue;
-                    const label = newValue === true ? 'Shared' : newValue === false ? 'Hidden' : 'Inherits from collection';
-                    showNotification(`Document visibility: ${label}`, 'success');
-                } else {
-                    showNotification('Failed to update sharing', 'danger');
-                }
+                await apiRequest(`/api/documents/${doc.id}/`, { method: 'PATCH', body: JSON.stringify({ visibility: newValue }) });
+                doc.visibility = newValue;
+                const labels = {
+                    status: 'Visible to all share links',
+                    maintenance: 'Maintenance links only',
+                    private: 'Hidden',
+                };
+                const label = newValue === null ? 'Inherits from collection' : labels[newValue];
+                showNotification(`Document: ${label}`, 'success');
             } catch (error) {
-                console.error('Error toggling document sharing:', error);
-                showNotification('Error updating sharing', 'danger');
+                console.error('Error toggling document visibility:', error);
+                showNotification('Failed to update document visibility', 'danger');
             }
         },
 

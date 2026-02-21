@@ -34,6 +34,12 @@ DOCUMENT_TYPES = (
         ('OTHER', 'Other'),
 )
 
+DOCUMENT_VISIBILITY_CHOICES = [
+    ('private', 'Private'),
+    ('status', 'All share links'),
+    ('maintenance', 'Maintenance only'),
+]
+
 COMPONENT_STATUSES = (
         ('SPARE', 'Spare Part'),
         ('IN-USE', 'In Service'),
@@ -106,7 +112,7 @@ class DocumentCollection(models.Model):
     components = models.ManyToManyField(Component, related_name='doc_collections', blank=True)
     name = models.CharField(max_length=254)
     description = models.TextField(blank=True)
-    shared = models.BooleanField(default=False)
+    visibility = models.CharField(max_length=20, choices=DOCUMENT_VISIBILITY_CHOICES, default='private')
 
     def __str__(self):
         ret_string = ""
@@ -124,7 +130,7 @@ class Document(models.Model):
     collection = models.ForeignKey(DocumentCollection, related_name='documents', on_delete=models.CASCADE, blank=True, null=True)
     name = models.CharField(max_length=254)
     description = models.TextField(blank=True)
-    shared = models.BooleanField(null=True, default=None)
+    visibility = models.CharField(max_length=20, choices=DOCUMENT_VISIBILITY_CHOICES, null=True, blank=True, default=None)
 
     def __str__(self):
         ret_string = ""

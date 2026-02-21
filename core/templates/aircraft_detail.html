@@ -1622,11 +1622,23 @@
                                     </div>
                                 </div>
                                 <div class="pf-v5-c-card__actions" style="display: flex; align-items: center; gap: 0.25rem;">
-                                    <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="toggleCollectionSharing(collection)"
-                                            :title="collection.shared ? 'Shared publicly (click to make private)' : 'Private (click to share publicly)'"
-                                            :style="collection.shared ? 'color: var(--pf-v5-global--success-color--100);' : ''">
-                                        <i class="fas" :class="collection.shared ? 'fa-globe' : 'fa-lock'"></i>
-                                    </button>
+                                    <div x-show="isOwner" style="display: flex; gap: 0; align-items: center; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 3px; overflow: hidden;">
+                                        <button class="pf-v5-c-button pf-m-plain" style="padding: 0.2rem 0.4rem; font-size: 0.75rem; border-radius: 0;"
+                                                @click="setCollectionVisibility(collection, 'private')" title="Private — not visible on share links"
+                                                :style="collection.visibility === 'private' ? 'background: var(--pf-v5-global--BackgroundColor--200);' : ''">
+                                            <i class="fas fa-lock" :style="collection.visibility === 'private' ? 'color: var(--pf-v5-global--Color--100);' : 'color: var(--pf-v5-global--Color--200);'"></i>
+                                        </button>
+                                        <button class="pf-v5-c-button pf-m-plain" style="padding: 0.2rem 0.4rem; font-size: 0.75rem; border-radius: 0; border-left: 1px solid var(--pf-v5-global--BorderColor--100);"
+                                                @click="setCollectionVisibility(collection, 'status')" title="All share links — visible to status and maintenance tokens"
+                                                :style="collection.visibility === 'status' ? 'background: var(--pf-v5-global--BackgroundColor--200);' : ''">
+                                            <i class="fas fa-globe" :style="collection.visibility === 'status' ? 'color: var(--pf-v5-global--success-color--100);' : 'color: var(--pf-v5-global--Color--200);'"></i>
+                                        </button>
+                                        <button class="pf-v5-c-button pf-m-plain" style="padding: 0.2rem 0.4rem; font-size: 0.75rem; border-radius: 0; border-left: 1px solid var(--pf-v5-global--BorderColor--100);"
+                                                @click="setCollectionVisibility(collection, 'maintenance')" title="Maintenance only — hidden from status-only share links"
+                                                :style="collection.visibility === 'maintenance' ? 'background: var(--pf-v5-global--BackgroundColor--200);' : ''">
+                                            <i class="fas fa-tools" :style="collection.visibility === 'maintenance' ? 'color: var(--pf-v5-global--info-color--100);' : 'color: var(--pf-v5-global--Color--200);'"></i>
+                                        </button>
+                                    </div>
                                     <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editCollection(collection)" title="Edit collection">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
@@ -1649,9 +1661,9 @@
                                         <div class="document-item" style="position: relative;" @click="openDocumentViewer(doc, collection.name)">
                                             <div class="document-item-actions" x-show="isOwner" style="position: absolute; top: 0.25rem; right: 0.25rem; display: flex; gap: 0.125rem; z-index: 2;">
                                                 <button class="pf-v5-c-button pf-m-plain" style="padding: 0.25rem; font-size: 0.75rem;" @click.stop="toggleDocumentSharing(doc)"
-                                                        :title="doc.shared === true ? 'Shared (click to cycle)' : doc.shared === false ? 'Hidden (click to cycle)' : 'Inherits from collection (click to cycle)'"
-                                                        :style="doc.shared === true ? 'color: var(--pf-v5-global--success-color--100);' : doc.shared === false ? 'color: var(--pf-v5-global--danger-color--100);' : ''">
-                                                    <i class="fas" :class="doc.shared === true ? 'fa-globe' : doc.shared === false ? 'fa-eye-slash' : 'fa-minus-circle'"></i>
+                                                        :title="doc.visibility === 'status' ? 'All share links (click to cycle)' : doc.visibility === 'maintenance' ? 'Maintenance only (click to cycle)' : doc.visibility === 'private' ? 'Hidden (click to cycle)' : 'Inherits from collection (click to cycle)'"
+                                                        :style="doc.visibility === 'status' ? 'color: var(--pf-v5-global--success-color--100);' : doc.visibility === 'maintenance' ? 'color: var(--pf-v5-global--info-color--100);' : doc.visibility === 'private' ? 'color: var(--pf-v5-global--danger-color--100);' : ''">
+                                                    <i class="fas" :class="doc.visibility === 'status' ? 'fa-globe' : doc.visibility === 'maintenance' ? 'fa-tools' : doc.visibility === 'private' ? 'fa-eye-slash' : 'fa-minus-circle'"></i>
                                                 </button>
                                                 <button class="pf-v5-c-button pf-m-plain" style="padding: 0.25rem; font-size: 0.75rem;" @click="editDocument(doc, $event)" title="Edit document">
                                                     <i class="fas fa-pencil-alt"></i>
@@ -1707,9 +1719,9 @@
                                         <div class="document-item" style="position: relative;" @click="openDocumentViewer(doc, 'Other Documents')">
                                             <div class="document-item-actions" x-show="isOwner" style="position: absolute; top: 0.25rem; right: 0.25rem; display: flex; gap: 0.125rem; z-index: 2;">
                                                 <button class="pf-v5-c-button pf-m-plain" style="padding: 0.25rem; font-size: 0.75rem;" @click.stop="toggleDocumentSharing(doc)"
-                                                        :title="doc.shared === true ? 'Shared (click to make private)' : 'Private (click to share)'"
-                                                        :style="doc.shared === true ? 'color: var(--pf-v5-global--success-color--100);' : ''">
-                                                    <i class="fas" :class="doc.shared === true ? 'fa-globe' : 'fa-lock'"></i>
+                                                        :title="doc.visibility === 'status' ? 'All share links (click to cycle)' : doc.visibility === 'maintenance' ? 'Maintenance only (click to cycle)' : 'Hidden (click to share)'"
+                                                        :style="doc.visibility === 'status' ? 'color: var(--pf-v5-global--success-color--100);' : doc.visibility === 'maintenance' ? 'color: var(--pf-v5-global--info-color--100);' : ''">
+                                                    <i class="fas" :class="doc.visibility === 'status' ? 'fa-globe' : doc.visibility === 'maintenance' ? 'fa-tools' : 'fa-lock'"></i>
                                                 </button>
                                                 <button class="pf-v5-c-button pf-m-plain" style="padding: 0.25rem; font-size: 0.75rem;" @click="editDocument(doc, $event)" title="Edit document">
                                                     <i class="fas fa-pencil-alt"></i>

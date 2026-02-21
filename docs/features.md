@@ -87,7 +87,11 @@ Automatic status calculation with color-coded badges:
 - Documents organized in collections
 - Multi-page document support with thumbnail navigation
 - Full-screen image viewing
-- Documents visible on public share links (based on privilege level)
+- Per-collection and per-document visibility controls for public share links:
+  - **Private** (lock) — not visible on any share link
+  - **All share links** (globe) — visible to both Status and Maintenance tokens
+  - **Maintenance only** (wrench) — visible only to Maintenance-level tokens
+- Documents in a collection inherit the collection's visibility by default; individual documents can override it
 
 ## Notes
 
