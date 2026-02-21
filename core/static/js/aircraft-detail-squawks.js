@@ -135,5 +135,12 @@ function squawksMixin() {
                 default: return '';
             }
         },
+
+        get sortedActiveSquawks() {
+            return [...this.activeSquawks].sort((a, b) => {
+                if (a.priority !== b.priority) return a.priority - b.priority;
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
+        },
     };
 }

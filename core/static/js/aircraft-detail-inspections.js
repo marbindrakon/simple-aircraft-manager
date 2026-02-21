@@ -35,6 +35,10 @@ function inspectionsMixin() {
             ).length;
         },
 
+        get sortedInspectionTypes() {
+            return [...this.inspectionTypes].sort((a, b) => a.name.localeCompare(b.name));
+        },
+
         async loadInspections() {
             try {
                 const response = await fetch(`/api/aircraft/${this.aircraftId}/inspections/`);

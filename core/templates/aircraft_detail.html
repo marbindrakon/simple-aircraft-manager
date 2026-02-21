@@ -671,7 +671,7 @@
 
             <!-- Squawk List -->
             <div class="pf-v5-l-stack pf-m-gutter" x-show="activeSquawks.length > 0">
-                <template x-for="squawk in activeSquawks" :key="squawk.id">
+                <template x-for="squawk in sortedActiveSquawks" :key="squawk.id">
                     <div class="pf-v5-c-card squawk-card" :class="getSquawkCardClass(squawk)">
                         <div class="pf-v5-c-card__header">
                             <div class="pf-v5-c-card__header-main">
@@ -792,7 +792,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <template x-for="ad in applicableAds" :key="ad.id">
+                            <template x-for="ad in sortedApplicableAds" :key="ad.id">
                                 <tr>
                                     <td x-text="ad.name"></td>
                                     <td>
@@ -915,7 +915,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <template x-for="insp in inspectionTypes" :key="insp.id">
+                            <template x-for="insp in sortedInspectionTypes" :key="insp.id">
                                 <tr>
                                     <td x-text="insp.name"></td>
                                     <td>
@@ -2293,7 +2293,7 @@
                                             <div style="display: flex; gap: 0.5rem; align-items: center; padding: 0.5rem; background: var(--pf-v5-global--BackgroundColor--200); border-radius: 4px; margin-bottom: 0.35rem;">
                                                 <select class="pf-v5-c-form-control" x-model="adAssoc.ad_id" style="flex: 2; min-width: 0;">
                                                     <option value="">— Select AD —</option>
-                                                    <template x-for="ad in applicableAds" :key="ad.id">
+                                                    <template x-for="ad in sortedApplicableAds" :key="ad.id">
                                                         <option :value="ad.id" :disabled="logbookAssociations.ads.some((a, i) => i !== idx && a.ad_id === ad.id)" x-text="ad.name + ' – ' + ad.short_description"></option>
                                                     </template>
                                                 </select>
@@ -2320,7 +2320,7 @@
                                             <div style="display: flex; gap: 0.5rem; align-items: center; padding: 0.5rem; background: var(--pf-v5-global--BackgroundColor--200); border-radius: 4px; margin-bottom: 0.35rem;">
                                                 <select class="pf-v5-c-form-control" x-model="inspAssoc.inspection_type_id" style="flex: 1; min-width: 0;">
                                                     <option value="">— Select Inspection —</option>
-                                                    <template x-for="it in inspectionTypes" :key="it.id">
+                                                    <template x-for="it in sortedInspectionTypes" :key="it.id">
                                                         <option :value="it.id" :disabled="logbookAssociations.inspections.some((a, i) => i !== idx && a.inspection_type_id === it.id)" x-text="it.name"></option>
                                                     </template>
                                                 </select>
@@ -2343,7 +2343,7 @@
                                             <div style="display: flex; gap: 0.5rem; align-items: center; padding: 0.5rem; background: var(--pf-v5-global--BackgroundColor--200); border-radius: 4px; margin-bottom: 0.35rem;">
                                                 <select class="pf-v5-c-form-control" x-model="sqAssoc.squawk_id" style="flex: 1; min-width: 0;">
                                                     <option value="">— Select Squawk —</option>
-                                                    <template x-for="sq in activeSquawks" :key="sq.id">
+                                                    <template x-for="sq in sortedActiveSquawks" :key="sq.id">
                                                         <option :value="sq.id" :disabled="logbookAssociations.squawks.some((a, i) => i !== idx && a.squawk_id === sq.id)" x-text="(sq.component_name ? sq.component_name + ': ' : '') + (sq.issue_reported || '').slice(0, 60)"></option>
                                                     </template>
                                                 </select>

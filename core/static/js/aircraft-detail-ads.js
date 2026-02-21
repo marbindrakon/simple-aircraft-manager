@@ -49,6 +49,15 @@ function adsMixin() {
             ).length;
         },
 
+        get sortedApplicableAds() {
+            function adSortKey(name) {
+                // Normalize leading 2-digit year (1900s) to 4 digits for correct ordering
+                // e.g. "98-12-03" → "1998-12-03", "2024-01-05" unchanged
+                return name.replace(/^(\d{2})(?!\d)-/, '19$1-');
+            }
+            return [...this.applicableAds].sort((a, b) => adSortKey(a.name).localeCompare(adSortKey(b.name)));
+        },
+
         async loadAds() {
             try {
                 const response = await fetch(`/api/aircraft/${this.aircraftId}/ads/`);
