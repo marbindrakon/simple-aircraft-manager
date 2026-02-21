@@ -420,12 +420,13 @@ function componentsMixin() {
         },
 
         get sortedComponents() {
-            const roots = this.components.filter(c => !c.parent_component_id);
+            const byName = (a, b) => a.name.localeCompare(b.name);
+            const roots = this.components.filter(c => !c.parent_component_id).sort(byName);
             const result = [];
 
             const addWithChildren = (component) => {
                 result.push(component);
-                const children = this.components.filter(c => c.parent_component_id === component.id);
+                const children = this.components.filter(c => c.parent_component_id === component.id).sort(byName);
                 children.forEach(child => addWithChildren(child));
             };
 
