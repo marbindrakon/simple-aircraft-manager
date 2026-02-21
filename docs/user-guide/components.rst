@@ -17,19 +17,27 @@ Components are displayed in a table with the following columns:
   Child components are indented under their parent to show hierarchy.
   Replacement-critical components show a purple sync icon.
 - **Manufacturer/Model** -- The part manufacturer and model number.
-- **Location** -- Where the component is installed (e.g., "Left engine").
-- **Hours** -- Current hours on the component (in-service or since overhaul,
-  depending on tracking mode).
-- **Interval** -- The service interval in hours.
-- **Remaining** -- Hours remaining until the next service action. This value
-  changes color as it approaches zero:
+- **In Service** -- Total cumulative hours since the component was installed.
+  This counter is never reset by a routine service action; it only resets
+  if you choose **Replace** during a service reset (see below).
+- **Since OH/SVC** -- Hours since the last overhaul *or* last service reset,
+  whichever is more recent. This is the counter used to calculate
+  replacement and TBO intervals. It resets to zero after every service reset.
+- **Remaining** -- Hours remaining until the next service action. Colour-coded
+  as the interval approaches:
 
   - Green when well within limits.
   - Orange when within 10 hours of the limit.
   - Red when overdue.
 
-- **Status** -- The component status (IN-USE, REMOVED, etc.).
+- **Status** -- The component status (IN-USE, SPARE, DISPOSED, etc.).
 - **Actions** -- Edit, reset service, or delete buttons (owners only).
+
+Click the **expand arrow** on any row to see additional detail: serial number,
+notes, and a calendar-based remaining time for components with a day-based
+interval.
+
+.. TODO: Screenshot of the components table showing parent-child hierarchy, expanded row, and color-coded remaining hours
 
 .. TODO: Screenshot of the components table showing parent-child hierarchy and color-coded remaining hours
 
@@ -53,7 +61,9 @@ Adding a Component
 
    - **Replacement Critical** -- For parts replaced on a schedule (oil, filters,
      spark plugs). Set the **Replacement Hours** interval and the current
-     **Hours in Service**.
+     **Hours Since Overhaul/SVC** (how many hours are already on it since
+     the last service). The airworthiness check flags the component when
+     this counter reaches the interval.
    - **TBO Critical** -- For parts with a Time Between Overhaul limit (engines,
      propellers). Set the **TBO Hours** and current **Hours Since Overhaul**.
    - **Inspection Critical** -- For parts requiring periodic inspections. Tracked
@@ -66,17 +76,31 @@ Adding a Component
 Resetting Service
 -----------------
 
-When you replace a consumable part (oil change, filter replacement), you need to
-reset its service time:
+When you service or replace a consumable part, click the **reset** button
+(circular arrow icon) in the Actions column. This button only appears for
+replacement-critical components with status "IN-USE".
 
-1. Find the component in the table.
-2. Click the **reset** button (circular arrow icon) in the Actions column. This
-   button only appears for replacement-critical components with status "IN-USE".
-3. Confirm the reset.
+A modal will appear asking how the service was performed:
 
-This resets the component's **Hours in Service** to zero and updates the
-**Date in Service** to today. It does *not* reset Hours Since Overhaul -- that
-field is only reset during a major overhaul.
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Option
+     - What it does
+   * - **Service in place**
+     - Resets **Since OH/SVC** hours to zero and updates the service date to
+       today. Use this when the component was inspected, adjusted, or cleaned
+       without being physically removed and replaced (e.g. spark plug gap
+       check, filter inspection).
+   * - **Replace**
+     - Resets **Since OH/SVC** hours *and* **In Service** hours to zero, and
+       updates both dates to today. Use this when a new unit was installed
+       (e.g. oil change with a new filter, new spark plugs).
+
+Both options reset the Since OH/SVC counter so that the next service interval
+counts from today. The difference is whether the total-time-in-service counter
+(**In Service**) also resets -- choose **Replace** any time a new part goes in.
 
 Editing and Deleting
 --------------------

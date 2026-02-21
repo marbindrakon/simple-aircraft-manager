@@ -60,20 +60,32 @@ class ComponentViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelVie
         Typically used for replacement_critical components like oil.
         """
         component = self.get_object()
+        reset_in_service = bool(request.data.get('reset_in_service', False))
 
         # Store old values for response
-        old_hours = float(component.hours_in_service)
+        old_hours = float(component.hours_since_overhaul)
+        old_in_service_hours = float(component.hours_in_service)
 
-        # Reset the service counters
-        component.hours_in_service = 0
-        component.date_in_service = timezone.now().date()
+        # Always reset OH/SVC time
+        component.hours_since_overhaul = 0
+        component.overhaul_date = timezone.now().date()
+
+        # Optionally also reset total time in service (for components that are replaced, e.g. oil)
+        if reset_in_service:
+            component.hours_in_service = 0
+            component.date_in_service = timezone.now().date()
+
         component.save()
+
+        notes = f"Previous OH/SVC hours: {old_hours}"
+        if reset_in_service:
+            notes += f", previous in-service hours: {old_in_service_hours}"
 
         log_event(
             component.aircraft, 'component',
             f"Service reset: {component.component_type.name}",
             user=request.user,
-            notes=f"Previous hours: {old_hours}",
+            notes=notes,
         )
 
         return Response({
@@ -82,7 +94,8 @@ class ComponentViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelVie
             'component_type': component.component_type.name,
             'old_hours': old_hours,
             'new_hours': 0,
-            'date_in_service': str(component.date_in_service),
+            'reset_in_service': reset_in_service,
+            'overhaul_date': str(component.overhaul_date),
         })
 
 class DocumentCollectionViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelViewSet):

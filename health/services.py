@@ -330,17 +330,17 @@ def _check_component_replacement(aircraft, current_hours: Decimal, today: date, 
 
         # Check hours-based replacement
         if component.replacement_hours:
-            if component.hours_in_service >= component.replacement_hours:
+            if component.hours_since_overhaul >= component.replacement_hours:
                 is_overdue = True
-                due_description = f'Replace every {component.replacement_hours} hrs. Current: {component.hours_in_service} hrs.'
-            elif component.hours_in_service + HOURS_WARNING_THRESHOLD >= component.replacement_hours:
+                due_description = f'Replace every {component.replacement_hours} hrs. Current: {component.hours_since_overhaul} hrs.'
+            elif component.hours_since_overhaul + HOURS_WARNING_THRESHOLD >= component.replacement_hours:
                 is_approaching = True
-                remaining = component.replacement_hours - component.hours_in_service
+                remaining = component.replacement_hours - component.hours_since_overhaul
                 due_description = f'Replace in {remaining} hrs.'
 
         # Check calendar-based replacement
-        if component.replacement_days and component.date_in_service:
-            next_replace_date = component.date_in_service + timedelta(days=component.replacement_days)
+        if component.replacement_days and component.overhaul_date:
+            next_replace_date = component.overhaul_date + timedelta(days=component.replacement_days)
 
             if today >= next_replace_date:
                 is_overdue = True

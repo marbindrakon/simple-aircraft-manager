@@ -33,10 +33,12 @@ Aircraft detail page with tabbed interface:
 - Parent-child hierarchy for nested component relationships
 - Component types with consumable flags
 - Three independent tracking modes per component:
-  - **Replacement** (`replacement_critical`) — periodic replacement via `replacement_hours` + `hours_in_service`
+  - **Replacement** (`replacement_critical`) — periodic replacement via `replacement_hours` + `hours_since_overhaul`
   - **TBO** (`tbo_critical`) — time between overhauls via `tbo_hours` + `hours_since_overhaul`
   - **Inspection** (`inspection_critical`) — requires periodic inspections
-- One-click service reset for replacement-critical components (e.g., oil changes) — resets `hours_in_service` and `date_in_service`
+- Service reset for replacement-critical components via a modal with two options:
+  - **Service in place** — resets OH/SVC hours only; use when the component is inspected, adjusted, or cleaned without being physically replaced
+  - **Replace** — resets OH/SVC hours *and* total time in service; use when a new unit is installed (e.g. oil change, new filter)
 - Automatic sync of component hours when aircraft hours are updated
 
 ## Airworthiness Status

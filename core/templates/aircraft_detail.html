@@ -420,7 +420,7 @@
                         <th>Type</th>
                         <th>Manufacturer/Model</th>
                         <th>In Service</th>
-                        <th>Since OH</th>
+                        <th>Since OH/SVC</th>
                         <th>Remaining</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -496,7 +496,7 @@
                                     </button>
                                     <template x-if="component.replacement_critical && component.status === 'IN-USE'">
                                         <button class="pf-v5-c-button pf-m-plain"
-                                                @click="resetComponentService(component)"
+                                                @click="openServiceResetModal(component)"
                                                 :title="'Reset ' + getComponentTypeName(component) + ' service time'">
                                             <i class="fas fa-redo"></i>
                                         </button>
@@ -528,7 +528,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Row 2: In Service | Since OH | Calendar Remaining -->
+                                <!-- Row 2: In Service | Since OH/SVC | Calendar Remaining -->
                                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1rem;">
                                     <div>
                                         <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.4rem;">In Service</div>
@@ -540,7 +540,7 @@
                                              style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
                                     </div>
                                     <div>
-                                        <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.4rem;">Since Overhaul</div>
+                                        <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.4rem;">Since OH/SVC</div>
                                         <template x-if="component.hours_since_overhaul > 0 || component.overhaul_date">
                                             <div>
                                                 <div style="font-size: 1.1em; font-weight: 600;" x-text="formatHours(component.hours_since_overhaul || 0)"></div>
@@ -3062,6 +3062,60 @@
                         <span x-show="componentSubmitting">Saving...</span>
                     </button>
                     <button class="pf-v5-c-button pf-m-link" @click="closeComponentModal()">Cancel</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Reset Modal -->
+    <div class="pf-v5-c-backdrop" x-show="serviceResetModalOpen" x-cloak @click.self="closeServiceResetModal()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-sm" @click.stop>
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeServiceResetModal()" style="position: absolute; top: 1rem; right: 1rem;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">Reset Service Time</h1>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <template x-if="serviceResetComponent">
+                        <div>
+                            <p style="margin-bottom: 1.25rem;">
+                                <strong x-text="getComponentLabel(serviceResetComponent)"></strong>
+                                &mdash;
+                                <span x-text="formatHours(serviceResetComponent.hours_since_overhaul || 0)"></span> since last OH/SVC
+                            </p>
+                            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                <div style="padding: 0.75rem; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: var(--pf-v5-global--BorderRadius--sm);">
+                                    <div style="font-weight: 600; margin-bottom: 0.25rem;">Service in place</div>
+                                    <div style="color: var(--pf-v5-global--Color--200); font-size: 0.875rem;">
+                                        Resets OH/SVC hours only. Use when the component is inspected, adjusted, or cleaned without being replaced.
+                                    </div>
+                                </div>
+                                <div style="padding: 0.75rem; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: var(--pf-v5-global--BorderRadius--sm);">
+                                    <div style="font-weight: 600; margin-bottom: 0.25rem;">Replace</div>
+                                    <div style="color: var(--pf-v5-global--Color--200); font-size: 0.875rem;">
+                                        Resets OH/SVC hours <em>and</em> total time in service. Use when a new unit is installed (e.g. oil change, new filter).
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" @click="confirmServiceReset(false)" :disabled="serviceResetSubmitting">
+                        <template x-if="serviceResetSubmitting">
+                            <span class="pf-v5-c-spinner pf-m-sm" role="progressbar">
+                                <span class="pf-v5-c-spinner__clipper"></span>
+                            </span>
+                        </template>
+                        Service in place
+                    </button>
+                    <button class="pf-v5-c-button pf-m-secondary" @click="confirmServiceReset(true)" :disabled="serviceResetSubmitting">Replace</button>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeServiceResetModal()" :disabled="serviceResetSubmitting">Cancel</button>
                 </footer>
             </div>
         </div>

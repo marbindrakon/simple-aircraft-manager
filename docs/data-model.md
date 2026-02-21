@@ -55,16 +55,18 @@ Aircraft (central hub)
 
 ## Component Hours Fields
 
-| Field | Purpose | Reset on service? |
+| Field | Purpose | Resets on service? |
 |-------|---------|-------------------|
-| `hours_in_service` | Hours since last replacement | Yes — `replacement_critical` only |
-| `hours_since_overhaul` | Hours since last overhaul/rebuild | No — only on major overhaul |
+| `hours_in_service` | Total cumulative hours since installation | No — never resets on service |
+| `hours_since_overhaul` | Hours since last overhaul or last service | Yes — resets on service for `replacement_critical` |
+
+Both fields are incremented together whenever aircraft hours are updated. The service reset action always zeros `hours_since_overhaul`; it optionally also zeros `hours_in_service` when the component is physically replaced.
 
 ## Component Critical Flags
 
 | Flag | Tracked via | Purpose |
 |------|-------------|---------|
-| `replacement_critical` | `replacement_hours` + `hours_in_service` | Periodic replacement (oil, filters) |
+| `replacement_critical` | `replacement_hours` + `hours_since_overhaul` | Periodic replacement (oil, filters) |
 | `tbo_critical` | `tbo_hours` + `hours_since_overhaul` | Time between overhauls (engines, props) |
 | `inspection_critical` | `InspectionType` records | Requires periodic inspections |
 

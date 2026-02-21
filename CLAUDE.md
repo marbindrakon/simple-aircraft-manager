@@ -8,14 +8,17 @@ Simple Aircraft Manager — Django + DRF app for tracking aircraft maintenance, 
 
 | Field | Purpose | Reset on service? |
 |-------|---------|-------------------|
-| `hours_in_service` | Hours since last replacement (oil, filters) | Yes — `replacement_critical` only |
-| `hours_since_overhaul` | Hours since last overhaul/rebuild | No — only on major overhaul |
+| `hours_in_service` | Total cumulative hours since installation | No — never resets on service |
+| `hours_since_overhaul` | Hours since last overhaul or last service | Yes — resets on service for `replacement_critical` |
 
-For consumable resets, reset `hours_in_service` + `date_in_service`, **not** `hours_since_overhaul`.
+For service resets (`POST /api/components/{id}/reset_service/`):
+- Always resets `hours_since_overhaul` → 0 and `overhaul_date` → today
+- Optional body param `reset_in_service: true` also resets `hours_in_service` → 0 and `date_in_service` → today
+- Use `reset_in_service=true` when the component is physically replaced (e.g. oil change); omit/false when serviced in place
 
 ### Component Critical Flags
 
-- `replacement_critical` — periodic replacement; tracked via `replacement_hours` + `hours_in_service`
+- `replacement_critical` — periodic replacement; tracked via `replacement_hours` + `hours_since_overhaul` + `overhaul_date`
 - `tbo_critical` — TBO limit (engines, props); tracked via `tbo_hours` + `hours_since_overhaul`
 - `inspection_critical` — requires periodic inspections
 
@@ -40,7 +43,7 @@ Aircraft detail page is composed from feature mixins merged by `mergeMixins()` (
 
 | Mixin file | Function | Feature |
 |-----------|----------|---------|
-| `aircraft-detail-components.js` | `componentsMixin()` | Component CRUD, tree sorting, status |
+| `aircraft-detail-components.js` | `componentsMixin()` | Component CRUD, tree sorting, status, service reset modal |
 | `aircraft-detail-squawks.js` | `squawksMixin()` | Squawk CRUD, priority helpers |
 | `aircraft-detail-notes.js` | `notesMixin()` | Note CRUD |
 | `aircraft-detail-consumables.js` | `makeConsumableMixin(cfg)` | Shared factory for oil/fuel mixins |
@@ -240,6 +243,28 @@ Documents have `collection` FK set or `collection=null` (uncollected). Both retu
 | Aircraft detail composer | `core/static/js/aircraft-detail.js` |
 | CSS overrides | `core/static/css/app.css` |
 | Base template | `core/templates/base.html` |
+| **User-facing docs (Sphinx)** | **`docs/user-guide/`** |
+
+## Updating User Documentation
+
+**Whenever a UX change is made, update `docs/user-guide/` to match.**
+
+The user guide is written in reStructuredText (`.rst`) and built with Sphinx. Key files:
+
+| File | Covers |
+|------|--------|
+| `docs/user-guide/components.rst` | Component tracking, hours columns, service reset modal |
+| `docs/user-guide/airworthiness.rst` | Status calculation logic and thresholds |
+| `docs/user-guide/squawks.rst` | Squawk priorities and workflow |
+| `docs/user-guide/inspections.rst` | Inspection types and compliance |
+| `docs/user-guide/ads.rst` | Airworthiness Directives |
+| `docs/user-guide/logbook.rst` | Logbook entries and AI import |
+| `docs/user-guide/documents.rst` | Document collections and viewer |
+| `docs/user-guide/sharing-and-access.rst` | Share links and RBAC |
+| `docs/user-guide/oil-and-fuel.rst` | Consumption records and charts |
+| `docs/user-guide/major-records.rst` | Major repair/alteration records |
+
+Changes that always require doc updates: new/renamed UI columns, modal workflows, new fields exposed in forms, changed behavior of existing actions, new tab or section added.
 
 ## Testing Commands
 

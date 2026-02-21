@@ -59,7 +59,7 @@ determined by the most severe issue found:
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - **Red** -- Any replacement-critical component has exceeded its replacement
-  hours interval (hours in service >= replacement hours).
+  hours interval (hours since last OH/SVC >= replacement hours).
 - **Orange** -- Any replacement-critical component is within **10 flight hours**
   of its replacement interval.
 

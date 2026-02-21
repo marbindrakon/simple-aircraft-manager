@@ -8,6 +8,11 @@ function componentsMixin() {
         componentTypesLoaded: false,
         expandedComponents: {},
 
+        // Service reset modal state
+        serviceResetModalOpen: false,
+        serviceResetComponent: null,
+        serviceResetSubmitting: false,
+
         toggleComponentExpand(id) {
             this.expandedComponents[id] = !this.expandedComponents[id];
             this.expandedComponents = { ...this.expandedComponents };
@@ -51,9 +56,6 @@ function componentsMixin() {
         },
 
         getComponentCurrentHours(component) {
-            if (component.replacement_critical) {
-                return component.hours_in_service || 0;
-            }
             return component.hours_since_overhaul || 0;
         },
 
@@ -73,7 +75,7 @@ function componentsMixin() {
 
             if (component.replacement_critical && component.replacement_hours) {
                 interval = component.replacement_hours;
-                currentHours = component.hours_in_service || 0;
+                currentHours = component.hours_since_overhaul || 0;
             } else if (component.tbo_hours) {
                 interval = component.tbo_hours;
                 currentHours = component.hours_since_overhaul || 0;
@@ -133,7 +135,7 @@ function componentsMixin() {
             let refDateStr = null;
             let daysInterval = null;
             if (component.replacement_critical && component.replacement_days) {
-                refDateStr = component.date_in_service;
+                refDateStr = component.overhaul_date;
                 daysInterval = component.replacement_days;
             } else if (component.tbo_days) {
                 refDateStr = component.overhaul_date || component.date_in_service;
@@ -166,7 +168,7 @@ function componentsMixin() {
             let refDateStr = null;
             let daysInterval = null;
             if (component.replacement_critical && component.replacement_days) {
-                refDateStr = component.date_in_service;
+                refDateStr = component.overhaul_date;
                 daysInterval = component.replacement_days;
             } else if (component.tbo_days) {
                 refDateStr = component.overhaul_date || component.date_in_service;
@@ -178,11 +180,21 @@ function componentsMixin() {
             return `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
         },
 
-        async resetComponentService(component) {
+        openServiceResetModal(component) {
+            this.serviceResetComponent = component;
+            this.serviceResetModalOpen = true;
+        },
+
+        closeServiceResetModal() {
+            this.serviceResetModalOpen = false;
+            this.serviceResetComponent = null;
+        },
+
+        async confirmServiceReset(resetInService) {
+            if (!this.serviceResetComponent || this.serviceResetSubmitting) return;
+            this.serviceResetSubmitting = true;
+            const component = this.serviceResetComponent;
             const typeName = this.getComponentTypeName(component);
-            if (!confirm(`Reset service time for ${typeName}?\n\nThis will set hours since service to 0 and update the service date to today.`)) {
-                return;
-            }
 
             try {
                 const response = await fetch(`/api/components/${component.id}/reset_service/`, {
@@ -191,11 +203,16 @@ function componentsMixin() {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCookie('csrftoken'),
                     },
+                    body: JSON.stringify({ reset_in_service: resetInService }),
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    showNotification(`${typeName} service reset - was ${data.old_hours} hrs`, 'success');
+                    const msg = resetInService
+                        ? `${typeName} replaced — OH/SVC and in-service time reset (was ${data.old_hours} hrs)`
+                        : `${typeName} serviced — OH/SVC time reset (was ${data.old_hours} hrs)`;
+                    showNotification(msg, 'success');
+                    this.closeServiceResetModal();
                     await this.loadData();
                 } else {
                     showNotification('Failed to reset service time', 'danger');
@@ -203,6 +220,8 @@ function componentsMixin() {
             } catch (error) {
                 console.error('Error resetting service:', error);
                 showNotification('Error resetting service time', 'danger');
+            } finally {
+                this.serviceResetSubmitting = false;
             }
         },
 
