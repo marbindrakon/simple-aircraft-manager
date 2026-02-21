@@ -295,12 +295,17 @@
 <li><p>Component types with consumable flags</p></li>
 <li><p>Three independent tracking modes per component:</p>
 <ul>
-<li><p><strong>Replacement</strong> (<code class="docutils literal notranslate"><span class="pre">replacement_critical</span></code>) — periodic replacement via <code class="docutils literal notranslate"><span class="pre">replacement_hours</span></code> + <code class="docutils literal notranslate"><span class="pre">hours_in_service</span></code></p></li>
+<li><p><strong>Replacement</strong> (<code class="docutils literal notranslate"><span class="pre">replacement_critical</span></code>) — periodic replacement via <code class="docutils literal notranslate"><span class="pre">replacement_hours</span></code> + <code class="docutils literal notranslate"><span class="pre">hours_since_overhaul</span></code></p></li>
 <li><p><strong>TBO</strong> (<code class="docutils literal notranslate"><span class="pre">tbo_critical</span></code>) — time between overhauls via <code class="docutils literal notranslate"><span class="pre">tbo_hours</span></code> + <code class="docutils literal notranslate"><span class="pre">hours_since_overhaul</span></code></p></li>
 <li><p><strong>Inspection</strong> (<code class="docutils literal notranslate"><span class="pre">inspection_critical</span></code>) — requires periodic inspections</p></li>
 </ul>
 </li>
-<li><p>One-click service reset for replacement-critical components (e.g., oil changes) — resets <code class="docutils literal notranslate"><span class="pre">hours_in_service</span></code> and <code class="docutils literal notranslate"><span class="pre">date_in_service</span></code></p></li>
+<li><p>Service reset for replacement-critical components via a modal with two options:</p>
+<ul>
+<li><p><strong>Service in place</strong> — resets OH/SVC hours only; use when the component is inspected, adjusted, or cleaned without being physically replaced</p></li>
+<li><p><strong>Replace</strong> — resets OH/SVC hours <em>and</em> total time in service; use when a new unit is installed (e.g. oil change, new filter)</p></li>
+</ul>
+</li>
 <li><p>Automatic sync of component hours when aircraft hours are updated</p></li>
 </ul>
 </section>

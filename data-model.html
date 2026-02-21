@@ -369,21 +369,22 @@
 <thead>
 <tr class="row-odd"><th class="head"><p>Field</p></th>
 <th class="head"><p>Purpose</p></th>
-<th class="head"><p>Reset on service?</p></th>
+<th class="head"><p>Resets on service?</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">hours_in_service</span></code></p></td>
-<td><p>Hours since last replacement</p></td>
-<td><p>Yes — <code class="docutils literal notranslate"><span class="pre">replacement_critical</span></code> only</p></td>
+<td><p>Total cumulative hours since installation</p></td>
+<td><p>No — never resets on service</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">hours_since_overhaul</span></code></p></td>
-<td><p>Hours since last overhaul/rebuild</p></td>
-<td><p>No — only on major overhaul</p></td>
+<td><p>Hours since last overhaul or last service</p></td>
+<td><p>Yes — resets on service for <code class="docutils literal notranslate"><span class="pre">replacement_critical</span></code></p></td>
 </tr>
 </tbody>
 </table>
 </div>
+<p>Both fields are incremented together whenever aircraft hours are updated. The service reset action always zeros <code class="docutils literal notranslate"><span class="pre">hours_since_overhaul</span></code>; it optionally also zeros <code class="docutils literal notranslate"><span class="pre">hours_in_service</span></code> when the component is physically replaced.</p>
 </section>
 <section id="component-critical-flags">
 <h2>Component Critical Flags<a class="headerlink" href="#component-critical-flags" title="Link to this heading">¶</a></h2>
@@ -397,7 +398,7 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">replacement_critical</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">replacement_hours</span></code> + <code class="docutils literal notranslate"><span class="pre">hours_in_service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">replacement_hours</span></code> + <code class="docutils literal notranslate"><span class="pre">hours_since_overhaul</span></code></p></td>
 <td><p>Periodic replacement (oil, filters)</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tbo_critical</span></code></p></td>

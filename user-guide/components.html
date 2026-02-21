@@ -267,21 +267,26 @@ along with their service intervals and remaining life.</p>
 Child components are indented under their parent to show hierarchy.
 Replacement-critical components show a purple sync icon.</p></li>
 <li><p><strong>Manufacturer/Model</strong> – The part manufacturer and model number.</p></li>
-<li><p><strong>Location</strong> – Where the component is installed (e.g., “Left engine”).</p></li>
-<li><p><strong>Hours</strong> – Current hours on the component (in-service or since overhaul,
-depending on tracking mode).</p></li>
-<li><p><strong>Interval</strong> – The service interval in hours.</p></li>
-<li><p><strong>Remaining</strong> – Hours remaining until the next service action. This value
-changes color as it approaches zero:</p>
+<li><p><strong>In Service</strong> – Total cumulative hours since the component was installed.
+This counter is never reset by a routine service action; it only resets
+if you choose <strong>Replace</strong> during a service reset (see below).</p></li>
+<li><p><strong>Since OH/SVC</strong> – Hours since the last overhaul <em>or</em> last service reset,
+whichever is more recent. This is the counter used to calculate
+replacement and TBO intervals. It resets to zero after every service reset.</p></li>
+<li><p><strong>Remaining</strong> – Hours remaining until the next service action. Colour-coded
+as the interval approaches:</p>
 <ul>
 <li><p>Green when well within limits.</p></li>
 <li><p>Orange when within 10 hours of the limit.</p></li>
 <li><p>Red when overdue.</p></li>
 </ul>
 </li>
-<li><p><strong>Status</strong> – The component status (IN-USE, REMOVED, etc.).</p></li>
+<li><p><strong>Status</strong> – The component status (IN-USE, SPARE, DISPOSED, etc.).</p></li>
 <li><p><strong>Actions</strong> – Edit, reset service, or delete buttons (owners only).</p></li>
 </ul>
+<p>Click the <strong>expand arrow</strong> on any row to see additional detail: serial number,
+notes, and a calendar-based remaining time for components with a day-based
+interval.</p>
 </section>
 <section id="adding-a-component">
 <h2>Adding a Component<a class="headerlink" href="#adding-a-component" title="Link to this heading">¶</a></h2>
@@ -304,7 +309,9 @@ independently:</p>
 <ul class="simple">
 <li><p><strong>Replacement Critical</strong> – For parts replaced on a schedule (oil, filters,
 spark plugs). Set the <strong>Replacement Hours</strong> interval and the current
-<strong>Hours in Service</strong>.</p></li>
+<strong>Hours Since Overhaul/SVC</strong> (how many hours are already on it since
+the last service). The airworthiness check flags the component when
+this counter reaches the interval.</p></li>
 <li><p><strong>TBO Critical</strong> – For parts with a Time Between Overhaul limit (engines,
 propellers). Set the <strong>TBO Hours</strong> and current <strong>Hours Since Overhaul</strong>.</p></li>
 <li><p><strong>Inspection Critical</strong> – For parts requiring periodic inspections. Tracked
@@ -316,17 +323,39 @@ via the <a class="reference internal" href="inspections.html"><span class="doc">
 </section>
 <section id="resetting-service">
 <h2>Resetting Service<a class="headerlink" href="#resetting-service" title="Link to this heading">¶</a></h2>
-<p>When you replace a consumable part (oil change, filter replacement), you need to
-reset its service time:</p>
-<ol class="arabic simple">
-<li><p>Find the component in the table.</p></li>
-<li><p>Click the <strong>reset</strong> button (circular arrow icon) in the Actions column. This
-button only appears for replacement-critical components with status “IN-USE”.</p></li>
-<li><p>Confirm the reset.</p></li>
-</ol>
-<p>This resets the component’s <strong>Hours in Service</strong> to zero and updates the
-<strong>Date in Service</strong> to today. It does <em>not</em> reset Hours Since Overhaul – that
-field is only reset during a major overhaul.</p>
+<p>When you service or replace a consumable part, click the <strong>reset</strong> button
+(circular arrow icon) in the Actions column. This button only appears for
+replacement-critical components with status “IN-USE”.</p>
+<p>A modal will appear asking how the service was performed:</p>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Option</p></th>
+<th class="head"><p>What it does</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Service in place</strong></p></td>
+<td><p>Resets <strong>Since OH/SVC</strong> hours to zero and updates the service date to
+today. Use this when the component was inspected, adjusted, or cleaned
+without being physically removed and replaced (e.g. spark plug gap
+check, filter inspection).</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Replace</strong></p></td>
+<td><p>Resets <strong>Since OH/SVC</strong> hours <em>and</em> <strong>In Service</strong> hours to zero, and
+updates both dates to today. Use this when a new unit was installed
+(e.g. oil change with a new filter, new spark plugs).</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Both options reset the Since OH/SVC counter so that the next service interval
+counts from today. The difference is whether the total-time-in-service counter
+(<strong>In Service</strong>) also resets – choose <strong>Replace</strong> any time a new part goes in.</p>
 </section>
 <section id="editing-and-deleting">
 <h2>Editing and Deleting<a class="headerlink" href="#editing-and-deleting" title="Link to this heading">¶</a></h2>
