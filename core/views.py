@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import re
 import shutil
@@ -62,6 +63,8 @@ from health.services import (
     end_of_month_after, ad_compliance_status, inspection_compliance_status,
     STATUS_LABELS,
 )
+
+logger = logging.getLogger(__name__)
 
 
 User = get_user_model()
@@ -997,8 +1000,7 @@ class LogbookImportView(LoginRequiredMixin, View):
             return JsonResponse({'job_id': str(job.id)})
 
         except Exception:
-            import logging
-            logging.getLogger(__name__).exception("Unhandled error in LogbookImportView.post")
+            logger.exception("Unhandled error in LogbookImportView.post")
             return JsonResponse({'type': 'error', 'message': 'An unexpected error occurred.'}, status=500)
         finally:
             if tmpdir:
@@ -1671,7 +1673,8 @@ class ImportView(LoginRequiredMixin, View):
                     for chunk in archive_file.chunks():
                         fh.write(chunk)
             except OSError as exc:
-                return JsonResponse({'error': f'Failed to stage archive: {exc}'}, status=500)
+                logger.exception("Failed to stage import archive: %s", exc)
+                return JsonResponse({'error': 'Failed to stage the archive. Please try again.'}, status=500)
             staged_id = new_staged_id
 
         # Quick synchronous validation
