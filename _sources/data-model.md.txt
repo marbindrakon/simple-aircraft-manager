@@ -81,5 +81,5 @@ Aircraft (central hub)
 
 | Level | Data Visible |
 |-------|-------------|
-| `status` | Overview, airworthiness, active squawks, public notes, current AD/inspection status, oil/fuel, public documents |
-| `maintenance` | Everything in `status` + full history (logbook, AD/inspection history, resolved squawks, major records) |
+| `status` | Overview, airworthiness, active squawks, public notes, current AD/inspection status, oil/fuel, documents marked "All share links" |
+| `maintenance` | Everything in `status` + full history (logbook, AD/inspection history, resolved squawks, major records) + documents marked "Maintenance only" |
