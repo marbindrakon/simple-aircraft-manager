@@ -211,9 +211,15 @@
                   <span class="pf-v5-c-form__label-text">Collection name</span>
                 </label>
                 <input id="collection-name" class="pf-v5-c-form-control" type="text"
-                       x-model="collectionName" placeholder="e.g. Airframe Log #4">
+                       x-model="collectionName" placeholder="e.g. Airframe Log #4"
+                       list="collection-suggestions" autocomplete="off">
+                <datalist id="collection-suggestions">
+                  <template x-for="col in existingCollections" :key="col.id">
+                    <option :value="col.name"></option>
+                  </template>
+                </datalist>
                 <p class="pf-v5-c-form__helper-text">
-                  Groups this import with related documents. Auto-filled from filename.
+                  Groups this import with related documents. Existing collections suggested.
                 </p>
               </div>
 

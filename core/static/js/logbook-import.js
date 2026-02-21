@@ -125,7 +125,7 @@ function logbookImport() {
             this.appendDocumentId = '';
             this.existingCollections = [];
             this.existingDocuments = [];
-            if (this.appendMode && this.aircraftId) {
+            if (this.aircraftId) {
                 this.loadCollections();
             }
         },
@@ -133,9 +133,9 @@ function logbookImport() {
         onAppendModeChange() {
             this.appendCollectionId = '';
             this.appendDocumentId = '';
-            this.existingCollections = [];
             this.existingDocuments = [];
-            if (this.appendMode && this.aircraftId) {
+            // Collections already loaded by onAircraftChange; fetch only if missing
+            if (this.appendMode && this.aircraftId && !this.existingCollections.length) {
                 this.loadCollections();
             }
         },
