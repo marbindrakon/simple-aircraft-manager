@@ -25,7 +25,7 @@ from health.logbook_import import SUPPORTED_EXTENSIONS, run_import
 
 class Command(BaseCommand):
     help = (
-        "Import aircraft logbook pages from a directory of images using Claude AI. "
+        "Import aircraft logbook pages from a directory of images using AI for transcription. "
         "Creates a DocumentCollection, Document, DocumentImages, and LogbookEntry records."
     )
 
