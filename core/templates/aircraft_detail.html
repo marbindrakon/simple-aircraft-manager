@@ -1043,14 +1043,13 @@
                 <template x-if="majorRecordFilter !== 'alteration' && majorRepairs.length > 0">
                     <div style="margin-bottom: 2rem;">
                         <h3 style="margin-bottom: 0.75rem; color: var(--pf-v5-global--Color--200);">Major Repairs</h3>
-                        <table class="pf-v5-c-table pf-m-grid-md pf-m-compact">
+                        <table class="pf-v5-c-table pf-m-grid-md pf-m-compact pf-m-striped">
                             <thead>
                                 <tr>
                                     <th>Title</th>
                                     <th>Date</th>
                                     <th>Component</th>
                                     <th>Performed By</th>
-                                    <th>Related</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -1067,24 +1066,24 @@
                                         <td x-text="record.component_name || '-'"></td>
                                         <td x-text="record.performed_by || '-'"></td>
                                         <td>
-                                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                                <template x-if="record.logbook_entry">
-                                                    <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewMajorRecordLogEntry(record)" title="View Logbook Entry" style="font-size: 0.85rem; padding: 0;">
-                                                        <i class="fas fa-book" style="margin-right: 0.25rem;"></i>Logbook
+                                            <div style="display: flex; gap: 0.25rem; align-items: center;">
+                                                <div class="related-popup-trigger" x-show="record.logbook_entry || canViewDocument(record.form_337_document)" @click.outside="if (openRelatedPopup === record.id) openRelatedPopup = null">
+                                                    <button class="pf-v5-c-button pf-m-plain" title="View related documents" style="color: var(--pf-v5-global--link--Color);" @click.stop="openRelatedPopup = openRelatedPopup === record.id ? null : record.id">
+                                                        <i class="fas fa-paperclip"></i>
                                                     </button>
-                                                </template>
-                                                <template x-if="canViewDocument(record.form_337_document)">
-                                                    <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewMajorRecordDocument(record.form_337_document, record.form_337_document_name || 'Form 337')" title="View Form 337 Document" style="font-size: 0.85rem; padding: 0;">
-                                                        <i class="fas fa-file-alt" style="margin-right: 0.25rem;"></i><span x-text="'Form 337'"></span>
-                                                    </button>
-                                                </template>
-                                                <template x-if="!record.logbook_entry && !canViewDocument(record.form_337_document)">
-                                                    <span style="color: var(--pf-v5-global--Color--200);">-</span>
-                                                </template>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div style="display: flex; gap: 0.25rem;">
+                                                    <div class="related-popup" x-show="openRelatedPopup === record.id">
+                                                        <template x-if="record.logbook_entry">
+                                                            <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewMajorRecordLogEntry(record)" style="font-size: 0.85rem; padding: 0;">
+                                                                <i class="fas fa-book" style="margin-right: 0.25rem;"></i>Logbook
+                                                            </button>
+                                                        </template>
+                                                        <template x-if="canViewDocument(record.form_337_document)">
+                                                            <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewMajorRecordDocument(record.form_337_document, record.form_337_document_name || 'Form 337')" style="font-size: 0.85rem; padding: 0;">
+                                                                <i class="fas fa-file-alt" style="margin-right: 0.25rem;"></i>Form 337
+                                                            </button>
+                                                        </template>
+                                                    </div>
+                                                </div>
                                                 <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
                                                         @click="editMajorRecord(record)"
                                                         title="Edit">
@@ -1108,7 +1107,7 @@
                 <template x-if="majorRecordFilter !== 'repair' && majorAlterations.length > 0">
                     <div>
                         <h3 style="margin-bottom: 0.75rem; color: var(--pf-v5-global--Color--200);">Major Alterations</h3>
-                        <table class="pf-v5-c-table pf-m-grid-md pf-m-compact">
+                        <table class="pf-v5-c-table pf-m-grid-md pf-m-compact pf-m-striped">
                             <thead>
                                 <tr>
                                     <th>Title</th>
@@ -1116,7 +1115,6 @@
                                     <th>Component</th>
                                     <th>STC #</th>
                                     <th>STC Holder</th>
-                                    <th>Related</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -1134,29 +1132,29 @@
                                         <td x-text="record.stc_number || '-'"></td>
                                         <td x-text="record.stc_holder || '-'"></td>
                                         <td>
-                                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                                <template x-if="record.logbook_entry">
-                                                    <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewMajorRecordLogEntry(record)" title="View Logbook Entry" style="font-size: 0.85rem; padding: 0;">
-                                                        <i class="fas fa-book" style="margin-right: 0.25rem;"></i>Logbook
+                                            <div style="display: flex; gap: 0.25rem; align-items: center;">
+                                                <div class="related-popup-trigger" x-show="record.logbook_entry || canViewDocument(record.form_337_document) || canViewDocument(record.stc_document)" @click.outside="if (openRelatedPopup === record.id) openRelatedPopup = null">
+                                                    <button class="pf-v5-c-button pf-m-plain" title="View related documents" style="color: var(--pf-v5-global--link--Color);" @click.stop="openRelatedPopup = openRelatedPopup === record.id ? null : record.id">
+                                                        <i class="fas fa-paperclip"></i>
                                                     </button>
-                                                </template>
-                                                <template x-if="canViewDocument(record.form_337_document)">
-                                                    <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewMajorRecordDocument(record.form_337_document, record.form_337_document_name || 'Form 337')" title="View Form 337 Document" style="font-size: 0.85rem; padding: 0;">
-                                                        <i class="fas fa-file-alt" style="margin-right: 0.25rem;"></i><span x-text="'Form 337'"></span>
-                                                    </button>
-                                                </template>
-                                                <template x-if="canViewDocument(record.stc_document)">
-                                                    <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewMajorRecordDocument(record.stc_document, record.stc_document_name || 'STC Document')" title="View STC Document" style="font-size: 0.85rem; padding: 0;">
-                                                        <i class="fas fa-certificate" style="margin-right: 0.25rem;"></i><span x-text="'STC Doc'"></span>
-                                                    </button>
-                                                </template>
-                                                <template x-if="!record.logbook_entry && !canViewDocument(record.form_337_document) && !canViewDocument(record.stc_document)">
-                                                    <span style="color: var(--pf-v5-global--Color--200);">-</span>
-                                                </template>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div style="display: flex; gap: 0.25rem;">
+                                                    <div class="related-popup" x-show="openRelatedPopup === record.id">
+                                                        <template x-if="record.logbook_entry">
+                                                            <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewMajorRecordLogEntry(record)" style="font-size: 0.85rem; padding: 0;">
+                                                                <i class="fas fa-book" style="margin-right: 0.25rem;"></i>Logbook
+                                                            </button>
+                                                        </template>
+                                                        <template x-if="canViewDocument(record.form_337_document)">
+                                                            <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewMajorRecordDocument(record.form_337_document, record.form_337_document_name || 'Form 337')" style="font-size: 0.85rem; padding: 0;">
+                                                                <i class="fas fa-file-alt" style="margin-right: 0.25rem;"></i>Form 337
+                                                            </button>
+                                                        </template>
+                                                        <template x-if="canViewDocument(record.stc_document)">
+                                                            <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewMajorRecordDocument(record.stc_document, record.stc_document_name || 'STC Document')" style="font-size: 0.85rem; padding: 0;">
+                                                                <i class="fas fa-certificate" style="margin-right: 0.25rem;"></i>STC Doc
+                                                            </button>
+                                                        </template>
+                                                    </div>
+                                                </div>
                                                 <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
                                                         @click="editMajorRecord(record)"
                                                         title="Edit">

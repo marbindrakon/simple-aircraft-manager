@@ -6,6 +6,7 @@ function majorRecordsMixin() {
         editingMajorRecord: null,
         majorRecordSubmitting: false,
         majorRecordFilter: 'all',
+        openRelatedPopup: null,
         majorRecordForm: {
             record_type: 'repair',
             title: '',

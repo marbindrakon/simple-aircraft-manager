@@ -660,3 +660,32 @@ html.pf-v5-theme-dark .loading-spinner {
 .logbook-picker-result:hover {
     background: var(--pf-v5-global--BackgroundColor--200);
 }
+
+/* Striped table rows (pf-m-striped not defined in loaded PF5 bundle) */
+.pf-v5-c-table.pf-m-striped tbody tr:nth-child(odd) {
+    background-color: var(--pf-v5-global--BackgroundColor--200);
+}
+
+/* Related links hover popup */
+.related-popup-trigger {
+    position: relative;
+    display: inline-flex;
+}
+
+.related-popup {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--pf-v5-global--BackgroundColor--100);
+    border: 1px solid var(--pf-v5-global--BorderColor--100);
+    border-radius: var(--pf-v5-global--BorderRadius--sm);
+    box-shadow: var(--pf-v5-global--BoxShadow--md);
+    padding: 0.5rem 0.75rem;
+    white-space: nowrap;
+    z-index: 300;
+    gap: 0.4rem;
+    min-width: 8rem;
+}
