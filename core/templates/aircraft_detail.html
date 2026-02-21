@@ -413,14 +413,14 @@
                 </button>
             </div>
 
-            <table class="pf-v5-c-table pf-m-grid-md">
+            <table class="pf-v5-c-table pf-m-grid-md pf-m-striped">
                 <thead>
                     <tr>
+                        <th style="width: 2rem;"></th>
                         <th>Type</th>
                         <th>Manufacturer/Model</th>
-                        <th>Location</th>
-                        <th>Hours</th>
-                        <th>Interval</th>
+                        <th>In Service</th>
+                        <th>Since OH</th>
                         <th>Remaining</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -432,26 +432,56 @@
                             <td colspan="8" style="text-align: center;">No components found</td>
                         </tr>
                     </template>
-                    <template x-for="component in sortedComponents" :key="component.id">
+                </tbody>
+                <template x-for="component in sortedComponents" :key="component.id">
+                    <tbody>
                         <tr>
+                            <td class="pf-v5-c-table__toggle">
+                                <button class="pf-v5-c-button pf-m-plain"
+                                        @click="toggleComponentExpand(component.id)"
+                                        :aria-expanded="isComponentExpanded(component.id).toString()">
+                                    <i class="fas fa-angle-down"
+                                       :style="isComponentExpanded(component.id) ? 'transform: rotate(180deg)' : ''"></i>
+                                </button>
+                            </td>
                             <td>
-                                <span :style="'padding-left: ' + (getComponentDepth(component) * 1.5) + 'rem'">
-                                    <template x-if="getComponentDepth(component) > 0">
-                                        <i class="fas fa-level-up-alt fa-rotate-90" style="color: var(--pf-v5-global--Color--200); margin-right: 0.25rem; font-size: 0.75rem;"></i>
-                                    </template>
-                                    <span x-text="getComponentTypeName(component)"></span>
-                                </span>
-                                <template x-if="component.replacement_critical">
-                                    <span class="pf-v5-c-label pf-m-compact pf-m-purple" style="margin-left: 0.25rem;" title="Replacement item">
-                                        <i class="fas fa-sync-alt"></i>
+                                <div style="display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap;">
+                                    <span :style="'padding-left: ' + (getComponentDepth(component) * 1.5) + 'rem'">
+                                        <template x-if="getComponentDepth(component) > 0">
+                                            <i class="fas fa-level-up-alt fa-rotate-90" style="color: var(--pf-v5-global--Color--200); margin-right: 0.25rem; font-size: 0.75rem;"></i>
+                                        </template>
+                                        <span x-text="getComponentTypeName(component)"></span>
                                     </span>
-                                </template>
+                                    <template x-if="component.install_location">
+                                        <span class="pf-v5-c-label pf-m-compact pf-m-grey"
+                                              x-text="component.install_location"></span>
+                                    </template>
+                                    <template x-if="component.replacement_critical">
+                                        <span class="pf-v5-c-label pf-m-compact pf-m-purple" title="Service Interval">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </span>
+                                    </template>
+                                </div>
                             </td>
                             <td x-text="`${component.manufacturer} ${component.model}`"></td>
-                            <td x-text="component.install_location"></td>
-                            <td x-text="formatHours(getComponentCurrentHours(component))"></td>
-                            <td x-text="getComponentInterval(component)"></td>
-                            <td :class="getHoursRemainingClass(component)" x-text="calculateHoursRemaining(component)"></td>
+                            <td>
+                                <div x-text="formatHours(component.hours_in_service || 0)"></div>
+                                <div x-show="getCalendarTimeSince(component.date_in_service)"
+                                     x-text="'(' + getCalendarTimeSince(component.date_in_service) + ')'"
+                                     style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
+                            </td>
+                            <td>
+                                <div x-text="(component.hours_since_overhaul > 0) ? formatHours(component.hours_since_overhaul) : '—'"></div>
+                                <div x-show="component.overhaul_date && getCalendarTimeSince(component.overhaul_date)"
+                                     x-text="'(' + getCalendarTimeSince(component.overhaul_date) + ')'"
+                                     style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
+                            </td>
+                            <td :class="getHoursRemainingClass(component)">
+                                <div x-text="getHoursRemainingDisplay(component)"></div>
+                                <div x-show="getRemainingLabel(component)"
+                                     x-text="getRemainingLabel(component)"
+                                     style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
+                            </td>
                             <td>
                                 <span class="pf-v5-c-label"
                                       :class="getStatusClass(component)"
@@ -479,8 +509,132 @@
                                 </div>
                             </td>
                         </tr>
-                    </template>
-                </tbody>
+                        <tr x-show="isComponentExpanded(component.id)"
+                            :class="{'pf-m-expanded': isComponentExpanded(component.id)}"
+                            class="pf-v5-c-table__expandable-row">
+                            <td></td>
+                            <td colspan="7" style="padding: 0.75rem 1rem;">
+
+                                <!-- Row 1: Serial Number | Notes -->
+                                <div style="display: grid; grid-template-columns: auto 1fr; gap: 1.5rem; margin-bottom: 1rem; align-items: start;">
+                                    <div>
+                                        <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.4rem;">Serial Number</div>
+                                        <div x-show="component.serial_number" x-text="component.serial_number"></div>
+                                        <div x-show="!component.serial_number" style="color: var(--pf-v5-global--Color--200);">—</div>
+                                    </div>
+                                    <div x-show="component.notes">
+                                        <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.4rem;">Notes</div>
+                                        <div x-text="component.notes" style="white-space: pre-wrap;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Row 2: In Service | Since OH | Calendar Remaining -->
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1rem;">
+                                    <div>
+                                        <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.4rem;">In Service</div>
+                                        <div style="font-size: 1.1em; font-weight: 600;" x-text="formatHours(component.hours_in_service || 0)"></div>
+                                        <div x-show="getCalendarTimeSince(component.date_in_service)"
+                                             x-text="getCalendarTimeSince(component.date_in_service)"></div>
+                                        <div x-show="component.date_in_service"
+                                             x-text="'Since ' + formatDate(component.date_in_service)"
+                                             style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.4rem;">Since Overhaul</div>
+                                        <template x-if="component.hours_since_overhaul > 0 || component.overhaul_date">
+                                            <div>
+                                                <div style="font-size: 1.1em; font-weight: 600;" x-text="formatHours(component.hours_since_overhaul || 0)"></div>
+                                                <div x-show="component.overhaul_date && getCalendarTimeSince(component.overhaul_date)"
+                                                     x-text="getCalendarTimeSince(component.overhaul_date)"></div>
+                                                <div x-show="component.overhaul_date"
+                                                     x-text="'Since ' + formatDate(component.overhaul_date)"
+                                                     style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
+                                            </div>
+                                        </template>
+                                        <template x-if="!(component.hours_since_overhaul > 0 || component.overhaul_date)">
+                                            <div style="color: var(--pf-v5-global--Color--200);">Not recorded</div>
+                                        </template>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.4rem;">Calendar Remaining</div>
+                                        <template x-if="getCalendarDaysRemaining(component) !== null">
+                                            <div>
+                                                <div style="font-size: 1.1em; font-weight: 600;"
+                                                     :class="getCalendarDaysRemaining(component) <= 0 ? 'hours-overdue' : ''"
+                                                     x-text="formatDuration(getCalendarDaysRemaining(component))"></div>
+                                                <div x-show="getDueDate(component)"
+                                                     x-text="'Due ' + formatDate(getDueDate(component))"
+                                                     style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
+                                            </div>
+                                        </template>
+                                        <template x-if="getCalendarDaysRemaining(component) === null">
+                                            <div style="color: var(--pf-v5-global--Color--200);">—</div>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <!-- Row 3: Tracking Settings -->
+                                <div style="margin-bottom: 0;">
+                                    <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.5rem;">Tracking</div>
+                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+                                        <!-- TBO -->
+                                        <div>
+                                            <span class="pf-v5-c-label pf-m-compact"
+                                                  :class="component.tbo_critical ? 'pf-m-blue' : 'pf-m-grey'">
+                                                TBO
+                                            </span>
+                                            <template x-if="component.tbo_critical">
+                                                <div style="margin-top: 0.3rem; font-size: 0.9em;">
+                                                    <div x-show="component.tbo_hours" x-text="component.tbo_hours + ' hr'"></div>
+                                                    <div x-show="component.tbo_days" x-text="component.tbo_days + ' days'" style="color: var(--pf-v5-global--Color--200);"></div>
+                                                    <div x-show="!component.tbo_hours && !component.tbo_days" style="color: var(--pf-v5-global--Color--200);">No limit set</div>
+                                                </div>
+                                            </template>
+                                            <template x-if="!component.tbo_critical">
+                                                <div style="margin-top: 0.3rem; font-size: 0.85em; color: var(--pf-v5-global--Color--200);">Disabled</div>
+                                            </template>
+                                        </div>
+                                        <!-- Service Interval -->
+                                        <div>
+                                            <span class="pf-v5-c-label pf-m-compact"
+                                                  :class="component.replacement_critical ? 'pf-m-purple' : 'pf-m-grey'">
+                                                Service Interval
+                                            </span>
+                                            <template x-if="component.replacement_critical">
+                                                <div style="margin-top: 0.3rem; font-size: 0.9em;">
+                                                    <div x-show="component.replacement_hours" x-text="component.replacement_hours + ' hr'"></div>
+                                                    <div x-show="component.replacement_days" x-text="component.replacement_days + ' days'" style="color: var(--pf-v5-global--Color--200);"></div>
+                                                    <div x-show="!component.replacement_hours && !component.replacement_days" style="color: var(--pf-v5-global--Color--200);">No limit set</div>
+                                                </div>
+                                            </template>
+                                            <template x-if="!component.replacement_critical">
+                                                <div style="margin-top: 0.3rem; font-size: 0.85em; color: var(--pf-v5-global--Color--200);">Disabled</div>
+                                            </template>
+                                        </div>
+                                        <!-- Inspection -->
+                                        <div>
+                                            <span class="pf-v5-c-label pf-m-compact"
+                                                  :class="component.inspection_critical ? 'pf-m-green' : 'pf-m-grey'">
+                                                Inspection
+                                            </span>
+                                            <template x-if="component.inspection_critical">
+                                                <div style="margin-top: 0.3rem; font-size: 0.9em;">
+                                                    <div x-show="component.inspection_hours" x-text="component.inspection_hours + ' hr'"></div>
+                                                    <div x-show="component.inspection_days" x-text="component.inspection_days + ' days'" style="color: var(--pf-v5-global--Color--200);"></div>
+                                                    <div x-show="!component.inspection_hours && !component.inspection_days" style="color: var(--pf-v5-global--Color--200);">No limit set</div>
+                                                </div>
+                                            </template>
+                                            <template x-if="!component.inspection_critical">
+                                                <div style="margin-top: 0.3rem; font-size: 0.85em; color: var(--pf-v5-global--Color--200);">Disabled</div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </td>
+                        </tr>
+                    </tbody>
+                </template>
             </table>
         </div>
 
@@ -2813,13 +2967,13 @@
                             </label>
                             <div class="pf-v5-c-form__group-control" style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
                                 <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                                    <input type="checkbox" x-model="componentForm.tbo_critical"> TBO Critical
+                                    <input type="checkbox" x-model="componentForm.tbo_critical"> TBO Tracking
                                 </label>
                                 <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                                    <input type="checkbox" x-model="componentForm.inspection_critical"> Inspection Critical
+                                    <input type="checkbox" x-model="componentForm.inspection_critical"> Inspection Tracking
                                 </label>
                                 <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                                    <input type="checkbox" x-model="componentForm.replacement_critical"> Replacement Critical
+                                    <input type="checkbox" x-model="componentForm.replacement_critical"> Service Interval Tracking
                                 </label>
                             </div>
                         </div>
@@ -2873,7 +3027,7 @@
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                                 <div class="pf-v5-c-form__group">
                                     <label class="pf-v5-c-form__label" for="comp-replacement-hours">
-                                        <span class="pf-v5-c-form__label-text">Replacement Hours</span>
+                                        <span class="pf-v5-c-form__label-text">Service Interval Hours</span>
                                     </label>
                                     <div class="pf-v5-c-form__group-control">
                                         <input id="comp-replacement-hours" class="pf-v5-c-form-control" type="number" min="0" x-model="componentForm.replacement_hours">
@@ -2881,7 +3035,7 @@
                                 </div>
                                 <div class="pf-v5-c-form__group">
                                     <label class="pf-v5-c-form__label" for="comp-replacement-days">
-                                        <span class="pf-v5-c-form__label-text">Replacement Days</span>
+                                        <span class="pf-v5-c-form__label-text">Service Interval Days</span>
                                     </label>
                                     <div class="pf-v5-c-form__group-control">
                                         <input id="comp-replacement-days" class="pf-v5-c-form-control" type="number" min="0" x-model="componentForm.replacement_days">

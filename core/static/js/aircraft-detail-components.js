@@ -6,6 +6,16 @@ function componentsMixin() {
         componentSubmitting: false,
         componentTypes: [],
         componentTypesLoaded: false,
+        expandedComponents: {},
+
+        toggleComponentExpand(id) {
+            this.expandedComponents[id] = !this.expandedComponents[id];
+            this.expandedComponents = { ...this.expandedComponents };
+        },
+
+        isComponentExpanded(id) {
+            return !!this.expandedComponents[id];
+        },
         componentForm: {
             parent_component: '',
             component_type: '',
@@ -71,7 +81,13 @@ function componentsMixin() {
 
             if (!interval) return 'N/A';
             const remaining = interval - currentHours;
-            return remaining > 0 ? remaining.toFixed(1) : '0.0';
+            return remaining.toFixed(1);
+        },
+
+        getHoursRemainingDisplay(component) {
+            const remaining = this.calculateHoursRemaining(component);
+            if (remaining === 'N/A') return 'N/A';
+            return Math.abs(parseFloat(remaining)).toFixed(1);
         },
 
         getHoursRemainingClass(component) {
@@ -82,6 +98,84 @@ function componentsMixin() {
             if (hours < 10) return 'hours-critical';
             if (hours < 25) return 'hours-warning';
             return '';
+        },
+
+        getCalendarTimeSince(dateStr) {
+            if (!dateStr) return null;
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffMs = now - date;
+            if (diffMs < 0) return null;
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const years = Math.floor(diffDays / 365);
+            const months = Math.floor((diffDays % 365) / 30);
+            const days = diffDays % 30;
+            if (years > 0) return months > 0 ? `${years} yr ${months} mo` : `${years} yr`;
+            if (months > 0) return days > 0 ? `${months} mo ${days} day${days !== 1 ? 's' : ''}` : `${months} mo`;
+            return `${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+        },
+
+        getRemainingLabel(component) {
+            const remaining = this.calculateHoursRemaining(component);
+            const overdue = remaining !== 'N/A' && parseFloat(remaining) <= 0;
+            if (component.replacement_critical && component.replacement_hours) {
+                return overdue ? 'over svc.' : 'to svc.';
+            }
+            if (component.tbo_hours) {
+                return overdue ? 'over TBO' : 'to TBO';
+            }
+            return '';
+        },
+
+        // Returns total calendar days remaining until the days-based interval is reached.
+        // Positive = days left, negative = days over, null = no days interval configured.
+        getCalendarDaysRemaining(component) {
+            let refDateStr = null;
+            let daysInterval = null;
+            if (component.replacement_critical && component.replacement_days) {
+                refDateStr = component.date_in_service;
+                daysInterval = component.replacement_days;
+            } else if (component.tbo_days) {
+                refDateStr = component.overhaul_date || component.date_in_service;
+                daysInterval = component.tbo_days;
+            }
+            if (!refDateStr || !daysInterval) return null;
+            const [y, m, d] = refDateStr.split('-').map(Number);
+            const due = new Date(y, m - 1, d + daysInterval);
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            return Math.round((due - now) / (1000 * 60 * 60 * 24));
+        },
+
+        // Formats a signed number of days as a human-readable duration string.
+        // Negative values append " over".
+        formatDuration(days) {
+            const abs = Math.abs(days);
+            const years = Math.floor(abs / 365);
+            const months = Math.floor((abs % 365) / 30);
+            const remDays = abs % 30;
+            let s;
+            if (years > 0) s = months > 0 ? `${years} yr ${months} mo` : `${years} yr`;
+            else if (months > 0) s = remDays > 0 ? `${months} mo ${remDays} day${remDays !== 1 ? 's' : ''}` : `${months} mo`;
+            else s = `${abs} day${abs !== 1 ? 's' : ''}`;
+            return days < 0 ? `${s} over` : s;
+        },
+
+        // Returns a YYYY-MM-DD string for the calendar due date, or null if not applicable.
+        getDueDate(component) {
+            let refDateStr = null;
+            let daysInterval = null;
+            if (component.replacement_critical && component.replacement_days) {
+                refDateStr = component.date_in_service;
+                daysInterval = component.replacement_days;
+            } else if (component.tbo_days) {
+                refDateStr = component.overhaul_date || component.date_in_service;
+                daysInterval = component.tbo_days;
+            }
+            if (!refDateStr || !daysInterval) return null;
+            const [y, m, d] = refDateStr.split('-').map(Number);
+            const due = new Date(y, m - 1, d + daysInterval);
+            return `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
         },
 
         async resetComponentService(component) {
