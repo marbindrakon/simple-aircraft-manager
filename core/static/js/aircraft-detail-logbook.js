@@ -636,15 +636,11 @@ function logbookMixin() {
             if (!this.adsLoaded) loadPromises.push(this.loadAds());
             if (loadPromises.length > 0) await Promise.all(loadPromises);
 
-            // Pre-check all inspections when entry type is INSPECTION
-            const preCheckInspections = entry.entry_type === 'INSPECTION';
-            const hours = this.createRecordsHours ? parseFloat(this.createRecordsHours) : null;
-
             this.createRecordsSelections = {
                 inspections: this.inspectionTypes.map(it => ({
                     id: it.id,
                     name: it.name,
-                    checked: preCheckInspections,
+                    checked: false,
                 })),
                 ads: this.applicableAds.map(ad => ({
                     id: ad.id,
