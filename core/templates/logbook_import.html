@@ -4,7 +4,7 @@
 {% block title %}Import Logbook — Simple Aircraft Manager{% endblock %}
 
 {% block content %}
-<div x-data="logbookImport()">
+<div x-data="logbookImport()" data-ai-enabled="{% if ai_enabled %}true{% else %}false{% endif %}">
 
   <!-- ── Page header ────────────────────────────────────────────────────── -->
   <div class="pf-v5-c-content" style="margin-bottom: 1.5rem;">
@@ -253,6 +253,7 @@
           <div class="pf-v5-c-card__body">
 
             <!-- Upload only -->
+            {% if ai_enabled %}
             <div style="margin-bottom: 1.25rem;">
               <label class="pf-v5-c-check">
                 <input class="pf-v5-c-check__input" type="checkbox"
@@ -263,6 +264,15 @@
                 </span>
               </label>
             </div>
+            {% else %}
+            <div class="pf-v5-c-alert pf-m-info pf-m-inline" style="margin-bottom: 1.25rem;">
+              <div class="pf-v5-c-alert__icon"><i class="fas fa-circle-info"></i></div>
+              <p class="pf-v5-c-alert__title">Upload only</p>
+              <div class="pf-v5-c-alert__description">
+                No AI models are configured. Images will be saved as documents without transcription.
+              </div>
+            </div>
+            {% endif %}
 
             <!-- Document type -->
             <div class="pf-v5-c-form__group" style="margin-bottom: 1.25rem;">
@@ -279,7 +289,8 @@
               </select>
             </div>
 
-            <!-- AI options (hidden when upload-only) -->
+            <!-- AI options (hidden when upload-only; omitted entirely when no models configured) -->
+            {% if ai_enabled %}
             <div x-show="!uploadOnly">
 
               <div class="pf-v5-c-form__group" style="margin-bottom: 1.25rem;">
@@ -318,6 +329,7 @@
               </div>
 
             </div><!-- end AI options -->
+            {% endif %}
 
           </div>
           <div class="pf-v5-c-card__footer">

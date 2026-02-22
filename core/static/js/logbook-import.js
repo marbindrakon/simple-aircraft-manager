@@ -23,6 +23,10 @@ function logbookImport() {
         documentsLoading: false,
 
         init() {
+            // When no AI models are configured, force upload-only mode
+            if (this.$el.dataset.aiEnabled === 'false') {
+                this.uploadOnly = true;
+            }
             // Read the default model from the server-rendered select element
             const modelSelect = document.getElementById('model-select');
             if (modelSelect) {

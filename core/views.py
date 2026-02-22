@@ -946,10 +946,18 @@ class LogbookImportView(LoginRequiredMixin, View):
                 user=request.user, role='owner'
             ).values_list('aircraft_id', flat=True)
             aircraft_list = Aircraft.objects.filter(id__in=owned_ids).order_by('tail_number')
+        import_models = settings.LOGBOOK_IMPORT_MODELS
+        if not os.environ.get('ANTHROPIC_API_KEY'):
+            import_models = [m for m in import_models if m.get('provider') != 'anthropic']
+        default_model = settings.LOGBOOK_IMPORT_DEFAULT_MODEL
+        available_ids = {m['id'] for m in import_models}
+        if default_model not in available_ids:
+            default_model = import_models[0]['id'] if import_models else ''
         return render(request, 'logbook_import.html', {
             'aircraft_list': aircraft_list,
-            'import_models': settings.LOGBOOK_IMPORT_MODELS,
-            'default_model': settings.LOGBOOK_IMPORT_DEFAULT_MODEL,
+            'import_models': import_models,
+            'default_model': default_model,
+            'ai_enabled': bool(import_models),
         })
 
     def post(self, request):
