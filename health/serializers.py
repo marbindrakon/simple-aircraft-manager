@@ -189,17 +189,18 @@ class LogbookEntrySerializer(serializers.HyperlinkedModelSerializer):
     related_documents_detail = DocumentNestedSerializer(
         source='related_documents', many=True, read_only=True
     )
+    log_image_detail = DocumentNestedSerializer(source='log_image', read_only=True)
 
     class Meta:
         model = LogbookEntry
         fields = [
             'url', 'id', 'log_type', 'aircraft', 'component', 'date', 'text',
-            'signoff_person', 'signoff_location', 'log_image',
+            'signoff_person', 'signoff_location', 'log_image', 'log_image_detail',
             'related_documents', 'related_documents_detail',
             'aircraft_hours_at_entry', 'component_hours',
             'entry_type', 'page_number',
         ]
-        read_only_fields = ['related_documents_detail']
+        read_only_fields = ['related_documents_detail', 'log_image_detail']
 
 class SquawkSerializer(serializers.HyperlinkedModelSerializer):
     id = serializers.UUIDField(read_only=True)

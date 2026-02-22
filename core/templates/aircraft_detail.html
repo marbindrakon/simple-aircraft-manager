@@ -440,8 +440,8 @@
                                 <button class="pf-v5-c-button pf-m-plain"
                                         @click="toggleComponentExpand(component.id)"
                                         :aria-expanded="isComponentExpanded(component.id).toString()">
-                                    <i class="fas fa-angle-down"
-                                       :style="isComponentExpanded(component.id) ? 'transform: rotate(180deg)' : ''"></i>
+                                    <i class="fas fa-angle-right"
+                                       :style="isComponentExpanded(component.id) ? 'transform: rotate(90deg)' : ''"></i>
                                 </button>
                             </td>
                             <td>
@@ -1217,8 +1217,8 @@
                                             <button class="pf-v5-c-button pf-m-plain"
                                                     @click="toggleMajorRecordExpand(record.id)"
                                                     :aria-expanded="isMajorRecordExpanded(record.id).toString()">
-                                                <i class="fas fa-angle-down"
-                                                   :style="isMajorRecordExpanded(record.id) ? 'transform: rotate(180deg)' : ''"></i>
+                                                <i class="fas fa-angle-right"
+                                                   :style="isMajorRecordExpanded(record.id) ? 'transform: rotate(90deg)' : ''"></i>
                                             </button>
                                         </td>
                                         <td>
@@ -1335,8 +1335,8 @@
                                             <button class="pf-v5-c-button pf-m-plain"
                                                     @click="toggleMajorRecordExpand(record.id)"
                                                     :aria-expanded="isMajorRecordExpanded(record.id).toString()">
-                                                <i class="fas fa-angle-down"
-                                                   :style="isMajorRecordExpanded(record.id) ? 'transform: rotate(180deg)' : ''"></i>
+                                                <i class="fas fa-angle-right"
+                                                   :style="isMajorRecordExpanded(record.id) ? 'transform: rotate(90deg)' : ''"></i>
                                             </button>
                                         </td>
                                         <td>
@@ -2833,14 +2833,115 @@
                                     </dd>
                                 </div>
                             </template>
-                            <template x-if="logEntryDetail.log_image && (!isPublicView || logEntryDetail.log_image_shared)">
-                                <div class="pf-v5-c-description-list__group">
-                                    <dt class="pf-v5-c-description-list__term">Attached Document</dt>
-                                    <dd class="pf-v5-c-description-list__description">
-                                        <button class="pf-v5-c-button pf-m-link pf-m-inline" @click="viewLogEntryDocument(logEntryDetail)">
-                                            <i class="fas fa-images"></i> View images
+                            <template x-if="logEntryDetail.log_image_detail && logEntryDetail.log_image_detail.images && logEntryDetail.log_image_detail.images.length > 0 && (!isPublicView || logEntryDetail.log_image_shared)">
+                                <div style="margin-top: 1rem; border-top: 1px solid var(--pf-v5-global--BorderColor--100); padding-top: 1rem;">
+                                    <!-- Header row: document name + download + counter -->
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                                        <span style="font-weight: 600; font-size: 0.9em;" x-text="logEntryDetail.log_image_detail.name"></span>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <span x-show="logEntryDetail.log_image_detail.images.length > 1"
+                                                  style="font-size: 0.85em; color: var(--pf-v5-global--Color--200);">
+                                                <span x-text="logEntryImageIndex + 1"></span> / <span x-text="logEntryDetail.log_image_detail.images.length"></span>
+                                            </span>
+                                            <a :href="logEntryDetail.log_image_detail.images[logEntryImageIndex]?.image"
+                                               class="pf-v5-c-button pf-m-plain pf-m-small" download target="_blank" title="Download">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <!-- Image display -->
+                                    <div style="position: relative;">
+                                        <!-- Prev button -->
+                                        <button class="pf-v5-c-button pf-m-plain" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); z-index: 1;"
+                                                x-show="logEntryDetail.log_image_detail.images.length > 1 && logEntryImageIndex > 0"
+                                                @click="logEntryImageIndex--">
+                                            <i class="fas fa-chevron-left"></i>
                                         </button>
-                                    </dd>
+                                        <!-- Image -->
+                                        <template x-if="getFileType(logEntryDetail.log_image_detail.images[logEntryImageIndex]?.image) === 'image'">
+                                            <img :src="logEntryDetail.log_image_detail.images[logEntryImageIndex]?.image"
+                                                 :alt="logEntryDetail.log_image_detail.name"
+                                                 style="max-width: 100%; display: block; margin: 0 auto; border-radius: 4px;">
+                                        </template>
+                                        <!-- PDF -->
+                                        <template x-if="getFileType(logEntryDetail.log_image_detail.images[logEntryImageIndex]?.image) === 'pdf'">
+                                            <iframe :src="logEntryDetail.log_image_detail.images[logEntryImageIndex]?.image"
+                                                    style="width: 100%; height: 60vh; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 4px;"></iframe>
+                                        </template>
+                                        <!-- Other file types -->
+                                        <template x-if="getFileType(logEntryDetail.log_image_detail.images[logEntryImageIndex]?.image) !== 'image' && getFileType(logEntryDetail.log_image_detail.images[logEntryImageIndex]?.image) !== 'pdf'">
+                                            <div style="text-align: center; padding: 2rem;">
+                                                <i :class="getFileIcon(logEntryDetail.log_image_detail.images[logEntryImageIndex]?.image)" style="font-size: 3rem; color: var(--pf-v5-global--Color--200); margin-bottom: 0.5rem;"></i>
+                                                <p style="color: var(--pf-v5-global--Color--200);">Use the download button to open this file.</p>
+                                            </div>
+                                        </template>
+                                        <!-- Next button -->
+                                        <button class="pf-v5-c-button pf-m-plain" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 1;"
+                                                x-show="logEntryDetail.log_image_detail.images.length > 1 && logEntryImageIndex < logEntryDetail.log_image_detail.images.length - 1"
+                                                @click="logEntryImageIndex++">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </button>
+                                    </div>
+                                    <!-- Image notes -->
+                                    <template x-if="logEntryDetail.log_image_detail.images[logEntryImageIndex]?.notes">
+                                        <p style="font-size: 0.85em; color: var(--pf-v5-global--Color--200); margin-top: 0.5rem;"
+                                           x-text="logEntryDetail.log_image_detail.images[logEntryImageIndex].notes"></p>
+                                    </template>
+                                </div>
+                            </template>
+                            <!-- Related documents inline -->
+                            <template x-if="logEntryDetail.related_documents_detail && logEntryDetail.related_documents_detail.length > 0">
+                                <div>
+                                    <template x-for="rdoc in logEntryDetail.related_documents_detail" :key="rdoc.id">
+                                        <div x-show="rdoc.images && rdoc.images.length > 0"
+                                             style="margin-top: 1rem; border-top: 1px solid var(--pf-v5-global--BorderColor--100); padding-top: 1rem;">
+                                            <!-- Header row: document name + download + counter -->
+                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                                                <span style="font-weight: 600; font-size: 0.9em;" x-text="rdoc.name"></span>
+                                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                    <span x-show="rdoc.images.length > 1"
+                                                          style="font-size: 0.85em; color: var(--pf-v5-global--Color--200);">
+                                                        <span x-text="(relatedDocImageIndices[rdoc.id] || 0) + 1"></span> / <span x-text="rdoc.images.length"></span>
+                                                    </span>
+                                                    <a :href="rdoc.images[relatedDocImageIndices[rdoc.id] || 0]?.image"
+                                                       class="pf-v5-c-button pf-m-plain pf-m-small" download target="_blank" title="Download">
+                                                        <i class="fas fa-download"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            <!-- Image display -->
+                                            <div style="position: relative;">
+                                                <button class="pf-v5-c-button pf-m-plain" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); z-index: 1;"
+                                                        x-show="rdoc.images.length > 1 && (relatedDocImageIndices[rdoc.id] || 0) > 0"
+                                                        @click="relatedDocImageIndices[rdoc.id] = (relatedDocImageIndices[rdoc.id] || 0) - 1">
+                                                    <i class="fas fa-chevron-left"></i>
+                                                </button>
+                                                <div x-show="getFileType(rdoc.images[relatedDocImageIndices[rdoc.id] || 0]?.image) === 'image'">
+                                                    <img :src="rdoc.images[relatedDocImageIndices[rdoc.id] || 0]?.image"
+                                                         :alt="rdoc.name"
+                                                         style="max-width: 100%; display: block; margin: 0 auto; border-radius: 4px;">
+                                                </div>
+                                                <div x-show="getFileType(rdoc.images[relatedDocImageIndices[rdoc.id] || 0]?.image) === 'pdf'">
+                                                    <iframe :src="rdoc.images[relatedDocImageIndices[rdoc.id] || 0]?.image"
+                                                            style="width: 100%; height: 60vh; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 4px;"></iframe>
+                                                </div>
+                                                <div x-show="getFileType(rdoc.images[relatedDocImageIndices[rdoc.id] || 0]?.image) !== 'image' && getFileType(rdoc.images[relatedDocImageIndices[rdoc.id] || 0]?.image) !== 'pdf'"
+                                                     style="text-align: center; padding: 2rem;">
+                                                    <i :class="getFileIcon(rdoc.images[relatedDocImageIndices[rdoc.id] || 0]?.image)" style="font-size: 3rem; color: var(--pf-v5-global--Color--200); margin-bottom: 0.5rem;"></i>
+                                                    <p style="color: var(--pf-v5-global--Color--200);">Use the download button to open this file.</p>
+                                                </div>
+                                                <button class="pf-v5-c-button pf-m-plain" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 1;"
+                                                        x-show="rdoc.images.length > 1 && (relatedDocImageIndices[rdoc.id] || 0) < rdoc.images.length - 1"
+                                                        @click="relatedDocImageIndices[rdoc.id] = (relatedDocImageIndices[rdoc.id] || 0) + 1">
+                                                    <i class="fas fa-chevron-right"></i>
+                                                </button>
+                                            </div>
+                                            <!-- Image notes -->
+                                            <p x-show="rdoc.images[relatedDocImageIndices[rdoc.id] || 0]?.notes"
+                                               x-text="rdoc.images[relatedDocImageIndices[rdoc.id] || 0]?.notes || ''"
+                                               style="font-size: 0.85em; color: var(--pf-v5-global--Color--200); margin-top: 0.5rem;"></p>
+                                        </div>
+                                    </template>
                                 </div>
                             </template>
                         </dl>

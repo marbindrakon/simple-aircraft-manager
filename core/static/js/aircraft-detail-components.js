@@ -88,17 +88,31 @@ function componentsMixin() {
 
         getHoursRemainingDisplay(component) {
             const remaining = this.calculateHoursRemaining(component);
-            if (remaining === 'N/A') return 'N/A';
-            return Math.abs(parseFloat(remaining)).toFixed(1);
+            if (remaining !== 'N/A') {
+                return Math.abs(parseFloat(remaining)).toFixed(1);
+            }
+            const calDays = this.getCalendarDaysRemaining(component);
+            if (calDays !== null) {
+                return this.formatDuration(Math.abs(calDays));
+            }
+            return 'N/A';
         },
 
         getHoursRemainingClass(component) {
             const remaining = this.calculateHoursRemaining(component);
-            if (remaining === 'N/A') return '';
-            const hours = parseFloat(remaining);
-            if (hours <= 0) return 'hours-overdue';
-            if (hours < 10) return 'hours-critical';
-            if (hours < 25) return 'hours-warning';
+            if (remaining !== 'N/A') {
+                const hours = parseFloat(remaining);
+                if (hours <= 0) return 'hours-overdue';
+                if (hours < 10) return 'hours-critical';
+                if (hours < 25) return 'hours-warning';
+                return '';
+            }
+            const calDays = this.getCalendarDaysRemaining(component);
+            if (calDays !== null) {
+                if (calDays <= 0) return 'hours-overdue';
+                if (calDays < 30) return 'hours-critical';
+                if (calDays < 90) return 'hours-warning';
+            }
             return '';
         },
 
@@ -125,6 +139,16 @@ function componentsMixin() {
             }
             if (component.tbo_hours) {
                 return overdue ? 'over TBO' : 'to TBO';
+            }
+            const calDays = this.getCalendarDaysRemaining(component);
+            if (calDays !== null) {
+                const calOverdue = calDays <= 0;
+                if (component.replacement_critical && component.replacement_days) {
+                    return calOverdue ? 'over svc.' : 'to svc.';
+                }
+                if (component.tbo_days) {
+                    return calOverdue ? 'over TBO' : 'to TBO';
+                }
             }
             return '';
         },

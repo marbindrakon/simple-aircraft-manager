@@ -42,6 +42,8 @@ function adsMixin() {
         logEntryDetailOpen: false,
         logEntryDetail: null,
         logEntryDetailLoading: false,
+        logEntryImageIndex: 0,
+        relatedDocImageIndices: {},
 
         get adIssueCount() {
             return this.applicableAds.filter(
@@ -438,6 +440,10 @@ function adsMixin() {
                 const entry = this.linkedLogbookEntriesById?.[entryId];
                 if (entry) {
                     this.logEntryDetail = entry;
+                    this.logEntryImageIndex = (entry.page_number || 1) - 1;
+                    this.relatedDocImageIndices = Object.fromEntries(
+                        (entry.related_documents_detail || []).map(d => [d.id, 0])
+                    );
                     this.logEntryDetailOpen = true;
                 } else {
                     showNotification('Logbook entry not available in shared view', 'warning');
@@ -453,6 +459,10 @@ function adsMixin() {
                 const response = await fetch(`/api/logbook-entries/${entryId}/`);
                 if (response.ok) {
                     this.logEntryDetail = await response.json();
+                    this.logEntryImageIndex = (this.logEntryDetail.page_number || 1) - 1;
+                    this.relatedDocImageIndices = Object.fromEntries(
+                        (this.logEntryDetail.related_documents_detail || []).map(d => [d.id, 0])
+                    );
                 } else {
                     showNotification('Failed to load logbook entry', 'danger');
                     this.logEntryDetailOpen = false;
@@ -469,6 +479,8 @@ function adsMixin() {
         closeLogEntryDetail() {
             this.logEntryDetailOpen = false;
             this.logEntryDetail = null;
+            this.logEntryImageIndex = 0;
+            this.relatedDocImageIndices = {};
         },
 
         getAdStatusClass(ad) {
