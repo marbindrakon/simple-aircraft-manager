@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Manage Users{% endblock %}
+
+{% block content %}
+    <!-- Page Header -->
+    <div class="pf-v5-c-page__main-section pf-m-light">
+        <div class="pf-v5-c-content">
+            <h1>Management</h1>
+            <p>Manage invitation codes and users</p>
+        </div>
+    </div>
+
+    <!-- Sub-nav -->
+    <div class="pf-v5-c-page__main-section pf-m-light pf-m-no-padding">
+        <nav class="pf-v5-c-nav pf-m-horizontal" aria-label="Manage subnav">
+            <ul class="pf-v5-c-nav__list">
+                <li class="pf-v5-c-nav__item">
+                    <a href="{% url 'manage-invitations' %}" class="pf-v5-c-nav__link">Invitation Codes</a>
+                </li>
+                <li class="pf-v5-c-nav__item">
+                    <a href="{% url 'manage-users' %}" class="pf-v5-c-nav__link pf-m-current">Users</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Users Table -->
+    <div class="pf-v5-c-page__main-section">
+        <div class="pf-v5-c-card">
+            <div class="pf-v5-c-card__body" style="padding: 0;">
+                <table class="pf-v5-c-table pf-m-grid-lg" role="grid">
+                    <thead class="pf-v5-c-table__thead">
+                        <tr class="pf-v5-c-table__tr">
+                            <th class="pf-v5-c-table__th">Username</th>
+                            <th class="pf-v5-c-table__th">Name</th>
+                            <th class="pf-v5-c-table__th">Email</th>
+                            <th class="pf-v5-c-table__th">Staff</th>
+                            <th class="pf-v5-c-table__th">Active</th>
+                            <th class="pf-v5-c-table__th">Joined</th>
+                            <th class="pf-v5-c-table__th">Last Login</th>
+                            <th class="pf-v5-c-table__th">Aircraft Access</th>
+                            <th class="pf-v5-c-table__th"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="pf-v5-c-table__tbody">
+                        {% for u in users %}
+                        <tr class="pf-v5-c-table__tr">
+                            <td class="pf-v5-c-table__td">
+                                <strong>{{ u.username }}</strong>
+                            </td>
+                            <td class="pf-v5-c-table__td">
+                                {{ u.get_full_name|default:"—" }}
+                            </td>
+                            <td class="pf-v5-c-table__td">
+                                {{ u.email|default:"—" }}
+                            </td>
+                            <td class="pf-v5-c-table__td">
+                                {% if u.is_staff %}
+                                <span class="pf-v5-c-label pf-m-compact pf-m-blue">
+                                    <span class="pf-v5-c-label__content">Staff</span>
+                                </span>
+                                {% else %}
+                                <span style="color: var(--pf-v5-global--Color--200);">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="pf-v5-c-table__td">
+                                {% if u.is_active %}
+                                <span class="pf-v5-c-label pf-m-compact pf-m-green">
+                                    <span class="pf-v5-c-label__content">Active</span>
+                                </span>
+                                {% else %}
+                                <span class="pf-v5-c-label pf-m-compact">
+                                    <span class="pf-v5-c-label__content">Inactive</span>
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="pf-v5-c-table__td">
+                                {{ u.date_joined|date:"Y-m-d" }}
+                            </td>
+                            <td class="pf-v5-c-table__td">
+                                {% if u.last_login %}
+                                {{ u.last_login|date:"Y-m-d" }}
+                                {% else %}
+                                <span style="color: var(--pf-v5-global--Color--200);">Never</span>
+                                {% endif %}
+                            </td>
+                            <td class="pf-v5-c-table__td">
+                                {% with roles=u.aircraft_roles.all %}
+                                {% if roles %}
+                                {% for role in roles %}{% if not forloop.first %}, {% endif %}{{ role.aircraft.tail_number }} ({{ role.role }}){% endfor %}
+                                {% else %}
+                                <span style="color: var(--pf-v5-global--Color--200);">—</span>
+                                {% endif %}
+                                {% endwith %}
+                            </td>
+                            <td class="pf-v5-c-table__td">
+                                {% if request.user.is_superuser %}
+                                <a class="pf-v5-c-button pf-m-small pf-m-secondary"
+                                   href="/admin/auth/user/{{ u.pk }}/change/">
+                                    Edit in Admin
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr class="pf-v5-c-table__tr">
+                            <td class="pf-v5-c-table__td" colspan="9" style="text-align: center; padding: 2rem; color: var(--pf-v5-global--Color--200);">
+                                No users found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

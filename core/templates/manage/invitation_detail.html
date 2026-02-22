@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Invitation Code Detail{% endblock %}
+
+{% block content %}
+<div x-data="manageInvitationDetail('{{ invitation_id }}')" x-init="init()">
+
+    <!-- Breadcrumb -->
+    <div class="pf-v5-c-page__main-section pf-m-light pf-m-no-padding" style="padding: 0.75rem 1.5rem;">
+        <nav class="pf-v5-c-breadcrumb" aria-label="breadcrumb">
+            <ol class="pf-v5-c-breadcrumb__list">
+                <li class="pf-v5-c-breadcrumb__item">
+                    <a href="{% url 'manage-invitations' %}" class="pf-v5-c-breadcrumb__link">Manage</a>
+                </li>
+                <li class="pf-v5-c-breadcrumb__item">
+                    <span class="pf-v5-c-breadcrumb__item-divider"><i class="fas fa-angle-right"></i></span>
+                    <a href="{% url 'manage-invitations' %}" class="pf-v5-c-breadcrumb__link">Invitation Codes</a>
+                </li>
+                <li class="pf-v5-c-breadcrumb__item">
+                    <span class="pf-v5-c-breadcrumb__item-divider"><i class="fas fa-angle-right"></i></span>
+                    <span class="pf-v5-c-breadcrumb__link pf-m-current" x-text="code ? code.label : 'Loading...'"></span>
+                </li>
+            </ol>
+        </nav>
+    </div>
+
+    <!-- Loading State -->
+    <div class="pf-v5-c-page__main-section" x-show="loading" x-cloak>
+        <div class="pf-v5-c-empty-state">
+            <div class="pf-v5-c-empty-state__content">
+                <div class="loading-spinner" style="width: 3rem; height: 3rem;"></div>
+                <h2 class="pf-v5-c-title pf-m-lg">Loading...</h2>
+            </div>
+        </div>
+    </div>
+
+    <template x-if="!loading && code">
+        <div>
+            <!-- Registration Link Card -->
+            <div class="pf-v5-c-page__main-section">
+                <div class="pf-v5-c-card">
+                    <div class="pf-v5-c-card__header">
+                        <div class="pf-v5-c-card__header-main">
+                            <h2 class="pf-v5-c-title pf-m-lg" x-text="code.label"></h2>
+                        </div>
+                        <div class="pf-v5-c-card__actions">
+                            <span class="pf-v5-c-label pf-m-compact"
+                                  :class="getStatusBadge().class">
+                                <span class="pf-v5-c-label__content" x-text="getStatusBadge().text"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="pf-v5-c-card__body">
+                        <p style="margin-bottom: 0.5rem; font-weight: 600; font-size: 0.875rem; color: var(--pf-v5-global--Color--200);">Registration Link</p>
+                        <div style="display: flex; gap: 0.75rem; align-items: center;">
+                            <code style="flex: 1; padding: 0.5rem 0.75rem; background: var(--pf-v5-global--BackgroundColor--200); border-radius: 4px; font-size: 0.875rem; word-break: break-all;"
+                                  x-text="code.registration_url"></code>
+                            <button class="pf-v5-c-button pf-m-secondary pf-m-small"
+                                    @click="copyLink()">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                        <p style="margin-top: 0.75rem; font-size: 0.875rem; color: var(--pf-v5-global--Color--200);">
+                            Created by <strong x-text="code.created_by_username || 'unknown'"></strong>
+                            on <span x-text="formatDate(code.created_at)"></span>
+                            &bull; <span x-text="code.use_count"></span> redemption<span x-text="code.use_count === 1 ? '' : 's'"></span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pf-v5-c-page__main-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+
+                <!-- Edit Form Card -->
+                <div class="pf-v5-c-card">
+                    <div class="pf-v5-c-card__header">
+                        <div class="pf-v5-c-card__header-main">
+                            <h2 class="pf-v5-c-title pf-m-md">Edit Details</h2>
+                        </div>
+                    </div>
+                    <div class="pf-v5-c-card__body">
+                        <div class="pf-v5-c-form">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="edit-label">
+                                    <span class="pf-v5-c-form__label-text">Label <span class="pf-v5-c-form__label-required">*</span></span>
+                                </label>
+                                <input class="pf-v5-c-form-control" type="text" id="edit-label"
+                                       x-model="editForm.label" required>
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="edit-email">
+                                    <span class="pf-v5-c-form__label-text">Email (optional)</span>
+                                </label>
+                                <input class="pf-v5-c-form-control" type="email" id="edit-email"
+                                       x-model="editForm.invited_email">
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="edit-name">
+                                    <span class="pf-v5-c-form__label-text">Name (optional)</span>
+                                </label>
+                                <input class="pf-v5-c-form-control" type="text" id="edit-name"
+                                       x-model="editForm.invited_name">
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="edit-max-uses">
+                                    <span class="pf-v5-c-form__label-text">Max Uses (optional)</span>
+                                </label>
+                                <input class="pf-v5-c-form-control" type="number" id="edit-max-uses"
+                                       x-model="editForm.max_uses" min="1"
+                                       placeholder="Leave blank for unlimited">
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="edit-expires-at">
+                                    <span class="pf-v5-c-form__label-text">Expires At (optional)</span>
+                                </label>
+                                <input class="pf-v5-c-form-control" type="datetime-local" id="edit-expires-at"
+                                       x-model="editForm.expires_at">
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label">
+                                    <span class="pf-v5-c-form__label-text">Active</span>
+                                </label>
+                                <div>
+                                    <label class="pf-v5-c-switch">
+                                        <input class="pf-v5-c-switch__input" type="checkbox"
+                                               x-model="editForm.is_active">
+                                        <span class="pf-v5-c-switch__toggle"></span>
+                                        <span class="pf-v5-c-switch__label pf-m-on" aria-hidden="true">Active</span>
+                                        <span class="pf-v5-c-switch__label pf-m-off" aria-hidden="true">Inactive</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pf-v5-c-card__footer">
+                        <button class="pf-v5-c-button pf-m-primary"
+                                @click="saveCode()"
+                                :disabled="saving || !editForm.label || !editForm.label.trim()">
+                            <span x-show="saving">Saving...</span>
+                            <span x-show="!saving">Save Changes</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Redemptions Card -->
+                <div class="pf-v5-c-card">
+                    <div class="pf-v5-c-card__header">
+                        <div class="pf-v5-c-card__header-main">
+                            <h2 class="pf-v5-c-title pf-m-md">Redemptions</h2>
+                        </div>
+                    </div>
+                    <div class="pf-v5-c-card__body" style="padding: 0;">
+                        <template x-if="code.redemptions && code.redemptions.length === 0">
+                            <p style="padding: 1.5rem; color: var(--pf-v5-global--Color--200); text-align: center;">No redemptions yet.</p>
+                        </template>
+                        <template x-if="code.redemptions && code.redemptions.length > 0">
+                            <table class="pf-v5-c-table pf-m-compact" role="grid">
+                                <thead class="pf-v5-c-table__thead">
+                                    <tr class="pf-v5-c-table__tr">
+                                        <th class="pf-v5-c-table__th">Username</th>
+                                        <th class="pf-v5-c-table__th">Name</th>
+                                        <th class="pf-v5-c-table__th">Redeemed</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="pf-v5-c-table__tbody">
+                                    <template x-for="r in code.redemptions" :key="r.id">
+                                        <tr class="pf-v5-c-table__tr">
+                                            <td class="pf-v5-c-table__td" x-text="r.username"></td>
+                                            <td class="pf-v5-c-table__td" x-text="r.user_display"></td>
+                                            <td class="pf-v5-c-table__td" x-text="formatDate(r.redeemed_at)"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aircraft Roles Card -->
+            <div class="pf-v5-c-page__main-section" style="padding-top: 0;">
+                <div class="pf-v5-c-card">
+                    <div class="pf-v5-c-card__header">
+                        <div class="pf-v5-c-card__header-main">
+                            <h2 class="pf-v5-c-title pf-m-md">Initial Aircraft Roles</h2>
+                        </div>
+                    </div>
+                    <div class="pf-v5-c-card__body">
+                        <p style="margin-bottom: 1rem; font-size: 0.875rem; color: var(--pf-v5-global--Color--200);">
+                            When someone redeems this code, they'll be automatically granted the following roles.
+                        </p>
+
+                        <!-- Add Role Row -->
+                        <div style="display: flex; gap: 0.75rem; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <label class="pf-v5-c-form__label" style="font-size: 0.875rem;">Aircraft</label>
+                                <select class="pf-v5-c-form-control" x-model="newRoleAircraftId">
+                                    <option value="">Select aircraft...</option>
+                                    <template x-for="ac in aircraftList" :key="ac.id">
+                                        <option :value="ac.id" x-text="ac.tail_number"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div style="min-width: 140px;">
+                                <label class="pf-v5-c-form__label" style="font-size: 0.875rem;">Role</label>
+                                <select class="pf-v5-c-form-control" x-model="newRoleRole">
+                                    <option value="pilot">Pilot</option>
+                                    <option value="owner">Owner</option>
+                                </select>
+                            </div>
+                            <button class="pf-v5-c-button pf-m-secondary"
+                                    @click="addRole()"
+                                    :disabled="addingRole || !newRoleAircraftId">
+                                <span x-show="addingRole">Adding...</span>
+                                <span x-show="!addingRole"><i class="fas fa-plus"></i> Add</span>
+                            </button>
+                        </div>
+
+                        <!-- Roles Table -->
+                        <template x-if="code.initial_roles && code.initial_roles.length === 0">
+                            <p style="color: var(--pf-v5-global--Color--200); font-size: 0.875rem;">No aircraft roles assigned. Add one above.</p>
+                        </template>
+                        <template x-if="code.initial_roles && code.initial_roles.length > 0">
+                            <table class="pf-v5-c-table pf-m-compact" role="grid">
+                                <thead class="pf-v5-c-table__thead">
+                                    <tr class="pf-v5-c-table__tr">
+                                        <th class="pf-v5-c-table__th">Aircraft</th>
+                                        <th class="pf-v5-c-table__th">Role</th>
+                                        <th class="pf-v5-c-table__th"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="pf-v5-c-table__tbody">
+                                    <template x-for="role in code.initial_roles" :key="role.id">
+                                        <tr class="pf-v5-c-table__tr">
+                                            <td class="pf-v5-c-table__td" x-text="role.aircraft_tail_number"></td>
+                                            <td class="pf-v5-c-table__td">
+                                                <span class="pf-v5-c-label pf-m-compact"
+                                                      :class="role.role === 'owner' ? 'pf-m-blue' : 'pf-m-green'">
+                                                    <span class="pf-v5-c-label__content"
+                                                          x-text="role.role.charAt(0).toUpperCase() + role.role.slice(1)"></span>
+                                                </span>
+                                            </td>
+                                            <td class="pf-v5-c-table__td">
+                                                <button class="pf-v5-c-button pf-m-small pf-m-plain"
+                                                        title="Remove role"
+                                                        style="color: var(--pf-v5-global--danger-color--100);"
+                                                        @click="removeRole(role.id)">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/manage-invitation-detail.js' %}"></script>
+{% endblock %}

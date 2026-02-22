@@ -1,6 +1,7 @@
 from rest_framework import serializers
+from django.urls import reverse
 
-from .models import Aircraft, AircraftNote, AircraftEvent, AircraftRole, AircraftShareToken
+from .models import Aircraft, AircraftNote, AircraftEvent, AircraftRole, AircraftShareToken, InvitationCode, InvitationCodeAircraftRole, InvitationCodeRedemption
 from health.services import calculate_airworthiness
 
 
@@ -212,4 +213,65 @@ class AircraftRoleSerializer(serializers.ModelSerializer):
     def get_user_display(self, obj):
         full = obj.user.get_full_name()
         return full if full else obj.user.username
+
+
+class InvitationCodeAircraftRoleSerializer(serializers.ModelSerializer):
+    aircraft_tail_number = serializers.CharField(source='aircraft.tail_number', read_only=True)
+
+    class Meta:
+        model = InvitationCodeAircraftRole
+        fields = ['id', 'invitation_code', 'aircraft', 'aircraft_tail_number', 'role']
+        read_only_fields = ['id', 'aircraft_tail_number']
+
+
+class InvitationCodeRedemptionSerializer(serializers.ModelSerializer):
+    username = serializers.SerializerMethodField()
+    user_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = InvitationCodeRedemption
+        fields = ['id', 'user', 'username', 'user_display', 'redeemed_at']
+
+    def get_username(self, obj):
+        return obj.user.username
+
+    def get_user_display(self, obj):
+        return obj.user.get_full_name() or obj.user.username
+
+
+class InvitationCodeSerializer(serializers.ModelSerializer):
+    use_count = serializers.IntegerField(read_only=True)
+    created_by_username = serializers.SerializerMethodField()
+    is_valid = serializers.SerializerMethodField()
+    registration_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = InvitationCode
+        fields = [
+            'id', 'label', 'invited_email', 'invited_name',
+            'max_uses', 'use_count', 'created_by_username',
+            'created_at', 'expires_at', 'is_active', 'is_valid',
+            'registration_url',
+        ]
+        read_only_fields = ['id', 'use_count', 'created_by_username', 'created_at', 'is_valid', 'registration_url']
+
+    def get_created_by_username(self, obj):
+        return obj.created_by.username if obj.created_by else None
+
+    def get_is_valid(self, obj):
+        return obj.is_valid
+
+    def get_registration_url(self, obj):
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(reverse('register', args=[obj.token]))
+        return None
+
+
+class InvitationCodeDetailSerializer(InvitationCodeSerializer):
+    initial_roles = InvitationCodeAircraftRoleSerializer(many=True, read_only=True)
+    redemptions = InvitationCodeRedemptionSerializer(many=True, read_only=True)
+
+    class Meta(InvitationCodeSerializer.Meta):
+        fields = InvitationCodeSerializer.Meta.fields + ['initial_roles', 'redemptions']
 

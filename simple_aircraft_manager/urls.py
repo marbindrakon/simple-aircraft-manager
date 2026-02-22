@@ -42,6 +42,8 @@ router.register(r'major-records', health_views.MajorRepairAlterationViewSet)
 router.register(r'inspections', health_views.InspectionRecordViewSet)
 router.register(r'ad-compliances', health_views.ADComplianceViewSet)
 router.register(r'consumable-records', health_views.ConsumableRecordViewSet)
+router.register(r'invitation-codes', core_views.InvitationCodeViewSet, basename='invitation-code')
+router.register(r'invitation-code-roles', core_views.InvitationCodeAircraftRoleViewSet, basename='invitation-code-role')
 
 
 urlpatterns = [
@@ -61,6 +63,10 @@ urlpatterns = [
     path('register/<uuid:token>/', core_views.RegisterView.as_view(), name='register'),
     path('accounts/profile/', core_views.ProfileView.as_view(), name='profile'),
     path('api/user-search/', core_views.UserSearchView.as_view(), name='user-search'),
+    path('manage/', RedirectView.as_view(url='/manage/invitations/'), name='manage'),
+    path('manage/invitations/', core_views.ManageInvitationsView.as_view(), name='manage-invitations'),
+    path('manage/invitations/<uuid:pk>/', core_views.ManageInvitationDetailView.as_view(), name='manage-invitation-detail'),
+    path('manage/users/', core_views.ManageUsersView.as_view(), name='manage-users'),
     path('api/', include(router.urls)),
     path('admin/', admin.site.urls),
     path("accounts/logout/", core_views.custom_logout, name='logout'),  # Custom logout before django.contrib.auth.urls

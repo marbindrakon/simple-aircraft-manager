@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Manage Invitation Codes{% endblock %}
+
+{% block content %}
+<div x-data="manageInvitations()" x-init="init()">
+
+    <!-- Page Header -->
+    <div class="pf-v5-c-page__main-section pf-m-light">
+        <div class="pf-v5-c-content">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>Management</h1>
+                    <p>Manage invitation codes and users</p>
+                </div>
+                <button class="pf-v5-c-button pf-m-primary" @click="createModalOpen = true">
+                    <i class="fas fa-plus"></i> New Invitation Code
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sub-nav -->
+    <div class="pf-v5-c-page__main-section pf-m-light pf-m-no-padding">
+        <nav class="pf-v5-c-nav pf-m-horizontal" aria-label="Manage subnav">
+            <ul class="pf-v5-c-nav__list">
+                <li class="pf-v5-c-nav__item">
+                    <a href="{% url 'manage-invitations' %}" class="pf-v5-c-nav__link pf-m-current">Invitation Codes</a>
+                </li>
+                <li class="pf-v5-c-nav__item">
+                    <a href="{% url 'manage-users' %}" class="pf-v5-c-nav__link">Users</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Loading State -->
+    <div class="pf-v5-c-page__main-section" x-show="loading" x-cloak>
+        <div class="pf-v5-c-empty-state">
+            <div class="pf-v5-c-empty-state__content">
+                <div class="loading-spinner" style="width: 3rem; height: 3rem;"></div>
+                <h2 class="pf-v5-c-title pf-m-lg">Loading invitation codes...</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="pf-v5-c-page__main-section" x-show="!loading" x-cloak>
+        <div class="pf-v5-c-card">
+            <div class="pf-v5-c-card__body" style="padding: 0;">
+                <table class="pf-v5-c-table pf-m-grid-md" role="grid">
+                    <thead class="pf-v5-c-table__thead">
+                        <tr class="pf-v5-c-table__tr">
+                            <th class="pf-v5-c-table__th">Label</th>
+                            <th class="pf-v5-c-table__th">Email</th>
+                            <th class="pf-v5-c-table__th">Uses</th>
+                            <th class="pf-v5-c-table__th">Expires</th>
+                            <th class="pf-v5-c-table__th">Status</th>
+                            <th class="pf-v5-c-table__th">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="pf-v5-c-table__tbody">
+                        <template x-if="!loading && codes.length === 0">
+                            <tr class="pf-v5-c-table__tr">
+                                <td class="pf-v5-c-table__td" colspan="6" style="text-align: center; padding: 2rem; color: var(--pf-v5-global--Color--200);">
+                                    No invitation codes yet. Create one to get started.
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-for="code in codes" :key="code.id">
+                            <tr class="pf-v5-c-table__tr">
+                                <td class="pf-v5-c-table__td">
+                                    <a :href="'/manage/invitations/' + code.id + '/'"
+                                       style="font-weight: 600;"
+                                       x-text="code.label"></a>
+                                </td>
+                                <td class="pf-v5-c-table__td">
+                                    <span x-text="code.invited_email || '—'"></span>
+                                </td>
+                                <td class="pf-v5-c-table__td" x-text="formatUses(code)"></td>
+                                <td class="pf-v5-c-table__td">
+                                    <span x-text="code.expires_at ? formatDate(code.expires_at) : 'Never'"></span>
+                                </td>
+                                <td class="pf-v5-c-table__td">
+                                    <span class="pf-v5-c-label pf-m-compact"
+                                          :class="getStatusBadge(code).class">
+                                        <span class="pf-v5-c-label__content" x-text="getStatusBadge(code).text"></span>
+                                    </span>
+                                </td>
+                                <td class="pf-v5-c-table__td">
+                                    <template x-if="deletingId === code.id">
+                                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                            <span style="font-size: 0.875rem; color: var(--pf-v5-global--Color--200);">Delete?</span>
+                                            <button class="pf-v5-c-button pf-m-small pf-m-danger"
+                                                    @click="deleteCode(code.id)">Yes</button>
+                                            <button class="pf-v5-c-button pf-m-small pf-m-secondary"
+                                                    @click="deletingId = null">No</button>
+                                        </div>
+                                    </template>
+                                    <template x-if="deletingId !== code.id">
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <button class="pf-v5-c-button pf-m-small pf-m-plain"
+                                                    title="Copy registration link"
+                                                    @click="copyLink(code.registration_url)">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                            <button class="pf-v5-c-button pf-m-small pf-m-secondary"
+                                                    @click="toggleActive(code)"
+                                                    x-text="code.is_active ? 'Deactivate' : 'Activate'">
+                                            </button>
+                                            <button class="pf-v5-c-button pf-m-small pf-m-plain"
+                                                    title="Delete"
+                                                    style="color: var(--pf-v5-global--danger-color--100);"
+                                                    @click="deletingId = code.id">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Modal -->
+    <div class="pf-v5-c-backdrop" x-show="createModalOpen" x-cloak style="z-index: 1000;">
+        <div class="pf-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-sm" role="dialog" aria-modal="true" aria-labelledby="create-modal-title">
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="createModalOpen = false">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title" id="create-modal-title">New Invitation Code</h1>
+                </div>
+                <div class="pf-v5-c-modal-box__body">
+                    <form @submit.prevent="createCode()">
+                        <div class="pf-v5-c-form">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="create-label">
+                                    <span class="pf-v5-c-form__label-text">Label <span class="pf-v5-c-form__label-required">*</span></span>
+                                </label>
+                                <input class="pf-v5-c-form-control" type="text" id="create-label"
+                                       x-model="createForm.label"
+                                       placeholder="e.g. Club XYZ Pilots - Spring 2026"
+                                       required>
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="create-email">
+                                    <span class="pf-v5-c-form__label-text">Email (optional)</span>
+                                </label>
+                                <input class="pf-v5-c-form-control" type="email" id="create-email"
+                                       x-model="createForm.invited_email"
+                                       placeholder="Pre-fill for a specific person">
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="create-name">
+                                    <span class="pf-v5-c-form__label-text">Name (optional)</span>
+                                </label>
+                                <input class="pf-v5-c-form-control" type="text" id="create-name"
+                                       x-model="createForm.invited_name"
+                                       placeholder="Pre-fill name for a specific person">
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="create-max-uses">
+                                    <span class="pf-v5-c-form__label-text">Max Uses (optional)</span>
+                                </label>
+                                <input class="pf-v5-c-form-control" type="number" id="create-max-uses"
+                                       x-model="createForm.max_uses"
+                                       min="1"
+                                       placeholder="Leave blank for unlimited">
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="create-expires-at">
+                                    <span class="pf-v5-c-form__label-text">Expires At (optional)</span>
+                                </label>
+                                <input class="pf-v5-c-form-control" type="datetime-local" id="create-expires-at"
+                                       x-model="createForm.expires_at">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary"
+                            @click="createCode()"
+                            :disabled="createSubmitting || !createForm.label.trim()">
+                        <span x-show="createSubmitting">Creating...</span>
+                        <span x-show="!createSubmitting">Create Code</span>
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" @click="createModalOpen = false">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/manage-invitations.js' %}"></script>
+{% endblock %}

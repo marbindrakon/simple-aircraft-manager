@@ -1,5 +1,28 @@
 /* Custom overrides and additions to PatternFly */
 
+/* Management portal — ensure text is always readable in both themes */
+.pf-v5-c-page__main-section .pf-v5-c-table__td,
+.pf-v5-c-page__main-section .pf-v5-c-table__th,
+.pf-v5-c-page__main-section .pf-v5-c-content,
+.pf-v5-c-page__main-section .pf-v5-c-form__label-text {
+    color: var(--pf-v5-global--Color--100);
+}
+.pf-v5-c-page__main-section .pf-v5-c-breadcrumb__link {
+    color: var(--pf-v5-global--link--Color);
+}
+.pf-v5-c-page__main-section .pf-v5-c-breadcrumb__link.pf-m-current {
+    color: var(--pf-v5-global--Color--100);
+}
+
+/* Horizontal nav used as a sub-nav inside a light page section (not in the masthead).
+   pf-m-horizontal defaults to white links (for dark backgrounds); override for light context. */
+.pf-v5-c-page__main-section .pf-v5-c-nav.pf-m-horizontal .pf-v5-c-nav__link {
+    --pf-v5-c-nav__link--Color: var(--pf-v5-global--Color--100);
+    --pf-v5-c-nav__link--hover--Color: var(--pf-v5-global--Color--100);
+    --pf-v5-c-nav__link--m-current--Color: var(--pf-v5-global--Color--100);
+    --pf-v5-c-nav__link--after--BorderColor: var(--pf-v5-global--primary-color--100);
+}
+
 /* Alpine.js cloak */
 [x-cloak] { display: none !important; }
 

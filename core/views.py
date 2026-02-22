@@ -23,8 +23,10 @@ from django.utils import timezone
 from django.views import View
 from django.views.decorators.http import require_GET
 from django.views.generic import TemplateView
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.db.models import Prefetch
 from rest_framework import viewsets, status
+from rest_framework.permissions import IsAdminUser
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -33,7 +35,7 @@ from rest_framework.views import APIView
 from core.events import log_event
 from core.mixins import AircraftScopedMixin, EventLoggingMixin
 from core.forms import RegistrationForm, UserProfileForm
-from core.models import Aircraft, AircraftNote, AircraftEvent, AircraftRole, AircraftShareToken, InvitationCode, InvitationCodeRedemption
+from core.models import Aircraft, AircraftNote, AircraftEvent, AircraftRole, AircraftShareToken, InvitationCode, InvitationCodeAircraftRole, InvitationCodeRedemption
 from core.permissions import (
     get_user_role, has_aircraft_permission, user_can_create_aircraft,
     CanCreateAircraft, IsAircraftOwnerOrAdmin, IsAircraftPilotOrAbove,
@@ -43,6 +45,8 @@ from core.serializers import (
     AircraftNoteNestedSerializer, AircraftNoteCreateUpdateSerializer,
     AircraftEventSerializer, AircraftEventNestedSerializer,
     AircraftRoleSerializer, AircraftShareTokenSerializer,
+    InvitationCodeSerializer, InvitationCodeDetailSerializer,
+    InvitationCodeAircraftRoleSerializer,
 )
 from health.models import (
     Component, LogbookEntry, Squawk, Document, DocumentCollection,
@@ -1875,3 +1879,85 @@ class UserSearchView(APIView):
                 'display': f"{u.username} ({full_name})" if full_name else u.username,
             })
         return Response(results)
+
+
+class InvitationCodeViewSet(viewsets.ModelViewSet):
+    queryset = InvitationCode.objects.all().order_by('-created_at').prefetch_related(
+        'initial_roles__aircraft', 'redemptions__user'
+    )
+    serializer_class = InvitationCodeSerializer
+
+    def get_permissions(self):
+        return [IsAdminUser()]
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return InvitationCodeDetailSerializer
+        return InvitationCodeSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+    @action(detail=True, methods=['post'], url_path='toggle_active')
+    def toggle_active(self, request, pk=None):
+        code = self.get_object()
+        code.is_active = not code.is_active
+        code.save()
+        return Response(InvitationCodeSerializer(code, context={'request': request}).data)
+
+
+class InvitationCodeAircraftRoleViewSet(viewsets.ModelViewSet):
+    queryset = InvitationCodeAircraftRole.objects.all()
+    serializer_class = InvitationCodeAircraftRoleSerializer
+
+    def get_permissions(self):
+        return [IsAdminUser()]
+
+    def list(self, request, *args, **kwargs):
+        from rest_framework.exceptions import MethodNotAllowed
+        raise MethodNotAllowed('GET')
+
+    def retrieve(self, request, *args, **kwargs):
+        from rest_framework.exceptions import MethodNotAllowed
+        raise MethodNotAllowed('GET')
+
+    def update(self, request, *args, **kwargs):
+        from rest_framework.exceptions import MethodNotAllowed
+        raise MethodNotAllowed('PUT')
+
+    def partial_update(self, request, *args, **kwargs):
+        from rest_framework.exceptions import MethodNotAllowed
+        raise MethodNotAllowed('PATCH')
+
+
+class ManageInvitationsView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
+    template_name = 'manage/invitations.html'
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+
+class ManageInvitationDetailView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
+    template_name = 'manage/invitation_detail.html'
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['invitation_id'] = str(self.kwargs['pk'])
+        return context
+
+
+class ManageUsersView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
+    template_name = 'manage/users.html'
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['users'] = User.objects.all().prefetch_related(
+            Prefetch('aircraft_roles', queryset=AircraftRole.objects.select_related('aircraft'))
+        ).order_by('username')
+        return context
