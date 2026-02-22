@@ -196,7 +196,8 @@ function makeConsumableMixin(cfg) {
 
             if (dataPoints.length === 0) return;
 
-            const avg = (dataPoints.reduce((sum, v) => sum + parseFloat(v), 0) / dataPoints.length).toFixed(1);
+            const avgWindow = dataPoints.slice(-20);
+            const avg = (avgWindow.reduce((sum, v) => sum + parseFloat(v), 0) / avgWindow.length).toFixed(1);
 
             this[chart] = new Chart(canvas, {
                 type: 'line',

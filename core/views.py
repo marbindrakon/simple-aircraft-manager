@@ -1412,13 +1412,13 @@ class PublicAircraftSummaryAPI(View):
             'oil_records': ConsumableRecordNestedSerializer(
                 aircraft.consumable_records.filter(
                     record_type=ConsumableRecord.RECORD_TYPE_OIL
-                ).order_by('-date')[:20],
+                ).order_by('-flight_hours')[:21],
                 many=True
             ).data,
             'fuel_records': ConsumableRecordNestedSerializer(
                 aircraft.consumable_records.filter(
                     record_type=ConsumableRecord.RECORD_TYPE_FUEL
-                ).order_by('-date')[:20],
+                ).order_by('-flight_hours')[:21],
                 many=True
             ).data,
             'document_collections': [
