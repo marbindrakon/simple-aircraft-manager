@@ -228,6 +228,18 @@ function documentsMixin() {
             this.documentModalOpen = true;
         },
 
+        openDocumentModalForCollection(collection) {
+            this.editingDocument = null;
+            this.documentForm = {
+                name: '',
+                description: '',
+                doc_type: 'OTHER',
+                collection: collection.id,
+            };
+            this.documentImageFiles = [];
+            this.documentModalOpen = true;
+        },
+
         editDocument(doc, event) {
             if (event) event.stopPropagation();
             this.editingDocument = doc;

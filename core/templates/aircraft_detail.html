@@ -1793,6 +1793,9 @@
                                             <i class="fas fa-tools" :style="collection.visibility === 'maintenance' ? 'color: var(--pf-v5-global--info-color--100);' : 'opacity: 0.35;'"></i>
                                         </button>
                                     </div>
+                                    <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="openDocumentModalForCollection(collection)" title="Add document to collection">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
                                     <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editCollection(collection)" title="Edit collection">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
@@ -4249,7 +4252,7 @@
                                 <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
                             </label>
                             <div class="pf-v5-c-form__group-control">
-                                <input id="collection-name" class="pf-v5-c-form-control" type="text" x-model="collectionForm.name" required placeholder="e.g. Engine Logbook">
+                                <input id="collection-name" class="pf-v5-c-form-control" type="text" x-model="collectionForm.name" required placeholder="e.g. Engine Logbook" x-effect="if (collectionModalOpen) $nextTick(() => $el.focus())">
                             </div>
                         </div>
                         <div class="pf-v5-c-form__group">
@@ -4319,7 +4322,7 @@
                                 <div class="pf-v5-c-form__group-control">
                                     <select id="doc-collection" class="pf-v5-c-form-control" x-model="documentForm.collection">
                                         <option value="">-- None --</option>
-                                        <template x-for="col in documentCollections" :key="col.id">
+                                        <template x-for="col in [...documentCollections].sort((a, b) => a.name.localeCompare(b.name))" :key="col.id">
                                             <option :value="col.id" x-text="col.name"></option>
                                         </template>
                                     </select>
