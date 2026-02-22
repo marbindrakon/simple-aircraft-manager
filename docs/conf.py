@@ -1,7 +1,7 @@
 # Configuration file for the Sphinx documentation builder.
 
 project = 'Simple Aircraft Manager'
-copyright = '2026, Simple Aircraft Manager'
+copyright = ''
 author = 'Simple Aircraft Manager'
 
 extensions = [
