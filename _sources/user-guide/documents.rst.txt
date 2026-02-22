@@ -15,7 +15,9 @@ Document Organization
 Documents can be organized into **collections** (folders) or left uncollected.
 
 - **Collections** group related documents together (e.g., "Airframe Log #4" or
-  "2024 Annual Inspection"). Each collection shows a page count badge.
+  "2024 Annual Inspection"). Collections are sorted alphabetically and each
+  shows a page count badge. Click the collection header to expand or collapse
+  its contents -- collections start collapsed by default.
 - **Other Documents** -- Documents not assigned to a collection appear in an
   "Other Documents" section at the bottom.
 
@@ -32,20 +34,23 @@ Each document is displayed as a thumbnail card showing:
 Creating a Collection
 ---------------------
 
-1. Click **Add Collection** (owners only).
+1. Click **Add Collection** (owners only). The Name field is focused
+   automatically so you can start typing immediately.
 2. Enter a **name** and optional **description**.
 3. Click **Save**.
 
 Adding a Document
 -----------------
 
-1. Click **Add Document** (owners only).
+1. Click **Add Document** (owners only), or click the **plus icon** in a
+   collection card header to add a document directly into that collection.
 2. Fill in:
 
    - **Name** -- A descriptive name for the document.
    - **Document Type** -- Select the type (Log, Alteration, Report, Invoice,
      Aircraft Record, or Other).
-   - **Collection** -- Optionally assign to an existing collection.
+   - **Collection** -- Optionally assign to an existing collection. Collections
+     are listed alphabetically.
    - **Images** -- Upload one or more image files. These become the pages of
      the document.
 
