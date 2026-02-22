@@ -27,7 +27,7 @@ class Aircraft(models.Model):
     model = models.CharField(max_length=254, blank=True)
     serial_number = models.CharField(max_length=254, blank=True)
     description = models.TextField(blank=True)
-    purchased = models.DateField(blank=True)
+    purchased = models.DateField(blank=True, null=True)
     added = models.DateTimeField(auto_now_add=True, editable=False)
     picture = models.ImageField(upload_to=random_picture_filename, blank=True)
     status = models.CharField(max_length=254, blank=False, choices=AIRCRAFT_STATUSES, default="AVAILABLE")

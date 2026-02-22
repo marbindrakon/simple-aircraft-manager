@@ -593,7 +593,7 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
                     model=aircraft_data.get('model', ''),
                     serial_number=aircraft_data.get('serial_number', ''),
                     description=aircraft_data.get('description', ''),
-                    purchased=_parse_date(aircraft_data.get('purchased')) or '1900-01-01',
+                    purchased=_parse_date(aircraft_data.get('purchased')),
                     status=aircraft_data.get('status', 'AVAILABLE'),
                     flight_time=_parse_decimal(aircraft_data.get('flight_time')) or Decimal('0.0'),
                 )
