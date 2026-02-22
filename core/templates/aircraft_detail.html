@@ -1767,8 +1767,8 @@
                 <!-- Document Collections -->
                 <div class="pf-v5-l-stack pf-m-gutter" x-show="documentCollections.length > 0 || uncollectedDocuments.length > 0">
                     <!-- Collections -->
-                    <template x-for="collection in documentCollections" :key="collection.id">
-                        <div class="pf-v5-c-card" x-data="{ collapsed: false }">
+                    <template x-for="collection in [...documentCollections].sort((a, b) => (a.name || '').localeCompare(b.name || ''))" :key="collection.id">
+                        <div class="pf-v5-c-card" x-data="{ collapsed: true }">
                             <div class="pf-v5-c-card__header">
                                 <div class="pf-v5-c-card__header-main">
                                     <div class="pf-v5-c-card__title" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;" @click="collapsed = !collapsed">
