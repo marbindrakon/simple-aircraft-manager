@@ -1768,10 +1768,11 @@
                 <div class="pf-v5-l-stack pf-m-gutter" x-show="documentCollections.length > 0 || uncollectedDocuments.length > 0">
                     <!-- Collections -->
                     <template x-for="collection in documentCollections" :key="collection.id">
-                        <div class="pf-v5-c-card">
+                        <div class="pf-v5-c-card" x-data="{ collapsed: false }">
                             <div class="pf-v5-c-card__header">
                                 <div class="pf-v5-c-card__header-main">
-                                    <div class="pf-v5-c-card__title">
+                                    <div class="pf-v5-c-card__title" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;" @click="collapsed = !collapsed">
+                                        <i class="fas" :class="collapsed ? 'fa-chevron-right' : 'fa-chevron-down'" style="font-size: 0.75rem; opacity: 0.6;"></i>
                                         <h2 x-text="collection.name"></h2>
                                     </div>
                                 </div>
@@ -1807,12 +1808,12 @@
                                     </span>
                                 </div>
                             </div>
-                            <template x-if="collection.description">
+                            <template x-if="collection.description && !collapsed">
                                 <div class="pf-v5-c-card__body">
                                     <p x-text="collection.description" style="color: var(--pf-v5-global--Color--200);"></p>
                                 </div>
                             </template>
-                            <div class="pf-v5-c-card__body">
+                            <div class="pf-v5-c-card__body" x-show="!collapsed">
                                 <div class="document-grid">
                                     <template x-for="doc in collection.documents" :key="doc.id">
                                         <div class="document-item" style="position: relative;" @click="openDocumentViewer(doc, collection.name)">
