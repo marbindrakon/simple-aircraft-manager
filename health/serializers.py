@@ -136,6 +136,7 @@ class DocumentCollectionNestedSerializer(serializers.ModelSerializer):
             'name',
             'description',
             'visibility',
+            'starred',
             'documents',
             'document_count',
         ]
@@ -155,6 +156,7 @@ class DocumentCollectionSerializer(serializers.HyperlinkedModelSerializer):
                 'name',
                 'description',
                 'visibility',
+                'starred',
                 'documents',
                 ]
         read_only_fields = ['documents']

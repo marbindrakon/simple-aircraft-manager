@@ -289,12 +289,12 @@
                         <div class="pf-v5-c-card__actions">
                             <template x-if="aircraft?.airworthiness?.red_count > 0">
                                 <span class="pf-v5-c-label pf-m-red">
-                                    <span x-text="aircraft.airworthiness.red_count"></span> Grounding
+                                    <span x-text="aircraft.airworthiness.red_count + ' Grounding'"></span>
                                 </span>
                             </template>
                             <template x-if="aircraft?.airworthiness?.orange_count > 0">
                                 <span class="pf-v5-c-label pf-m-orange" style="margin-left: 0.5rem;">
-                                    <span x-text="aircraft.airworthiness.orange_count"></span> Upcoming
+                                    <span x-text="aircraft.airworthiness.orange_count + ' Upcoming'"></span>
                                 </span>
                             </template>
                         </div>
@@ -1767,7 +1767,7 @@
                 <!-- Document Collections -->
                 <div class="pf-v5-l-stack pf-m-gutter" x-show="documentCollections.length > 0 || uncollectedDocuments.length > 0">
                     <!-- Collections -->
-                    <template x-for="collection in [...documentCollections].sort((a, b) => (a.name || '').localeCompare(b.name || ''))" :key="collection.id">
+                    <template x-for="collection in [...documentCollections].sort((a, b) => { if (a.starred && !b.starred) return -1; if (!a.starred && b.starred) return 1; return (a.name || '').localeCompare(b.name || ''); })" :key="collection.id">
                         <div class="pf-v5-c-card" x-data="{ collapsed: true }">
                             <div class="pf-v5-c-card__header">
                                 <div class="pf-v5-c-card__header-main">
@@ -1777,6 +1777,11 @@
                                     </div>
                                 </div>
                                 <div class="pf-v5-c-card__actions" style="display: flex; align-items: center; gap: 0.25rem;">
+                                    <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="starCollection(collection)"
+                                            :title="collection.starred ? 'Unpin collection' : 'Pin collection to top'"
+                                            :style="collection.starred ? 'color: var(--pf-v5-global--warning-color--100);' : 'opacity: 0.35;'">
+                                        <i class="fas fa-star"></i>
+                                    </button>
                                     <div x-show="isOwner" style="display: flex; gap: 0; align-items: center; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 3px; overflow: hidden;">
                                         <button class="pf-v5-c-button pf-m-plain" style="padding: 0.2rem 0.4rem; font-size: 0.75rem; border-radius: 0;"
                                                 @click="setCollectionVisibility(collection, 'private')" title="Private — not visible on share links"
@@ -1804,7 +1809,7 @@
                                         <i class="fas fa-trash"></i>
                                     </button>
                                     <span class="pf-v5-c-label pf-m-blue">
-                                        <span x-text="collection.document_count"></span> pages
+                                        <span x-text="collection.document_count + ' pages'"></span>
                                     </span>
                                 </div>
                             </div>
@@ -1867,7 +1872,7 @@
                                 </div>
                                 <div class="pf-v5-c-card__actions">
                                     <span class="pf-v5-c-label pf-m-grey">
-                                        <span x-text="uncollectedDocuments.length"></span> documents
+                                        <span x-text="uncollectedDocuments.length + ' documents'"></span>
                                     </span>
                                 </div>
                             </div>

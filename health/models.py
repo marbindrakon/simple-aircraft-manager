@@ -113,6 +113,7 @@ class DocumentCollection(models.Model):
     name = models.CharField(max_length=254)
     description = models.TextField(blank=True)
     visibility = models.CharField(max_length=20, choices=DOCUMENT_VISIBILITY_CHOICES, default='private')
+    starred = models.BooleanField(default=False)
 
     def __str__(self):
         ret_string = ""

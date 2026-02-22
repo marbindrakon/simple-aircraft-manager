@@ -97,13 +97,13 @@
                                 <template x-if="aircraft.airworthiness.red_count > 0">
                                     <span class="issue-count issue-red">
                                         <i class="fas fa-times-circle"></i>
-                                        <span x-text="aircraft.airworthiness.red_count"></span> grounding
+                                        <span x-text="aircraft.airworthiness.red_count + ' grounding'"></span>
                                     </span>
                                 </template>
                                 <template x-if="aircraft.airworthiness.orange_count > 0">
                                     <span class="issue-count issue-orange">
                                         <i class="fas fa-exclamation-triangle"></i>
-                                        <span x-text="aircraft.airworthiness.orange_count"></span> upcoming
+                                        <span x-text="aircraft.airworthiness.orange_count + ' upcoming'"></span>
                                     </span>
                                 </template>
                             </div>

@@ -386,6 +386,21 @@ function documentsMixin() {
             }
         },
 
+        async starCollection(collection) {
+            const newValue = !collection.starred;
+            try {
+                await apiRequest(`/api/document-collections/${collection.id}/`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ starred: newValue }),
+                });
+                collection.starred = newValue;
+                showNotification(newValue ? 'Collection pinned to top' : 'Collection unpinned', 'success');
+            } catch (error) {
+                console.error('Error starring collection:', error);
+                showNotification('Failed to update collection', 'danger');
+            }
+        },
+
         async setCollectionVisibility(collection, value) {
             // value: 'private' | 'status' | 'maintenance'
             try {

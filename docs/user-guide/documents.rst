@@ -15,9 +15,10 @@ Document Organization
 Documents can be organized into **collections** (folders) or left uncollected.
 
 - **Collections** group related documents together (e.g., "Airframe Log #4" or
-  "2024 Annual Inspection"). Collections are sorted alphabetically and each
-  shows a page count badge. Click the collection header to expand or collapse
-  its contents -- collections start collapsed by default.
+  "2024 Annual Inspection"). Collections are sorted with starred (pinned)
+  collections first, then alphabetically. Each collection shows a page count
+  badge. Click the collection header to expand or collapse its contents --
+  collections start collapsed by default.
 - **Other Documents** -- Documents not assigned to a collection appear in an
   "Other Documents" section at the bottom.
 
@@ -88,6 +89,17 @@ public share links (see :doc:`sharing-and-access`):
 - **Minus icon** -- Inherits visibility from the collection.
 
 For uncollected documents, the toggle is simpler -- shared or private.
+
+Pinning Collections
+-------------------
+
+Owners can **star** a collection to pin it above all non-starred collections.
+Click the **star icon** in the collection card header to toggle pinning on or
+off. The star appears gold when active. Within the pinned and unpinned groups,
+collections are still sorted alphabetically.
+
+This is useful for keeping high-priority collections like POH, W&B, or
+Airframe Logbook always visible at the top.
 
 Editing and Deleting
 --------------------
