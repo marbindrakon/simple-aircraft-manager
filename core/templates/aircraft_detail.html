@@ -2684,7 +2684,7 @@
                                     <div class="pf-v5-c-form__group" style="margin-bottom: 0.75rem;">
                                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
                                             <span style="font-size: 0.8rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.04em;">AD Compliance</span>
-                                            <button type="button" class="pf-v5-c-button pf-m-link pf-m-inline" @click="addAdAssociation()" :disabled="availableAdsForLogbook.length === 0" style="font-size: 0.8rem;">+ Add AD</button>
+                                            <button type="button" class="pf-v5-c-button pf-m-link pf-m-inline" @click="addAdAssociation()" :disabled="availableAdsForLogbook.length === 0" style="font-size: 0.8rem;">+ Add Bulletin</button>
                                         </div>
                                         <template x-for="(adAssoc, idx) in logbookAssociations.ads" :key="idx">
                                             <div style="display: flex; gap: 0.5rem; align-items: center; padding: 0.5rem; background: var(--pf-v5-global--BackgroundColor--200); border-radius: 4px; margin-bottom: 0.35rem;">
@@ -3962,7 +3962,7 @@
                 </button>
 
                 <header class="pf-v5-c-modal-box__header">
-                    <h1 class="pf-v5-c-modal-box__title" x-text="editingComplianceRecord ? 'Edit Compliance Record' : 'Record AD Compliance'"></h1>
+                    <h1 class="pf-v5-c-modal-box__title" x-text="editingComplianceRecord ? 'Edit Compliance Record' : 'Record Bulletin Compliance'"></h1>
                     <template x-if="selectedAd">
                         <div class="pf-v5-c-modal-box__description" x-text="selectedAd.name + ' — ' + selectedAd.short_description"></div>
                     </template>

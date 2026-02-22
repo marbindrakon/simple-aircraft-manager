@@ -180,18 +180,18 @@ function adsMixin() {
                 });
 
                 if (response.ok) {
-                    showNotification('AD added to aircraft', 'success');
+                    showNotification('Bulletin added to aircraft', 'success');
                     this.closeAdModal();
                     this.adsLoaded = false;
                     await this.loadAds();
                     await this.loadData();
                 } else {
                     const errorData = await response.json();
-                    showNotification(errorData.error || 'Failed to add AD', 'danger');
+                    showNotification(errorData.error || 'Failed to add bulletin', 'danger');
                 }
             } catch (error) {
-                console.error('Error adding AD:', error);
-                showNotification('Error adding AD', 'danger');
+                console.error('Error adding bulletin:', error);
+                showNotification('Error adding bulletin', 'danger');
             } finally {
                 this.adSubmitting = false;
             }
@@ -225,7 +225,7 @@ function adsMixin() {
                 });
 
                 if (response.ok) {
-                    showNotification('AD created and added to aircraft', 'success');
+                    showNotification('Bulletin created and added to aircraft', 'success');
                     this.closeAdModal();
                     this.adsLoaded = false;
                     await this.loadAds();
@@ -234,12 +234,12 @@ function adsMixin() {
                     const errorData = await response.json();
                     const msg = typeof errorData === 'object'
                         ? Object.values(errorData).flat().join(', ')
-                        : 'Failed to create AD';
+                        : 'Failed to create bulletin';
                     showNotification(msg, 'danger');
                 }
             } catch (error) {
-                console.error('Error creating AD:', error);
-                showNotification('Error creating AD', 'danger');
+                console.error('Error creating bulletin:', error);
+                showNotification('Error creating bulletin', 'danger');
             } finally {
                 this.adSubmitting = false;
             }
@@ -273,7 +273,7 @@ function adsMixin() {
                 });
 
                 if (response.ok) {
-                    showNotification('AD updated', 'success');
+                    showNotification('Bulletin updated', 'success');
                     this.closeAdModal();
                     this.adsLoaded = false;
                     await this.loadAds();
@@ -282,19 +282,19 @@ function adsMixin() {
                     const errorData = await response.json();
                     const msg = typeof errorData === 'object'
                         ? Object.values(errorData).flat().join(', ')
-                        : 'Failed to update AD';
+                        : 'Failed to update bulletin';
                     showNotification(msg, 'danger');
                 }
             } catch (error) {
-                console.error('Error updating AD:', error);
-                showNotification('Error updating AD', 'danger');
+                console.error('Error updating bulletin:', error);
+                showNotification('Error updating bulletin', 'danger');
             } finally {
                 this.adSubmitting = false;
             }
         },
 
         async removeAd(ad) {
-            if (!confirm(`Remove AD "${ad.name}" from this aircraft?`)) return;
+            if (!confirm(`Remove bulletin "${ad.name}" from this aircraft?`)) return;
             try {
                 const response = await fetch(`/api/aircraft/${this.aircraftId}/remove_ad/`, {
                     method: 'POST',
@@ -306,16 +306,16 @@ function adsMixin() {
                 });
 
                 if (response.ok) {
-                    showNotification('AD removed from aircraft', 'success');
+                    showNotification('Bulletin removed from aircraft', 'success');
                     this.adsLoaded = false;
                     await this.loadAds();
                     await this.loadData();
                 } else {
-                    showNotification('Failed to remove AD', 'danger');
+                    showNotification('Failed to remove bulletin', 'danger');
                 }
             } catch (error) {
-                console.error('Error removing AD:', error);
-                showNotification('Error removing AD', 'danger');
+                console.error('Error removing bulletin:', error);
+                showNotification('Error removing bulletin', 'danger');
             }
         },
 
