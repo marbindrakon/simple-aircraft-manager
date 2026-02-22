@@ -341,14 +341,19 @@ def build_manifest(aircraft):
     )
 
     component_ids = [c.id for c in components]
-    inspection_types = list(
-        (InspectionType.objects.filter(applicable_aircraft=aircraft) |
-         InspectionType.objects.filter(applicable_component__in=component_ids)).distinct()
-        .prefetch_related('applicable_aircraft', 'applicable_component')
-    )
     inspection_records = list(
         InspectionRecord.objects.filter(aircraft=aircraft)
         .prefetch_related('documents', 'component')
+    )
+    # Include types linked to this aircraft/components, plus any types directly
+    # referenced by existing inspection records (in case the M2M association was
+    # removed after the record was created).
+    referenced_type_ids = {r.inspection_type_id for r in inspection_records if r.inspection_type_id}
+    inspection_types = list(
+        (InspectionType.objects.filter(applicable_aircraft=aircraft) |
+         InspectionType.objects.filter(applicable_component__in=component_ids) |
+         InspectionType.objects.filter(id__in=referenced_type_ids)).distinct()
+        .prefetch_related('applicable_aircraft', 'applicable_component')
     )
 
     ads = list(
