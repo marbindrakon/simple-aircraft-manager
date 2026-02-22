@@ -199,7 +199,7 @@
 <li class="toctree-l1"><a class="reference internal" href="components.html">Components</a></li>
 <li class="toctree-l1"><a class="reference internal" href="squawks.html">Squawks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="logbook.html">Logbook</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ads.html">Airworthiness Directives (ADs)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ads.html">ADs / Bulletins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="inspections.html">Inspections</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oil-and-fuel.html">Oil &amp; Fuel Tracking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="documents.html">Documents</a></li>
@@ -296,14 +296,19 @@ until the issues are resolved. The “Update Hours” button is disabled.</p></t
 <h2>How Status is Calculated<a class="headerlink" href="#how-status-is-calculated" title="Link to this heading">¶</a></h2>
 <p>The system checks the following areas, in order. The overall status is
 determined by the most severe issue found:</p>
-<section id="ad-compliance">
-<h3>1. AD Compliance<a class="headerlink" href="#ad-compliance" title="Link to this heading">¶</a></h3>
+<section id="mandatory-bulletin-compliance">
+<h3>1. Mandatory Bulletin Compliance<a class="headerlink" href="#mandatory-bulletin-compliance" title="Link to this heading">¶</a></h3>
+<p>Only bulletins marked <strong>Mandatory</strong> (see <a class="reference internal" href="ads.html"><span class="doc">ADs / Bulletins</span></a>) are included in the
+airworthiness calculation. Optional/advisory bulletins (SAIBs, non-mandatory
+SBs, etc.) are tracked for reference but never affect status.</p>
 <ul class="simple">
-<li><p><strong>Red</strong> – Any Airworthiness Directive is overdue (past its next-due date or
-hours).</p></li>
-<li><p><strong>Orange</strong> – Any AD is coming due within <strong>10 flight hours</strong> of its
-hour-based limit.</p></li>
+<li><p><strong>Red</strong> – Any mandatory bulletin is overdue (past its next-due date or
+hours), or has no compliance record at all.</p></li>
+<li><p><strong>Orange</strong> – Any mandatory bulletin is coming due within <strong>10 flight hours</strong>
+or <strong>30 calendar days</strong> of its limit.</p></li>
 </ul>
+<p>Issue titles in the Airworthiness Issues card show the bulletin type prefix
+(e.g. “AD 2024-01-05 - Overdue”, “SB 300-27-01 - Due Soon”).</p>
 </section>
 <section id="grounding-squawks">
 <h3>2. Grounding Squawks<a class="headerlink" href="#grounding-squawks" title="Link to this heading">¶</a></h3>
@@ -359,7 +364,7 @@ issues.</p></li>
 <h2>Resolving Issues<a class="headerlink" href="#resolving-issues" title="Link to this heading">¶</a></h2>
 <p>To return an aircraft to green status, address each flagged issue:</p>
 <ul class="simple">
-<li><p><strong>Overdue AD</strong> – Record a compliance action on the <a class="reference internal" href="ads.html"><span class="doc">Airworthiness Directives (ADs)</span></a> tab.</p></li>
+<li><p><strong>Overdue mandatory bulletin</strong> – Record a compliance action on the <a class="reference internal" href="ads.html"><span class="doc">ADs / Bulletins</span></a> tab.</p></li>
 <li><p><strong>Grounding squawk</strong> – Resolve the squawk on the <a class="reference internal" href="squawks.html"><span class="doc">Squawks</span></a> tab.</p></li>
 <li><p><strong>Overdue inspection</strong> – Record an inspection on the <a class="reference internal" href="inspections.html"><span class="doc">Inspections</span></a> tab.</p></li>
 <li><p><strong>Component replacement due</strong> – Reset the service time on the
@@ -427,7 +432,7 @@ issues.</p></li>
 <li><a class="reference internal" href="#">Airworthiness Status</a><ul>
 <li><a class="reference internal" href="#status-levels">Status Levels</a></li>
 <li><a class="reference internal" href="#how-status-is-calculated">How Status is Calculated</a><ul>
-<li><a class="reference internal" href="#ad-compliance">1. AD Compliance</a></li>
+<li><a class="reference internal" href="#mandatory-bulletin-compliance">1. Mandatory Bulletin Compliance</a></li>
 <li><a class="reference internal" href="#grounding-squawks">2. Grounding Squawks</a></li>
 <li><a class="reference internal" href="#inspection-recurrency">3. Inspection Recurrency</a></li>
 <li><a class="reference internal" href="#component-replacement">4. Component Replacement</a></li>

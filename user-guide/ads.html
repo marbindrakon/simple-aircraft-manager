@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Inspections" href="inspections.html"><link rel="prev" title="Logbook" href="logbook.html">
 
     <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
-        <title>Airworthiness Directives (ADs) - Simple Aircraft Manager</title>
+        <title>ADs / Bulletins - Simple Aircraft Manager</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -199,7 +199,7 @@
 <li class="toctree-l1"><a class="reference internal" href="components.html">Components</a></li>
 <li class="toctree-l1"><a class="reference internal" href="squawks.html">Squawks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="logbook.html">Logbook</a></li>
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Airworthiness Directives (ADs)</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">ADs / Bulletins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="inspections.html">Inspections</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oil-and-fuel.html">Oil &amp; Fuel Tracking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="documents.html">Documents</a></li>
@@ -253,81 +253,120 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="airworthiness-directives-ads">
-<h1>Airworthiness Directives (ADs)<a class="headerlink" href="#airworthiness-directives-ads" title="Link to this heading">¶</a></h1>
-<p>The ADs tab tracks FAA Airworthiness Directives that apply to your aircraft.
-ADs are mandatory safety requirements that must be complied with to maintain
-airworthiness.</p>
-<p>The ADs tab in the navigation shows a <strong>badge count</strong> when there are overdue or
-upcoming AD compliance issues.</p>
-<section id="ad-list">
-<h2>AD List<a class="headerlink" href="#ad-list" title="Link to this heading">¶</a></h2>
-<p>ADs are displayed in a table with the following columns:</p>
+          <section id="ads-bulletins">
+<h1>ADs / Bulletins<a class="headerlink" href="#ads-bulletins" title="Link to this heading">¶</a></h1>
+<p>The <strong>ADs / Bulletins</strong> tab tracks Airworthiness Directives and other maintenance
+bulletins that apply to your aircraft. Mandatory bulletins (such as FAA ADs) affect
+airworthiness status; optional/advisory bulletins are tracked for completeness but
+do not affect the airworthiness badge.</p>
+<p>The tab in the navigation shows a <strong>badge count</strong> when mandatory bulletins have
+overdue or missing compliance records.</p>
+<section id="bulletin-types">
+<h2>Bulletin Types<a class="headerlink" href="#bulletin-types" title="Link to this heading">¶</a></h2>
+<p>Each bulletin has a <strong>type</strong> that describes its origin and authority:</p>
 <ul class="simple">
-<li><p><strong>AD Name</strong> – The AD number or identifier (e.g., “2024-01-05”).</p></li>
-<li><p><strong>Description</strong> – A short summary of what the AD requires.</p></li>
-<li><p><strong>Recurring</strong> – Whether the AD requires repeated compliance, and at what
+<li><p><strong>AD</strong> – FAA Airworthiness Directive. Mandatory federal regulation.</p></li>
+<li><p><strong>SAIB</strong> – Special Airworthiness Information Bulletin. FAA advisory;
+non-mandatory.</p></li>
+<li><p><strong>SB</strong> – Manufacturer Service Bulletin. May be mandatory or optional
+depending on context.</p></li>
+<li><p><strong>Airworthiness Alert</strong> – FAA advisory notice; non-mandatory.</p></li>
+<li><p><strong>Other</strong> – Any other bulletin or notice you want to track.</p></li>
+</ul>
+<p>The type is shown as a badge on each row: red for ADs, blue for all others.</p>
+</section>
+<section id="mandatory-vs-optional-advisory">
+<h2>Mandatory vs Optional / Advisory<a class="headerlink" href="#mandatory-vs-optional-advisory" title="Link to this heading">¶</a></h2>
+<p>The <strong>Mandatory</strong> checkbox controls whether a bulletin affects airworthiness
+status:</p>
+<ul class="simple">
+<li><p><strong>Mandatory</strong> – Overdue or missing compliance turns the airworthiness badge
+red. These appear in the <strong>Mandatory</strong> section of the tab.</p></li>
+<li><p><strong>Not mandatory</strong> – Tracked for reference but does not affect airworthiness.
+These appear in the <strong>Optional / Advisory</strong> section.</p></li>
+</ul>
+<p>When you add a new AD, the Mandatory checkbox is automatically set to checked.
+For SAIBs, SBs, and other advisory types, it is automatically unchecked. You
+can override this manually before saving.</p>
+</section>
+<section id="bulletin-list">
+<h2>Bulletin List<a class="headerlink" href="#bulletin-list" title="Link to this heading">¶</a></h2>
+<p>The tab is split into two sections: <strong>Mandatory</strong> (top) and <strong>Optional /
+Advisory</strong> (bottom). Each section shows a table with the following columns:</p>
+<ul class="simple">
+<li><p><strong>Type</strong> – Bulletin type badge (AD, SAIB, SB, etc.).</p></li>
+<li><p><strong>Name</strong> – The bulletin number or identifier (e.g., “2024-01-05”,
+“SB-300-27-01”).</p></li>
+<li><p><strong>Description</strong> – A short summary of what the bulletin covers.</p></li>
+<li><p><strong>Recurring</strong> – Whether repeated compliance is required, and at what
 interval (hours or months).</p></li>
 <li><p><strong>Status</strong> – Color-coded compliance status:</p>
 <ul>
-<li><p><strong>Compliant</strong> (green) – The AD is currently in compliance.</p></li>
-<li><p><strong>Due Soon</strong> (orange) – Compliance is coming due within 10 hours or
-30 days.</p></li>
-<li><p><strong>Overdue</strong> (red) – Compliance has lapsed. This grounds the aircraft.</p></li>
+<li><p><strong>Compliant</strong> (green) – Currently in compliance.</p></li>
+<li><p><strong>Due Soon</strong> (orange) – Compliance coming due within 10 hours or 30 days.</p></li>
+<li><p><strong>Overdue</strong> (red) – Compliance has lapsed. For mandatory bulletins, this
+grounds the aircraft.</p></li>
 <li><p><strong>Not Complied</strong> – No compliance record exists yet.</p></li>
+<li><p><strong>Conditional</strong> – Only applies when a trigger condition is met.</p></li>
 </ul>
 </li>
-<li><p><strong>Last Complied</strong> – The date of the most recent compliance action.</p></li>
+<li><p><strong>Last Complied</strong> – Date of the most recent compliance action.</p></li>
 <li><p><strong>Next Due</strong> – When the next compliance action is due (date or hours).</p></li>
 </ul>
 </section>
-<section id="adding-an-ad">
-<h2>Adding an AD<a class="headerlink" href="#adding-an-ad" title="Link to this heading">¶</a></h2>
+<section id="adding-a-bulletin">
+<h2>Adding a Bulletin<a class="headerlink" href="#adding-a-bulletin" title="Link to this heading">¶</a></h2>
 <ol class="arabic simple">
-<li><p>Click <strong>Add AD</strong> on the ADs tab (owners only).</p></li>
+<li><p>Click <strong>Add Bulletin</strong> on the ADs / Bulletins tab (owners only).</p></li>
 <li><p>Fill in:</p>
 <ul class="simple">
-<li><p><strong>AD Name</strong> – The official AD number.</p></li>
+<li><p><strong>Bulletin Type</strong> – Select the type (AD, SAIB, SB, etc.). Choosing a
+type automatically sets the Mandatory checkbox for you; override as needed.</p></li>
+<li><p><strong>Mandatory</strong> – Check to include this bulletin in airworthiness status
+calculations. Uncheck for advisory/optional tracking only.</p></li>
+<li><p><strong>Name / Number</strong> – The official bulletin number or identifier.</p></li>
 <li><p><strong>Short Description</strong> – A brief summary.</p></li>
-<li><p><strong>Compliance Type</strong> – Select the type:</p>
+<li><p><strong>Compliance Type</strong> – Select the compliance model:</p>
 <ul>
-<li><p><strong>Standard</strong> – A normal recurring or one-time AD.</p></li>
-<li><p><strong>Conditional</strong> – An AD that only applies when a trigger condition is
-met. Enter the trigger condition in the field that appears.</p></li>
+<li><p><strong>Standard</strong> – A normal recurring or one-time bulletin.</p></li>
+<li><p><strong>Conditional</strong> – Only applies when a trigger condition is met. Enter
+the trigger condition in the field that appears.</p></li>
 </ul>
 </li>
-<li><p><strong>Recurring</strong> – Check this if the AD requires repeated compliance.</p></li>
+<li><p><strong>Recurring</strong> – Check if the bulletin requires repeated compliance.</p></li>
 <li><p><strong>Recurring Hours</strong> – For hour-based recurrence (e.g., every 100 hours).</p></li>
 <li><p><strong>Recurring Months</strong> – For calendar-based recurrence (e.g., every 12
 months).</p></li>
 </ul>
 </li>
-<li><p>Click <strong>Save</strong>.</p></li>
+<li><p>Click <strong>Create and Add to Aircraft</strong>.</p></li>
 </ol>
+<p>You can also add a bulletin that already exists in the system by selecting it
+from the <strong>Add Existing Bulletin</strong> dropdown at the top of the modal.</p>
 </section>
 <section id="recording-compliance">
 <h2>Recording Compliance<a class="headerlink" href="#recording-compliance" title="Link to this heading">¶</a></h2>
-<p>When you comply with an AD:</p>
+<p>When you comply with a bulletin:</p>
 <ol class="arabic simple">
-<li><p>Click the <strong>checkmark</strong> button on the AD row.</p></li>
+<li><p>Click the <strong>checkmark</strong> button on the bulletin row.</p></li>
 <li><p>Fill in the compliance record:</p>
 <ul class="simple">
 <li><p><strong>Date Complied</strong> – The date the compliance action was performed.</p></li>
 <li><p><strong>Hours at Compliance</strong> – Aircraft hours at the time.</p></li>
 <li><p><strong>Notes</strong> – Details about what was done.</p></li>
 <li><p><strong>Permanent</strong> – Check this if the compliance action permanently resolves
-the AD (e.g., replacing the affected part with a non-affected part).</p></li>
+the bulletin (e.g., replacing the affected part with a non-affected part).</p></li>
 <li><p><strong>Logbook Entry</strong> – Optionally link the compliance record to a logbook
 entry (see below).</p></li>
 </ul>
 </li>
 <li><p>Click <strong>Save</strong>.</p></li>
 </ol>
-<p>For recurring ADs, the system automatically calculates the <strong>next due</strong> date
-or hours based on the recurrence interval and the last compliance record.
-Monthly and annual recurrence uses end-of-month calculation – if an AD is due
-every 12 months from a compliance date of January 15, the next due date is the
-end of January the following year.</p>
+<p>For recurring bulletins, the system automatically calculates the <strong>next due</strong>
+date or hours based on the recurrence interval and the last compliance record.
+Monthly and annual recurrence uses end-of-month calculation – if a bulletin is
+due every 12 months from a compliance date of January 15, the next due date is
+the end of January the following year.</p>
 <section id="linking-a-logbook-entry-to-a-compliance-record">
 <h3>Linking a Logbook Entry to a Compliance Record<a class="headerlink" href="#linking-a-logbook-entry-to-a-compliance-record" title="Link to this heading">¶</a></h3>
 <p>The <strong>Logbook Entry</strong> field in the compliance modal is a search picker rather
@@ -345,15 +384,16 @@ Log Book / Entry Type filters. Click <strong>Select</strong> on any result.</p><
 </section>
 <section id="viewing-compliance-history">
 <h2>Viewing Compliance History<a class="headerlink" href="#viewing-compliance-history" title="Link to this heading">¶</a></h2>
-<p>Click the <strong>history</strong> icon on any AD row to view the full compliance history,
-showing all past compliance records with dates, hours, and notes.</p>
+<p>Click the <strong>history</strong> icon on any bulletin row to view the full compliance
+history, showing all past compliance records with dates, hours, and notes.</p>
 </section>
-<section id="editing-and-removing-ads">
-<h2>Editing and Removing ADs<a class="headerlink" href="#editing-and-removing-ads" title="Link to this heading">¶</a></h2>
+<section id="editing-and-removing-bulletins">
+<h2>Editing and Removing Bulletins<a class="headerlink" href="#editing-and-removing-bulletins" title="Link to this heading">¶</a></h2>
 <ul class="simple">
-<li><p>Click the <strong>pencil</strong> icon to edit an AD’s details.</p></li>
-<li><p>Click the <strong>X</strong> icon to remove an AD from tracking. This does not delete the
-AD’s compliance history.</p></li>
+<li><p>Click the <strong>pencil</strong> icon to edit a bulletin’s details (type, mandatory flag,
+name, description, recurrence, etc.).</p></li>
+<li><p>Click the <strong>X</strong> icon to remove a bulletin from tracking. This does not delete
+the compliance history.</p></li>
 </ul>
 </section>
 </section>
@@ -413,15 +453,17 @@ AD’s compliance history.</p></li>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">Airworthiness Directives (ADs)</a><ul>
-<li><a class="reference internal" href="#ad-list">AD List</a></li>
-<li><a class="reference internal" href="#adding-an-ad">Adding an AD</a></li>
+<li><a class="reference internal" href="#">ADs / Bulletins</a><ul>
+<li><a class="reference internal" href="#bulletin-types">Bulletin Types</a></li>
+<li><a class="reference internal" href="#mandatory-vs-optional-advisory">Mandatory vs Optional / Advisory</a></li>
+<li><a class="reference internal" href="#bulletin-list">Bulletin List</a></li>
+<li><a class="reference internal" href="#adding-a-bulletin">Adding a Bulletin</a></li>
 <li><a class="reference internal" href="#recording-compliance">Recording Compliance</a><ul>
 <li><a class="reference internal" href="#linking-a-logbook-entry-to-a-compliance-record">Linking a Logbook Entry to a Compliance Record</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#viewing-compliance-history">Viewing Compliance History</a></li>
-<li><a class="reference internal" href="#editing-and-removing-ads">Editing and Removing ADs</a></li>
+<li><a class="reference internal" href="#editing-and-removing-bulletins">Editing and Removing Bulletins</a></li>
 </ul>
 </li>
 </ul>

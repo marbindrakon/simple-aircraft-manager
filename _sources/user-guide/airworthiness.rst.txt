@@ -33,13 +33,20 @@ How Status is Calculated
 The system checks the following areas, in order. The overall status is
 determined by the most severe issue found:
 
-1. AD Compliance
-^^^^^^^^^^^^^^^^
+1. Mandatory Bulletin Compliance
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- **Red** -- Any Airworthiness Directive is overdue (past its next-due date or
-  hours).
-- **Orange** -- Any AD is coming due within **10 flight hours** of its
-  hour-based limit.
+Only bulletins marked **Mandatory** (see :doc:`ads`) are included in the
+airworthiness calculation. Optional/advisory bulletins (SAIBs, non-mandatory
+SBs, etc.) are tracked for reference but never affect status.
+
+- **Red** -- Any mandatory bulletin is overdue (past its next-due date or
+  hours), or has no compliance record at all.
+- **Orange** -- Any mandatory bulletin is coming due within **10 flight hours**
+  or **30 calendar days** of its limit.
+
+Issue titles in the Airworthiness Issues card show the bulletin type prefix
+(e.g. "AD 2024-01-05 - Overdue", "SB 300-27-01 - Due Soon").
 
 2. Grounding Squawks
 ^^^^^^^^^^^^^^^^^^^^
@@ -96,7 +103,7 @@ Resolving Issues
 
 To return an aircraft to green status, address each flagged issue:
 
-- **Overdue AD** -- Record a compliance action on the :doc:`ads` tab.
+- **Overdue mandatory bulletin** -- Record a compliance action on the :doc:`ads` tab.
 - **Grounding squawk** -- Resolve the squawk on the :doc:`squawks` tab.
 - **Overdue inspection** -- Record an inspection on the :doc:`inspections` tab.
 - **Component replacement due** -- Reset the service time on the
