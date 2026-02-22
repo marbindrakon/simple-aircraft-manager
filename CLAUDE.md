@@ -115,6 +115,7 @@ Three roles: **Admin** (`is_staff`/`is_superuser`, bypasses all per-aircraft che
 
 - `get_user_role(user, aircraft)` → `'admin'` | `'owner'` | `'pilot'` | `None`
 - `IsAircraftOwnerOrAdmin`, `IsAircraftPilotOrAbove`
+- `IsAdAircraftOwnerOrAdmin` — allows AD update/partial_update if user owns any aircraft the AD is associated with
 - `PILOT_WRITE_ACTIONS` = `{'update_hours', 'squawks', 'notes', 'oil_records', 'fuel_records'}`
 - `PILOT_WRITABLE_MODELS` = `{'squawk', 'consumablerecord', 'aircraftnote'}`
 
@@ -161,7 +162,7 @@ class MyViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelViewSet):
     aircraft_fk_path = 'aircraft'
     event_category = 'my_category'
 ```
-Add to `PILOT_WRITABLE_MODELS` if pilots should write it. Reference-data viewsets (no Aircraft FK) use `IsAuthenticated` reads, `IsAdminUser` writes.
+Add to `PILOT_WRITABLE_MODELS` if pilots should write it. Reference-data viewsets (no Aircraft FK) use `IsAuthenticated` reads, `IsAdminUser` writes — **except `ADViewSet`**, which uses `IsAdAircraftOwnerOrAdmin` for `update`/`partial_update` (allows owners of any associated aircraft to edit) and `IsAdminUser` for `create`/`destroy`.
 
 Backfill ownership: `python manage.py assign_owners --user <username> --all`
 

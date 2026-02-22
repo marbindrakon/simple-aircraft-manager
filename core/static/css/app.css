@@ -661,6 +661,11 @@ html.pf-v5-theme-dark .loading-spinner {
     background: var(--pf-v5-global--BackgroundColor--200);
 }
 
+/* Bulletin search result rows */
+.bulletin-search-result:hover {
+    background: var(--pf-v5-global--BackgroundColor--200);
+}
+
 /* Striped table rows (pf-m-striped not defined in loaded PF5 bundle) */
 .pf-v5-c-table.pf-m-striped tbody tr:nth-child(odd) {
     background-color: var(--pf-v5-global--BackgroundColor--200);

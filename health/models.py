@@ -249,6 +249,14 @@ COMPLIANCE_TYPES = (
     ('conditional', 'Conditional'),
 )
 
+BULLETIN_TYPE_CHOICES = [
+    ('ad',    'Airworthiness Directive'),
+    ('saib',  'Special Airworthiness Information Bulletin'),
+    ('sb',    'Service Bulletin'),
+    ('alert', 'Airworthiness Alert'),
+    ('other', 'Other'),
+]
+
 class AD(models.Model):
     id = models.UUIDField(primary_key=True, blank=False, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=254)
@@ -260,6 +268,8 @@ class AD(models.Model):
     recurring_hours = models.DecimalField(max_digits=8, decimal_places=1, default=0.0)
     recurring_months = models.IntegerField(default=0)
     recurring_days = models.IntegerField(default=0)
+    bulletin_type = models.CharField(max_length=20, choices=BULLETIN_TYPE_CHOICES, default='ad')
+    mandatory = models.BooleanField(default=True)
     on_inspection_type = models.ManyToManyField(InspectionType, blank=True)
     applicable_aircraft = models.ManyToManyField(core_models.Aircraft, related_name='ads', blank=True)
     applicable_component = models.ManyToManyField(Component, related_name='ads', blank=True)

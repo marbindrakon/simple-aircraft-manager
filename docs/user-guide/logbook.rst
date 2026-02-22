@@ -96,9 +96,9 @@ the maintenance record cross-references the logbook entry.
 
 .. note::
 
-   Only the *latest* compliance record per AD appears in the AD Compliance tab.
+   Only the *latest* compliance record per bulletin appears in the AD Compliance tab.
    To link a logbook entry to an older compliance record, edit that record
-   directly from the ADs tab compliance history.
+   directly from the ADs / Bulletins tab compliance history.
 
 .. |link-icon| raw:: html
 

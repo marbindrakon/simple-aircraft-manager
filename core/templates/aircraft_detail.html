@@ -108,7 +108,7 @@
                 </li>
                 <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'ads' }">
                     <button class="pf-v5-c-tabs__link" @click="activeTab = 'ads'">
-                        <span class="pf-v5-c-tabs__item-text">ADs</span>
+                        <span class="pf-v5-c-tabs__item-text">ADs & Bulletins</span>
                         <template x-if="adIssueCount > 0">
                             <span class="pf-v5-c-badge pf-m-unread" style="margin-left: 0.5rem;" x-text="adIssueCount"></span>
                         </template>
@@ -900,12 +900,12 @@
             </template>
         </div>
 
-        <!-- ADs Tab -->
+        <!-- ADs & Bulletins Tab -->
         <div x-show="activeTab === 'ads'" class="pf-v5-c-page__main-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h2>Airworthiness Directives</h2>
+                <h2>ADs & Bulletins</h2>
                 <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openAdModal()">
-                    <i class="fas fa-plus"></i> Add AD
+                    <i class="fas fa-plus"></i> Add Bulletin
                 </button>
             </div>
 
@@ -913,7 +913,7 @@
             <div x-show="!adsLoaded" class="pf-v5-c-empty-state">
                 <div class="pf-v5-c-empty-state__content">
                     <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
-                    <h2 class="pf-v5-c-title pf-m-lg">Loading ADs...</h2>
+                    <h2 class="pf-v5-c-title pf-m-lg">Loading bulletins...</h2>
                 </div>
             </div>
 
@@ -923,20 +923,22 @@
                     <div class="pf-v5-c-empty-state">
                         <div class="pf-v5-c-empty-state__content">
                             <i class="fas fa-clipboard-check" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
-                            <h2 class="pf-v5-c-title pf-m-lg">No Applicable ADs</h2>
+                            <h2 class="pf-v5-c-title pf-m-lg">No Bulletins Tracked</h2>
                             <div class="pf-v5-c-empty-state__body">
-                                No Airworthiness Directives are currently tracked for this aircraft.
+                                No ADs or bulletins are currently tracked for this aircraft.
                             </div>
                         </div>
                     </div>
                 </template>
 
-                <!-- AD Table -->
-                <template x-if="applicableAds.length > 0">
-                    <table class="pf-v5-c-table pf-m-grid-md">
+                <!-- Mandatory section -->
+                <div x-show="mandatoryAds.length > 0">
+                    <h3 style="margin-bottom: 0.75rem;">Mandatory</h3>
+                    <table class="pf-v5-c-table pf-m-grid-md" style="margin-bottom: 1.5rem;">
                         <thead>
                             <tr>
-                                <th>AD Name</th>
+                                <th>Type</th>
+                                <th>Name</th>
                                 <th>Description</th>
                                 <th>Recurring</th>
                                 <th>Status</th>
@@ -946,8 +948,11 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <template x-for="ad in sortedApplicableAds" :key="ad.id">
+                            <template x-for="ad in mandatoryAds" :key="ad.id">
                                 <tr>
+                                    <td>
+                                        <span class="pf-v5-c-label" :class="getBulletinTypeClass(ad.bulletin_type)" x-text="getBulletinTypeLabel(ad.bulletin_type)"></span>
+                                    </td>
                                     <td x-text="ad.name"></td>
                                     <td>
                                         <span x-text="ad.short_description"></span>
@@ -1000,8 +1005,8 @@
                                             </button>
                                             <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
                                                     @click="editAd(ad)"
-                                                    title="Edit AD"
-                                                    aria-label="Edit AD">
+                                                    title="Edit"
+                                                    aria-label="Edit bulletin">
                                                 <i class="fas fa-edit"></i>
                                             </button>
                                             <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
@@ -1011,7 +1016,7 @@
                                             </button>
                                             <button class="pf-v5-c-button pf-m-plain pf-m-danger" x-show="isOwner"
                                                     @click="removeAd(ad)"
-                                                    title="Remove AD">
+                                                    title="Remove">
                                                 <i class="fas fa-times"></i>
                                             </button>
                                         </div>
@@ -1020,7 +1025,104 @@
                             </template>
                         </tbody>
                     </table>
-                </template>
+                </div>
+
+                <!-- Optional / Advisory section -->
+                <div x-show="nonMandatoryAds.length > 0">
+                    <hr style="margin-bottom: 1.25rem; border-color: var(--pf-v5-global--BorderColor--100);" x-show="mandatoryAds.length > 0">
+                    <h3 style="margin-bottom: 0.75rem;">Optional / Advisory</h3>
+                    <table class="pf-v5-c-table pf-m-grid-md">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Recurring</th>
+                                <th>Status</th>
+                                <th>Last Complied</th>
+                                <th>Next Due</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="ad in nonMandatoryAds" :key="ad.id">
+                                <tr>
+                                    <td>
+                                        <span class="pf-v5-c-label" :class="getBulletinTypeClass(ad.bulletin_type)" x-text="getBulletinTypeLabel(ad.bulletin_type)"></span>
+                                    </td>
+                                    <td x-text="ad.name"></td>
+                                    <td>
+                                        <span x-text="ad.short_description"></span>
+                                        <template x-if="ad.compliance_type === 'conditional' && ad.trigger_condition">
+                                            <div style="font-size: 0.85em; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;">
+                                                Trigger: <span x-text="ad.trigger_condition"></span>
+                                            </div>
+                                        </template>
+                                    </td>
+                                    <td>
+                                        <template x-if="ad.recurring">
+                                            <span>
+                                                Yes
+                                                <template x-if="ad.recurring_hours > 0">
+                                                    <span x-text="'(' + ad.recurring_hours + ' hrs)'"></span>
+                                                </template>
+                                                <template x-if="ad.recurring_months > 0">
+                                                    <span x-text="'(' + ad.recurring_months + ' mo)'"></span>
+                                                </template>
+                                            </span>
+                                        </template>
+                                        <template x-if="!ad.recurring">
+                                            <span>No</span>
+                                        </template>
+                                    </td>
+                                    <td>
+                                        <span class="pf-v5-c-label" :class="getAdStatusClass(ad)" x-text="getAdStatusText(ad)"></span>
+                                    </td>
+                                    <td x-text="ad.latest_compliance ? formatDate(ad.latest_compliance.date_complied) : '-'"></td>
+                                    <td>
+                                        <template x-if="ad.latest_compliance && ad.latest_compliance.permanent">
+                                            <span>Permanent</span>
+                                        </template>
+                                        <template x-if="ad.latest_compliance && !ad.latest_compliance.permanent && ad.next_due_date_display">
+                                            <span x-text="'End of ' + ad.next_due_date_display"></span>
+                                        </template>
+                                        <template x-if="ad.latest_compliance && !ad.latest_compliance.permanent && !ad.next_due_date_display && ad.latest_compliance.next_due_at_time > 0">
+                                            <span x-text="formatHours(ad.latest_compliance.next_due_at_time) + ' hrs'"></span>
+                                        </template>
+                                        <template x-if="!ad.latest_compliance || (!ad.latest_compliance.permanent && !ad.next_due_date_display && (!ad.latest_compliance.next_due_at_time || ad.latest_compliance.next_due_at_time == 0))">
+                                            <span>-</span>
+                                        </template>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.25rem;">
+                                            <button class="pf-v5-c-button pf-m-plain" x-show="isMaintenance"
+                                                    @click="openComplianceHistory(ad)"
+                                                    title="View Compliance History">
+                                                <i class="fas fa-history"></i>
+                                            </button>
+                                            <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                                    @click="editAd(ad)"
+                                                    title="Edit"
+                                                    aria-label="Edit bulletin">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                                    @click="openComplianceModal(ad)"
+                                                    title="Record Compliance">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button class="pf-v5-c-button pf-m-plain pf-m-danger" x-show="isOwner"
+                                                    @click="removeAd(ad)"
+                                                    title="Remove">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -3647,7 +3749,7 @@
         </div>
     </div>
 
-    <!-- Add AD Modal -->
+    <!-- Add Bulletin Modal -->
     <div class="pf-v5-c-backdrop" x-show="adModalOpen" x-cloak @click.self="closeAdModal()">
         <div class="pf-v5-l-bullseye">
             <div class="pf-v5-c-modal-box pf-m-md" @click.stop style="max-height: 90vh; overflow-y: auto;">
@@ -3656,43 +3758,111 @@
                 </button>
 
                 <header class="pf-v5-c-modal-box__header">
-                    <h1 class="pf-v5-c-modal-box__title" x-text="editingAd ? 'Edit Airworthiness Directive' : 'Add Airworthiness Directive'"></h1>
+                    <h1 class="pf-v5-c-modal-box__title" x-text="editingAd ? 'Edit Bulletin' : 'Add Bulletin'"></h1>
                 </header>
 
                 <div class="pf-v5-c-modal-box__body">
-                    <!-- Add existing AD - only show when creating new -->
-                    <div class="pf-v5-c-form" style="margin-bottom: 1.5rem;" x-show="!editingAd">
-                        <h3 style="margin-bottom: 0.5rem;">Add Existing AD</h3>
-                        <div class="pf-v5-c-form__group">
-                            <label class="pf-v5-c-form__label" for="existing-ad-select">
-                                <span class="pf-v5-c-form__label-text">Select AD</span>
-                            </label>
-                            <div class="pf-v5-c-form__group-control" style="display: flex; gap: 0.5rem;">
-                                <select id="existing-ad-select" class="pf-v5-c-form-control" x-model="selectedExistingAdId" style="flex: 1;">
-                                    <option value="">-- Select an AD --</option>
-                                    <template x-for="ad in availableAds" :key="ad.id">
-                                        <option :value="ad.id" x-text="ad.name + ' - ' + ad.short_description"></option>
-                                    </template>
-                                </select>
-                                <button class="pf-v5-c-button pf-m-primary" @click="addExistingAd()" :disabled="!selectedExistingAdId || adSubmitting">
-                                    Add
+                    <!-- Add existing bulletin - only show when creating new -->
+                    <div style="margin-bottom: 1.5rem;" x-show="!editingAd">
+                        <h3 style="margin-bottom: 0.75rem;">Add Existing Bulletin</h3>
+
+                        <!-- Selected bulletin chip -->
+                        <template x-if="selectedExistingAd">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 3px; margin-bottom: 0.5rem; background: var(--pf-v5-global--BackgroundColor--200);">
+                                <span class="pf-v5-c-label" :class="getBulletinTypeClass(selectedExistingAd.bulletin_type)" x-text="getBulletinTypeLabel(selectedExistingAd.bulletin_type)" style="flex-shrink: 0;"></span>
+                                <span style="font-weight: 600;" x-text="selectedExistingAd.name"></span>
+                                <span style="color: var(--pf-v5-global--Color--200); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="'— ' + selectedExistingAd.short_description"></span>
+                                <button class="pf-v5-c-button pf-m-plain" @click="selectedExistingAdId = ''; adSearchQuery = ''" title="Clear selection" style="margin-left: auto; flex-shrink: 0;">
+                                    <i class="fas fa-times"></i>
                                 </button>
                             </div>
+                        </template>
+
+                        <!-- Search input (shown when nothing is selected) -->
+                        <template x-if="!selectedExistingAd">
+                            <div>
+                                <div style="position: relative; margin-bottom: 0.4rem;">
+                                    <i class="fas fa-search" style="position: absolute; left: 0.65rem; top: 50%; transform: translateY(-50%); color: var(--pf-v5-global--Color--200); pointer-events: none;"></i>
+                                    <input class="pf-v5-c-form-control" type="search"
+                                           x-model="adSearchQuery"
+                                           placeholder="Search by name, number, type, or description..."
+                                           style="padding-left: 2rem;">
+                                </div>
+                                <template x-if="allAdsLoading">
+                                    <div style="padding: 0.75rem 1rem; color: var(--pf-v5-global--Color--200); display: flex; align-items: center; gap: 0.5rem; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 3px;">
+                                        <div class="loading-spinner" style="width: 1rem; height: 1rem; flex-shrink: 0;"></div>
+                                        Loading bulletins...
+                                    </div>
+                                </template>
+                                <template x-if="!allAdsLoading">
+                                    <div style="border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 3px; max-height: 220px; overflow-y: auto;">
+                                        <template x-if="availableAds.length === 0">
+                                            <div style="padding: 0.75rem 1rem; color: var(--pf-v5-global--Color--200); font-style: italic;">
+                                                All known bulletins are already applied to this aircraft.
+                                            </div>
+                                        </template>
+                                        <template x-if="availableAds.length > 0 && filteredAvailableAds.length === 0">
+                                            <div style="padding: 0.75rem 1rem; color: var(--pf-v5-global--Color--200); font-style: italic;">
+                                                No bulletins match your search.
+                                            </div>
+                                        </template>
+                                        <template x-for="ad in filteredAvailableAds" :key="ad.id">
+                                            <div class="bulletin-search-result"
+                                                 @click="selectedExistingAdId = ad.id"
+                                                 style="display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; cursor: pointer; border-bottom: 1px solid var(--pf-v5-global--BorderColor--100);">
+                                                <span class="pf-v5-c-label" :class="getBulletinTypeClass(ad.bulletin_type)" x-text="getBulletinTypeLabel(ad.bulletin_type)" style="flex-shrink: 0;"></span>
+                                                <div style="min-width: 0;">
+                                                    <div style="font-weight: 600;" x-text="ad.name"></div>
+                                                    <div style="font-size: 0.85em; color: var(--pf-v5-global--Color--200); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" x-text="ad.short_description"></div>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+
+                        <div style="margin-top: 0.6rem;">
+                            <button class="pf-v5-c-button pf-m-primary" @click="addExistingAd()" :disabled="!selectedExistingAdId || adSubmitting"
+                                    x-text="adSubmitting ? 'Adding...' : 'Add to Aircraft'">
+                            </button>
                         </div>
                     </div>
 
                     <hr style="margin: 1rem 0; border-color: var(--pf-v5-global--BorderColor--100);" x-show="!editingAd">
 
-                    <!-- Create new AD -->
-                    <h3 style="margin-bottom: 0.5rem;" x-text="editingAd ? 'Edit AD Details' : 'Or Create New AD'"></h3>
+                    <!-- Create new bulletin -->
+                    <h3 style="margin-bottom: 0.5rem;" x-text="editingAd ? 'Edit Bulletin Details' : 'Or Create New Bulletin'"></h3>
                     <form @submit.prevent="createAndAddAd" class="pf-v5-c-form">
                         <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="ad-bulletin-type">
+                                <span class="pf-v5-c-form__label-text">Bulletin Type</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <select id="ad-bulletin-type" class="pf-v5-c-form-control" x-model="adForm.bulletin_type"
+                                        @change="if (!editingAd) { adForm.mandatory = (adForm.bulletin_type === 'ad'); }">
+                                    <option value="ad">Airworthiness Directive (AD)</option>
+                                    <option value="saib">Special Airworthiness Information Bulletin (SAIB)</option>
+                                    <option value="sb">Service Bulletin (SB)</option>
+                                    <option value="alert">Airworthiness Alert</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-control">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" x-model="adForm.mandatory"> Mandatory (affects airworthiness status)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
                             <label class="pf-v5-c-form__label" for="ad-name">
-                                <span class="pf-v5-c-form__label-text">AD Name</span>
+                                <span class="pf-v5-c-form__label-text">Name / Number</span>
                                 <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
                             </label>
                             <div class="pf-v5-c-form__group-control">
-                                <input id="ad-name" class="pf-v5-c-form-control" type="text" x-model="adForm.name" placeholder="e.g. AD 2024-01-05">
+                                <input id="ad-name" class="pf-v5-c-form-control" type="text" x-model="adForm.name" placeholder="e.g. AD 2024-01-05 or SB-300-27-01">
                             </div>
                         </div>
                         <div class="pf-v5-c-form__group">
@@ -3775,7 +3945,7 @@
                     <button class="pf-v5-c-button pf-m-primary"
                             @click="editingAd ? updateAd() : createAndAddAd()"
                             :disabled="adSubmitting || !adForm.name || !adForm.short_description"
-                            x-text="editingAd ? (adSubmitting ? 'Updating...' : 'Update AD') : (adSubmitting ? 'Creating...' : 'Create and Add to Aircraft')">
+                            x-text="editingAd ? (adSubmitting ? 'Updating...' : 'Update Bulletin') : (adSubmitting ? 'Creating...' : 'Create and Add to Aircraft')">
                     </button>
                     <button class="pf-v5-c-button pf-m-link" @click="closeAdModal()">Cancel</button>
                 </footer>

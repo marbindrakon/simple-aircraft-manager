@@ -3,12 +3,14 @@ function adsMixin() {
         // AD tracking state
         applicableAds: [],
         allAds: [],
+        allAdsLoading: false,
         adsLoaded: false,
         adModalOpen: false,
         complianceModalOpen: false,
         selectedAd: null,
         editingAd: null,
         selectedExistingAdId: '',
+        adSearchQuery: '',
         adSubmitting: false,
         complianceSubmitting: false,
         adForm: {
@@ -21,6 +23,8 @@ function adsMixin() {
             recurring_hours: 0,
             recurring_months: 0,
             recurring_days: 0,
+            bulletin_type: 'ad',
+            mandatory: true,
         },
         editingComplianceRecord: null,
         complianceForm: {
@@ -47,7 +51,7 @@ function adsMixin() {
 
         get adIssueCount() {
             return this.applicableAds.filter(
-                ad => ad.compliance_status === 'overdue' || ad.compliance_status === 'no_compliance'
+                ad => ad.mandatory && (ad.compliance_status === 'overdue' || ad.compliance_status === 'no_compliance')
             ).length;
         },
 
@@ -58,6 +62,29 @@ function adsMixin() {
                 return name.replace(/^(\d{2})(?!\d)-/, '19$1-');
             }
             return [...this.applicableAds].sort((a, b) => adSortKey(a.name).localeCompare(adSortKey(b.name)));
+        },
+
+        get mandatoryAds() {
+            return this.sortedApplicableAds.filter(ad => ad.mandatory);
+        },
+
+        get nonMandatoryAds() {
+            return this.sortedApplicableAds.filter(ad => !ad.mandatory);
+        },
+
+        get filteredAvailableAds() {
+            const q = this.adSearchQuery.toLowerCase().trim();
+            if (!q) return this.availableAds;
+            return this.availableAds.filter(ad =>
+                ad.name.toLowerCase().includes(q) ||
+                ad.short_description.toLowerCase().includes(q) ||
+                this.getBulletinTypeLabel(ad.bulletin_type).toLowerCase().includes(q)
+            );
+        },
+
+        get selectedExistingAd() {
+            if (!this.selectedExistingAdId) return null;
+            return this.availableAds.find(ad => ad.id === this.selectedExistingAdId) || null;
         },
 
         async loadAds() {
@@ -73,6 +100,7 @@ function adsMixin() {
         },
 
         async loadAllAds() {
+            this.allAdsLoading = true;
             try {
                 const response = await fetch('/api/ads/');
                 const data = await response.json();
@@ -81,6 +109,8 @@ function adsMixin() {
             } catch (error) {
                 console.error('Error loading all ADs:', error);
                 return [];
+            } finally {
+                this.allAdsLoading = false;
             }
         },
 
@@ -92,6 +122,7 @@ function adsMixin() {
         openAdModal() {
             this.editingAd = null;
             this.selectedExistingAdId = '';
+            this.adSearchQuery = '';
             this.adForm = {
                 name: '',
                 short_description: '',
@@ -102,6 +133,8 @@ function adsMixin() {
                 recurring_hours: 0,
                 recurring_months: 0,
                 recurring_days: 0,
+                bulletin_type: 'ad',
+                mandatory: true,
             };
             this.loadAllAds();
             this.adModalOpen = true;
@@ -120,6 +153,8 @@ function adsMixin() {
                 recurring_hours: ad.recurring_hours || 0,
                 recurring_months: ad.recurring_months || 0,
                 recurring_days: ad.recurring_days || 0,
+                bulletin_type: ad.bulletin_type || 'ad',
+                mandatory: ad.mandatory !== undefined ? ad.mandatory : true,
             };
             this.adModalOpen = true;
         },
@@ -127,6 +162,8 @@ function adsMixin() {
         closeAdModal() {
             this.adModalOpen = false;
             this.editingAd = null;
+            this.selectedExistingAdId = '';
+            this.adSearchQuery = '';
         },
 
         async addExistingAd() {
@@ -174,6 +211,8 @@ function adsMixin() {
                     recurring_hours: this.adForm.recurring ? parseFloat(this.adForm.recurring_hours) || 0 : 0,
                     recurring_months: this.adForm.recurring ? parseInt(this.adForm.recurring_months) || 0 : 0,
                     recurring_days: this.adForm.recurring ? parseInt(this.adForm.recurring_days) || 0 : 0,
+                    bulletin_type: this.adForm.bulletin_type,
+                    mandatory: this.adForm.mandatory,
                 };
 
                 const response = await fetch(`/api/aircraft/${this.aircraftId}/ads/`, {
@@ -220,6 +259,8 @@ function adsMixin() {
                     recurring_hours: this.adForm.recurring ? parseFloat(this.adForm.recurring_hours) || 0 : 0,
                     recurring_months: this.adForm.recurring ? parseInt(this.adForm.recurring_months) || 0 : 0,
                     recurring_days: this.adForm.recurring ? parseInt(this.adForm.recurring_days) || 0 : 0,
+                    bulletin_type: this.adForm.bulletin_type,
+                    mandatory: this.adForm.mandatory,
                 };
 
                 const response = await fetch(`/api/ads/${this.editingAd.id}/`, {
@@ -503,6 +544,15 @@ function adsMixin() {
                 case 'conditional': return 'Conditional';
                 default: return 'Unknown';
             }
+        },
+
+        getBulletinTypeLabel(bulletinType) {
+            const labels = { ad: 'AD', saib: 'SAIB', sb: 'Service Bulletin', alert: 'Airworthiness Alert', other: 'Other' };
+            return labels[bulletinType] || bulletinType || 'AD';
+        },
+
+        getBulletinTypeClass(bulletinType) {
+            return bulletinType === 'ad' ? 'pf-m-red' : 'pf-m-blue';
         },
     };
 }

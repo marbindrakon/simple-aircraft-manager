@@ -128,6 +128,27 @@ class CanCreateAircraft(permissions.BasePermission):
         return user_can_create_aircraft(request.user)
 
 
+class IsAdAircraftOwnerOrAdmin(permissions.BasePermission):
+    """
+    Allows write access to an AD if the user is an admin, or is an owner of
+    at least one aircraft that the AD is currently associated with.
+    """
+
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+        if user.is_staff or user.is_superuser:
+            return True
+        from core.models import AircraftRole
+        return AircraftRole.objects.filter(
+            user=user,
+            role='owner',
+            aircraft__in=obj.applicable_aircraft.all(),
+        ).exists()
+
+
 class IsPublicShareOrAuthenticated(permissions.BasePermission):
     """Allows unauthenticated read access via share token, or authenticated role-based access."""
 

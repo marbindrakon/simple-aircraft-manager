@@ -230,6 +230,8 @@ def _ad_dict(ad):
         'recurring_hours': _decimal(ad.recurring_hours),
         'recurring_months': ad.recurring_months,
         'recurring_days': ad.recurring_days,
+        'bulletin_type': ad.bulletin_type,
+        'mandatory': ad.mandatory,
         'on_inspection_type': [_str(it_id) for it_id in ad.on_inspection_type.values_list('id', flat=True)],
         'applicable_aircraft': [_str(a_id) for a_id in ad.applicable_aircraft.values_list('id', flat=True)],
         'applicable_component': [_str(c_id) for c_id in ad.applicable_component.values_list('id', flat=True)],

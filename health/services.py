@@ -200,6 +200,9 @@ def calculate_airworthiness(aircraft) -> AirworthinessStatus:
     return result
 
 
+_BULLETIN_LABEL = {'ad': 'AD', 'saib': 'SAIB', 'sb': 'SB', 'alert': 'Alert', 'other': 'Bulletin'}
+
+
 def _check_ad_compliance(aircraft, current_hours: Decimal, today: date, result: AirworthinessStatus):
     """Check AD compliance status."""
     aircraft_ads = AD.objects.filter(applicable_aircraft=aircraft)
@@ -210,6 +213,8 @@ def _check_ad_compliance(aircraft, current_hours: Decimal, today: date, result: 
     for ad in all_ads:
         if ad.compliance_type == 'conditional':
             continue
+        if not ad.mandatory:
+            continue
 
         compliance = ADCompliance.objects.filter(
             ad=ad
@@ -219,6 +224,8 @@ def _check_ad_compliance(aircraft, current_hours: Decimal, today: date, result: 
 
         rank, _ = ad_compliance_status(ad, compliance, current_hours, today)
 
+        type_label = _BULLETIN_LABEL.get(ad.bulletin_type, 'AD')
+
         if rank == STATUS_OVERDUE:
             if not compliance:
                 desc = f'{ad.short_description}. No compliance record found.'
@@ -227,7 +234,7 @@ def _check_ad_compliance(aircraft, current_hours: Decimal, today: date, result: 
             result.issues.append(AirworthinessIssue(
                 category='AD',
                 severity=STATUS_RED,
-                title=f'AD {ad.name} - Overdue',
+                title=f'{type_label} {ad.name} - Overdue',
                 description=desc,
                 item_id=str(ad.id),
             ))
@@ -235,7 +242,7 @@ def _check_ad_compliance(aircraft, current_hours: Decimal, today: date, result: 
             result.issues.append(AirworthinessIssue(
                 category='AD',
                 severity=STATUS_ORANGE,
-                title=f'AD {ad.name} - Due Soon',
+                title=f'{type_label} {ad.name} - Due Soon',
                 description=f'{ad.short_description}. Compliance due soon.',
                 item_id=str(ad.id),
             ))

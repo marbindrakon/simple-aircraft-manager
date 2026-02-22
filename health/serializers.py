@@ -291,6 +291,7 @@ class ADSerializer(serializers.HyperlinkedModelSerializer):
             'id', 'url', 'name', 'short_description', 'required_action',
             'compliance_type', 'trigger_condition',
             'recurring', 'recurring_hours', 'recurring_months', 'recurring_days',
+            'bulletin_type', 'mandatory',
             'on_inspection_type', 'applicable_aircraft', 'applicable_component',
         ]
 
@@ -303,6 +304,7 @@ class ADNestedSerializer(serializers.ModelSerializer):
             'id', 'name', 'short_description', 'required_action',
             'compliance_type', 'trigger_condition',
             'recurring', 'recurring_hours', 'recurring_months', 'recurring_days',
+            'bulletin_type', 'mandatory',
         ]
 
 

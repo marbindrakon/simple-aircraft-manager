@@ -929,6 +929,8 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
                         for field, val in [
                             ('recurring', ad_data.get('recurring', False)),
                             ('compliance_type', ad_data.get('compliance_type', 'standard')),
+                            ('bulletin_type', ad_data.get('bulletin_type', 'ad')),
+                            ('mandatory', ad_data.get('mandatory', True)),
                         ]:
                             if getattr(existing, field) != val:
                                 diffs.append(field)
@@ -958,6 +960,8 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
                             recurring_hours=_parse_decimal(ad_data.get('recurring_hours')) or Decimal('0.0'),
                             recurring_months=ad_data.get('recurring_months', 0),
                             recurring_days=ad_data.get('recurring_days', 0),
+                            bulletin_type=ad_data.get('bulletin_type', 'ad'),
+                            mandatory=ad_data.get('mandatory', True),
                         )
                         new_ad.applicable_aircraft.add(new_aircraft)
                         for cid in ad_data.get('applicable_component', []):

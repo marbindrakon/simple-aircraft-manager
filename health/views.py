@@ -13,6 +13,7 @@ class LogbookPagination(LimitOffsetPagination):
 
 from core.events import log_event
 from core.mixins import AircraftScopedMixin, EventLoggingMixin
+from core.permissions import IsAdAircraftOwnerOrAdmin
 from health.models import (
     ComponentType, Component, DocumentCollection, Document, DocumentImage,
     LogbookEntry, Squawk, InspectionType, AD, MajorRepairAlteration,
@@ -175,8 +176,10 @@ class ADViewSet(viewsets.ModelViewSet):
     serializer_class = ADSerializer
 
     def get_permissions(self):
-        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+        if self.action in ('create', 'destroy'):
             return [IsAdminUser()]
+        if self.action in ('update', 'partial_update'):
+            return [IsAdAircraftOwnerOrAdmin()]
         return [IsAuthenticated()]
 
 class MajorRepairAlterationViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelViewSet):
