@@ -285,6 +285,14 @@ class InspectionRecordNestedSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 class ADSerializer(serializers.HyperlinkedModelSerializer):
+    document = DocumentNestedSerializer(read_only=True)
+    document_id = serializers.PrimaryKeyRelatedField(
+        source='document',
+        queryset=Document.objects.all(),
+        allow_null=True,
+        required=False,
+    )
+
     class Meta:
         model = AD
         fields = [
@@ -292,12 +300,16 @@ class ADSerializer(serializers.HyperlinkedModelSerializer):
             'compliance_type', 'trigger_condition',
             'recurring', 'recurring_hours', 'recurring_months', 'recurring_days',
             'bulletin_type', 'mandatory',
+            'document', 'document_id',
             'on_inspection_type', 'applicable_aircraft', 'applicable_component',
         ]
+        read_only_fields = ['document']
 
 
 class ADNestedSerializer(serializers.ModelSerializer):
     """Nested serializer for ADs without hyperlinks, used in aircraft detail."""
+    document = DocumentNestedSerializer(read_only=True)
+
     class Meta:
         model = AD
         fields = [
@@ -305,6 +317,7 @@ class ADNestedSerializer(serializers.ModelSerializer):
             'compliance_type', 'trigger_condition',
             'recurring', 'recurring_hours', 'recurring_months', 'recurring_days',
             'bulletin_type', 'mandatory',
+            'document',
         ]
 
 

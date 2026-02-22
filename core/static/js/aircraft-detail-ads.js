@@ -13,6 +13,18 @@ function adsMixin() {
         adSearchQuery: '',
         adSubmitting: false,
         complianceSubmitting: false,
+
+        // Expandable rows
+        expandedAdIds: {},
+
+        // Document picker for AD modal
+        adDocPickerQuery: '',
+        adDocPickerResults: [],
+        adDocPickerDropdownOpen: false,
+        adDocPickerLoading: false,
+        adDocPickerSelected: null,
+        adDocPickerTimer: null,
+
         adForm: {
             name: '',
             short_description: '',
@@ -25,6 +37,7 @@ function adsMixin() {
             recurring_days: 0,
             bulletin_type: 'ad',
             mandatory: true,
+            document_id: null,
         },
         editingComplianceRecord: null,
         complianceForm: {
@@ -135,7 +148,12 @@ function adsMixin() {
                 recurring_days: 0,
                 bulletin_type: 'ad',
                 mandatory: true,
+                document_id: null,
             };
+            this.adDocPickerSelected = null;
+            this.adDocPickerQuery = '';
+            this.adDocPickerResults = [];
+            this.adDocPickerDropdownOpen = false;
             this.loadAllAds();
             this.adModalOpen = true;
         },
@@ -155,7 +173,12 @@ function adsMixin() {
                 recurring_days: ad.recurring_days || 0,
                 bulletin_type: ad.bulletin_type || 'ad',
                 mandatory: ad.mandatory !== undefined ? ad.mandatory : true,
+                document_id: ad.document ? ad.document.id : null,
             };
+            this.adDocPickerSelected = ad.document || null;
+            this.adDocPickerQuery = '';
+            this.adDocPickerResults = [];
+            this.adDocPickerDropdownOpen = false;
             this.adModalOpen = true;
         },
 
@@ -213,6 +236,7 @@ function adsMixin() {
                     recurring_days: this.adForm.recurring ? parseInt(this.adForm.recurring_days) || 0 : 0,
                     bulletin_type: this.adForm.bulletin_type,
                     mandatory: this.adForm.mandatory,
+                    document_id: this.adForm.document_id || null,
                 };
 
                 const response = await fetch(`/api/aircraft/${this.aircraftId}/ads/`, {
@@ -261,6 +285,7 @@ function adsMixin() {
                     recurring_days: this.adForm.recurring ? parseInt(this.adForm.recurring_days) || 0 : 0,
                     bulletin_type: this.adForm.bulletin_type,
                     mandatory: this.adForm.mandatory,
+                    document_id: this.adForm.document_id || null,
                 };
 
                 const response = await fetch(`/api/ads/${this.editingAd.id}/`, {
@@ -522,6 +547,58 @@ function adsMixin() {
             this.logEntryDetail = null;
             this.logEntryImageIndex = 0;
             this.relatedDocImageIndices = {};
+        },
+
+        toggleAdExpand(adId) {
+            if (this.expandedAdIds[adId]) {
+                const copy = { ...this.expandedAdIds };
+                delete copy[adId];
+                this.expandedAdIds = copy;
+            } else {
+                this.expandedAdIds = { ...this.expandedAdIds, [adId]: true };
+            }
+        },
+
+        adDocPickerInput() {
+            clearTimeout(this.adDocPickerTimer);
+            if (!this.adDocPickerQuery.trim()) {
+                this.adDocPickerResults = [];
+                this.adDocPickerDropdownOpen = false;
+                return;
+            }
+            this.adDocPickerTimer = setTimeout(() => this.adDocPickerSearch(), 300);
+        },
+
+        async adDocPickerSearch() {
+            this.adDocPickerLoading = true;
+            const params = new URLSearchParams({
+                aircraft: this.aircraftId,
+                search: this.adDocPickerQuery.trim(),
+                limit: 8,
+            });
+            try {
+                const resp = await fetch(`/api/documents/?${params}`);
+                const data = await resp.json();
+                this.adDocPickerResults = data.results || [];
+                this.adDocPickerDropdownOpen = true;
+            } catch (e) {
+                console.error('Document picker search error:', e);
+            } finally {
+                this.adDocPickerLoading = false;
+            }
+        },
+
+        adDocPickerSelect(doc) {
+            this.adDocPickerSelected = doc;
+            this.adForm.document_id = doc.id;
+            this.adDocPickerDropdownOpen = false;
+            this.adDocPickerQuery = '';
+        },
+
+        adDocPickerClear() {
+            this.adDocPickerSelected = null;
+            this.adForm.document_id = null;
+            this.adDocPickerQuery = '';
         },
 
         getAdStatusClass(ad) {

@@ -962,6 +962,7 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
                             recurring_days=ad_data.get('recurring_days', 0),
                             bulletin_type=ad_data.get('bulletin_type', 'ad'),
                             mandatory=ad_data.get('mandatory', True),
+                            # document FK not imported (cross-aircraft document UUIDs won't match)
                         )
                         new_ad.applicable_aircraft.add(new_aircraft)
                         for cid in ad_data.get('applicable_component', []):

@@ -934,9 +934,10 @@
                 <!-- Mandatory section -->
                 <div x-show="mandatoryAds.length > 0">
                     <h3 style="margin-bottom: 0.75rem;">Mandatory</h3>
-                    <table class="pf-v5-c-table pf-m-grid-md" style="margin-bottom: 1.5rem;">
+                    <table class="pf-v5-c-table pf-m-grid-md pf-m-expandable" style="margin-bottom: 1.5rem;">
                         <thead>
                             <tr>
+                                <th></th>
                                 <th>Type</th>
                                 <th>Name</th>
                                 <th>Description</th>
@@ -947,9 +948,18 @@
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <template x-for="ad in mandatoryAds" :key="ad.id">
+                        <template x-for="ad in mandatoryAds" :key="ad.id">
+                            <tbody :class="{'pf-m-expanded': expandedAdIds[ad.id]}">
                                 <tr>
+                                    <td class="pf-v5-c-table__toggle">
+                                        <button class="pf-v5-c-button pf-m-plain"
+                                                @click="toggleAdExpand(ad.id)"
+                                                :aria-expanded="expandedAdIds[ad.id] ? 'true' : 'false'"
+                                                title="Toggle details">
+                                            <i class="fas fa-angle-right"
+                                               :style="expandedAdIds[ad.id] ? 'transform: rotate(90deg)' : ''"></i>
+                                        </button>
+                                    </td>
                                     <td>
                                         <span class="pf-v5-c-label" :class="getBulletinTypeClass(ad.bulletin_type)" x-text="getBulletinTypeLabel(ad.bulletin_type)"></span>
                                     </td>
@@ -1022,8 +1032,38 @@
                                         </div>
                                     </td>
                                 </tr>
-                            </template>
-                        </tbody>
+
+                                <!-- Expandable detail row -->
+                                <tr class="pf-v5-c-table__expandable-row"
+                                    :class="{'pf-m-expanded': expandedAdIds[ad.id]}"
+                                    x-show="expandedAdIds[ad.id]">
+                                    <td colspan="9">
+                                        <div class="pf-v5-c-table__expandable-row-content">
+                                            <div class="pf-v5-l-grid pf-m-gutter">
+                                                <div class="pf-v5-l-grid__item pf-m-12-col pf-m-6-col-on-md">
+                                                    <p class="pf-v5-u-font-weight-bold pf-v5-u-mb-xs">Required Action</p>
+                                                    <p x-text="ad.required_action || 'No required action specified.'"
+                                                       style="white-space: pre-wrap; margin: 0;"></p>
+                                                </div>
+                                                <div class="pf-v5-l-grid__item pf-m-12-col pf-m-6-col-on-md">
+                                                    <p class="pf-v5-u-font-weight-bold pf-v5-u-mb-xs">Bulletin Document</p>
+                                                    <template x-if="ad.document">
+                                                        <button class="pf-v5-c-button pf-m-link pf-m-inline"
+                                                                @click="openDocumentViewer(ad.document, 'Bulletin: ' + ad.name, 0)">
+                                                            <i class="fas fa-file-alt pf-v5-u-mr-xs"></i>
+                                                            <span x-text="ad.document.name"></span>
+                                                        </button>
+                                                    </template>
+                                                    <template x-if="!ad.document">
+                                                        <span class="pf-v5-u-color-400">No document attached</span>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </template>
                     </table>
                 </div>
 
@@ -1031,9 +1071,10 @@
                 <div x-show="nonMandatoryAds.length > 0">
                     <hr style="margin-bottom: 1.25rem; border-color: var(--pf-v5-global--BorderColor--100);" x-show="mandatoryAds.length > 0">
                     <h3 style="margin-bottom: 0.75rem;">Optional / Advisory</h3>
-                    <table class="pf-v5-c-table pf-m-grid-md">
+                    <table class="pf-v5-c-table pf-m-grid-md pf-m-expandable">
                         <thead>
                             <tr>
+                                <th></th>
                                 <th>Type</th>
                                 <th>Name</th>
                                 <th>Description</th>
@@ -1044,9 +1085,18 @@
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <template x-for="ad in nonMandatoryAds" :key="ad.id">
+                        <template x-for="ad in nonMandatoryAds" :key="ad.id">
+                            <tbody :class="{'pf-m-expanded': expandedAdIds[ad.id]}">
                                 <tr>
+                                    <td class="pf-v5-c-table__toggle">
+                                        <button class="pf-v5-c-button pf-m-plain"
+                                                @click="toggleAdExpand(ad.id)"
+                                                :aria-expanded="expandedAdIds[ad.id] ? 'true' : 'false'"
+                                                title="Toggle details">
+                                            <i class="fas fa-angle-right"
+                                               :style="expandedAdIds[ad.id] ? 'transform: rotate(90deg)' : ''"></i>
+                                        </button>
+                                    </td>
                                     <td>
                                         <span class="pf-v5-c-label" :class="getBulletinTypeClass(ad.bulletin_type)" x-text="getBulletinTypeLabel(ad.bulletin_type)"></span>
                                     </td>
@@ -1119,8 +1169,38 @@
                                         </div>
                                     </td>
                                 </tr>
-                            </template>
-                        </tbody>
+
+                                <!-- Expandable detail row -->
+                                <tr class="pf-v5-c-table__expandable-row"
+                                    :class="{'pf-m-expanded': expandedAdIds[ad.id]}"
+                                    x-show="expandedAdIds[ad.id]">
+                                    <td colspan="9">
+                                        <div class="pf-v5-c-table__expandable-row-content">
+                                            <div class="pf-v5-l-grid pf-m-gutter">
+                                                <div class="pf-v5-l-grid__item pf-m-12-col pf-m-6-col-on-md">
+                                                    <p class="pf-v5-u-font-weight-bold pf-v5-u-mb-xs">Required Action</p>
+                                                    <p x-text="ad.required_action || 'No required action specified.'"
+                                                       style="white-space: pre-wrap; margin: 0;"></p>
+                                                </div>
+                                                <div class="pf-v5-l-grid__item pf-m-12-col pf-m-6-col-on-md">
+                                                    <p class="pf-v5-u-font-weight-bold pf-v5-u-mb-xs">Bulletin Document</p>
+                                                    <template x-if="ad.document">
+                                                        <button class="pf-v5-c-button pf-m-link pf-m-inline"
+                                                                @click="openDocumentViewer(ad.document, 'Bulletin: ' + ad.name, 0)">
+                                                            <i class="fas fa-file-alt pf-v5-u-mr-xs"></i>
+                                                            <span x-text="ad.document.name"></span>
+                                                        </button>
+                                                    </template>
+                                                    <template x-if="!ad.document">
+                                                        <span class="pf-v5-u-color-400">No document attached</span>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </template>
                     </table>
                 </div>
             </div>
@@ -3938,6 +4018,74 @@
                                 </div>
                             </div>
                         </template>
+
+                        <!-- Bulletin Document -->
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-label">
+                                <label class="pf-v5-c-form__label">
+                                    <span class="pf-v5-c-form__label-text">Bulletin Document</span>
+                                </label>
+                            </div>
+                            <div class="pf-v5-c-form__group-control">
+                                <!-- Selected document chip -->
+                                <template x-if="adDocPickerSelected">
+                                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                                        <span class="pf-v5-c-label pf-m-blue">
+                                            <span class="pf-v5-c-label__content">
+                                                <i class="fas fa-file-alt pf-v5-u-mr-xs"></i>
+                                                <span x-text="adDocPickerSelected.name"></span>
+                                            </span>
+                                        </span>
+                                        <button type="button" class="pf-v5-c-button pf-m-link"
+                                                style="color: var(--pf-v5-global--danger-color--100);"
+                                                @click="adDocPickerClear()">
+                                            <i class="fas fa-times"></i> Remove
+                                        </button>
+                                    </div>
+                                </template>
+
+                                <!-- Search input (shown when no doc selected) -->
+                                <template x-if="!adDocPickerSelected">
+                                    <div style="position: relative;">
+                                        <input type="text"
+                                               class="pf-v5-c-form-control"
+                                               placeholder="Search documents by name…"
+                                               x-model="adDocPickerQuery"
+                                               @input="adDocPickerInput()"
+                                               @keydown.escape="adDocPickerDropdownOpen = false">
+
+                                        <!-- Inline dropdown -->
+                                        <div x-show="adDocPickerDropdownOpen"
+                                             style="position: absolute; z-index: 10; width: 100%; background: white;
+                                                    border: 1px solid #d2d2d2; border-radius: 4px; max-height: 240px;
+                                                    overflow-y: auto; box-shadow: 0 4px 8px rgba(0,0,0,.12);">
+                                            <div x-show="adDocPickerLoading" class="pf-v5-u-p-sm pf-v5-u-color-200">
+                                                Searching…
+                                            </div>
+                                            <div x-show="!adDocPickerLoading && adDocPickerResults.length === 0"
+                                                 class="pf-v5-u-p-sm pf-v5-u-color-200">
+                                                No documents found
+                                            </div>
+                                            <template x-for="doc in adDocPickerResults" :key="doc.id">
+                                                <div class="pf-v5-u-p-sm"
+                                                     style="cursor: pointer; border-bottom: 1px solid #f0f0f0;"
+                                                     @click="adDocPickerSelect(doc)"
+                                                     @mouseenter="$el.style.background='#f5f5f5'"
+                                                     @mouseleave="$el.style.background=''">
+                                                    <div style="font-weight: 600;" x-text="doc.name"></div>
+                                                    <div class="pf-v5-u-font-size-sm pf-v5-u-color-200"
+                                                         x-text="doc.doc_type_display"></div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <p class="pf-v5-u-mt-xs" style="font-size: 0.875rem; color: var(--pf-v5-global--Color--200);">
+                                    Link an existing document from this aircraft's library.
+                                </p>
+                            </div>
+                        </div>
                     </form>
                 </div>
 

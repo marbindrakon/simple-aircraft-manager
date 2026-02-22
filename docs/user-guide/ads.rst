@@ -63,6 +63,21 @@ Advisory** (bottom). Each section shows a table with the following columns:
 - **Last Complied** -- Date of the most recent compliance action.
 - **Next Due** -- When the next compliance action is due (date or hours).
 
+Expandable Row Details
+~~~~~~~~~~~~~~~~~~~~~~
+
+Click the **arrow** toggle at the left of any bulletin row to expand it and
+reveal additional details:
+
+- **Required Action** -- The full required action text entered when the
+  bulletin was created.
+- **Bulletin Document** -- A link to the associated document in the aircraft's
+  document library, if one has been attached. Click the link to open the
+  document viewer. If no document has been attached, *No document attached* is
+  shown.
+
+Multiple rows can be expanded simultaneously.
+
 .. TODO: Screenshot of the ADs / Bulletins tab showing both sections
 
 Adding a Bulletin
@@ -87,6 +102,11 @@ Adding a Bulletin
    - **Recurring Hours** -- For hour-based recurrence (e.g., every 100 hours).
    - **Recurring Months** -- For calendar-based recurrence (e.g., every 12
      months).
+   - **Bulletin Document** -- Optionally link a document from this aircraft's
+     document library (e.g., the scanned AD text or manufacturer bulletin PDF).
+     Type part of the document name to search; click a result to select it. The
+     selected document is shown as a chip; click **Remove** to clear it. Only
+     documents already uploaded to this aircraft's library are available here.
 
 3. Click **Create and Add to Aircraft**.
 

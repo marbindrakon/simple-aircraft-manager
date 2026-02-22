@@ -270,6 +270,14 @@ class AD(models.Model):
     recurring_days = models.IntegerField(default=0)
     bulletin_type = models.CharField(max_length=20, choices=BULLETIN_TYPE_CHOICES, default='ad')
     mandatory = models.BooleanField(default=True)
+    document = models.ForeignKey(
+        'Document',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='referenced_by_ads',
+        help_text="Optional reference to a document (e.g., copy of the bulletin)"
+    )
     on_inspection_type = models.ManyToManyField(InspectionType, blank=True)
     applicable_aircraft = models.ManyToManyField(core_models.Aircraft, related_name='ads', blank=True)
     applicable_component = models.ManyToManyField(Component, related_name='ads', blank=True)
