@@ -79,11 +79,11 @@ class AircraftViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), CanCreateAircraft()]
         if self.action in ('update', 'partial_update', 'destroy',
                            'components', 'remove_ad', 'compliance',
-                           'remove_inspection_type', 'major_records',
+                           'remove_inspection_type',
                            'manage_roles', 'manage_share_tokens', 'delete_share_token'):
             return [IsAuthenticated(), IsAircraftOwnerOrAdmin()]
-        # ADs and inspections: GET is readable by pilots, POST/DELETE requires owner
-        if self.action in ('ads', 'inspections'):
+        # ADs, inspections, and major records: GET is readable by pilots, POST/DELETE requires owner
+        if self.action in ('ads', 'inspections', 'major_records'):
             if self.request.method == 'GET':
                 return [IsAuthenticated(), IsAircraftPilotOrAbove()]
             return [IsAuthenticated(), IsAircraftOwnerOrAdmin()]
