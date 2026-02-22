@@ -266,29 +266,46 @@ performed on the aircraft, corresponding to Form 337 or equivalent records.</p>
 <li><p><strong>Alterations</strong> – Show only major alterations.</p></li>
 </ul>
 </section>
+<section id="ica-indicator">
+<h2>ICA Indicator<a class="headerlink" href="#ica-indicator" title="Link to this heading">¶</a></h2>
+<p>Records that include <strong>Instructions for Continued Airworthiness (ICAs)</strong> are
+flagged with a gold <strong>ICA</strong> badge next to the title in both the repairs and
+alterations tables. This makes it easy for a mechanic to quickly identify
+which repairs or alterations have associated ICA requirements.</p>
+</section>
 <section id="major-repairs">
 <h2>Major Repairs<a class="headerlink" href="#major-repairs" title="Link to this heading">¶</a></h2>
 <p>The repairs table shows:</p>
 <ul class="simple">
-<li><p><strong>Title</strong> – A description of the repair, with a truncated preview of the
-full description.</p></li>
+<li><p><strong>Title</strong> – A brief title. A gold <strong>ICA</strong> badge appears here if the record
+includes ICAs.</p></li>
 <li><p><strong>Date</strong> – When the repair was performed.</p></li>
 <li><p><strong>Component</strong> – The affected component, if linked.</p></li>
-<li><p><strong>Performed By</strong> – The person or shop that performed the repair.</p></li>
 <li><p><strong>Actions</strong> – Edit and delete buttons (owners only), plus a <strong>paperclip
 icon</strong> that appears when the record has linked files. Click the paperclip to
 open a popup with links to the associated logbook entry and/or Form 337
 document. Click the icon again (or anywhere outside the popup) to dismiss it.</p></li>
 </ul>
+<p>Click the <strong>chevron</strong> (▸) at the left of any row to expand it and reveal
+additional detail:</p>
+<ul class="simple">
+<li><p><strong>Performed By</strong> – The mechanic, shop, or IA who performed the work.</p></li>
+<li><p><strong>Aircraft Hours</strong> – The aircraft’s total time at the time of the repair.</p></li>
+<li><p><strong>ICAs / ICA Notes</strong> – Whether the record includes Instructions for
+Continued Airworthiness, and any notes about where they can be found.</p></li>
+<li><p><strong>Description</strong> – The full work description.</p></li>
+<li><p><strong>Notes</strong> – Any additional notes.</p></li>
+</ul>
 </section>
 <section id="major-alterations">
 <h2>Major Alterations<a class="headerlink" href="#major-alterations" title="Link to this heading">¶</a></h2>
-<p>The alterations table includes the same fields as repairs, plus:</p>
+<p>The alterations table includes the same columns as repairs, plus:</p>
 <ul class="simple">
 <li><p><strong>STC #</strong> – The Supplemental Type Certificate number, if applicable.</p></li>
 <li><p><strong>STC Holder</strong> – The STC holder’s name.</p></li>
 </ul>
-<p>The paperclip popup for alterations may also include a link to the STC
+<p>Expanding an alteration row reveals the same detail fields as repairs.
+The paperclip popup for alterations may also include a link to the STC
 document when one is attached.</p>
 </section>
 <section id="adding-a-record">
@@ -311,6 +328,15 @@ document when one is attached.</p>
 <li><p><strong>STC Number</strong> – The STC number.</p></li>
 <li><p><strong>STC Holder</strong> – The STC holder.</p></li>
 <li><p><strong>STC Document</strong> – Optionally link to the STC document.</p></li>
+</ul>
+<p>To flag ICAs:</p>
+<ul class="simple">
+<li><p><strong>Instructions for Continued Airworthiness (ICAs)</strong> – Check this box if
+the repair or alteration includes ICAs. The record will display a gold
+<strong>ICA</strong> badge in the table.</p></li>
+<li><p><strong>ICA Notes</strong> – (Appears when the ICA checkbox is checked.) Describe
+where the ICAs are located and what they cover, e.g. the document they
+appear in or the maintenance tasks they define.</p></li>
 </ul>
 </li>
 <li><p>Click <strong>Save</strong>.</p></li>
@@ -396,6 +422,7 @@ Log Book / Entry Type filters. Click <strong>Select</strong> on any result.</p><
             <ul>
 <li><a class="reference internal" href="#">Repairs &amp; Alterations</a><ul>
 <li><a class="reference internal" href="#filtering">Filtering</a></li>
+<li><a class="reference internal" href="#ica-indicator">ICA Indicator</a></li>
 <li><a class="reference internal" href="#major-repairs">Major Repairs</a></li>
 <li><a class="reference internal" href="#major-alterations">Major Alterations</a></li>
 <li><a class="reference internal" href="#adding-a-record">Adding a Record</a><ul>
