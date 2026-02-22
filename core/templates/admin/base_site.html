@@ -1,0 +1,35 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | Simple Aircraft Manager Admin{% endblock %}
+
+{# Replace Django's dark mode system with our PatternFly-based one #}
+{% block dark-mode-vars %}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+{# Apply user's theme preference before first paint to avoid flash #}
+<script src="{% static 'js/admin-theme.js' %}"></script>
+{# PatternFly CSS #}
+<link rel="stylesheet" href="https://unpkg.com/@patternfly/patternfly@5.3.1/patternfly.min.css">
+<link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+<link rel="stylesheet" href="{% static 'css/admin.css' %}">
+{% endblock %}
+
+{% block branding %}
+<a href="{% url 'admin:index' %}" class="sam-admin-brand">
+    Simple Aircraft Manager <span class="sam-admin-brand__suffix">Admin</span>
+</a>
+{% endblock %}
+
+{# Replace "View site" / user links with a cleaner layout #}
+{% block userlinks %}
+<a href="/">View site</a> /
+{% if user.has_usable_password %}
+<a href="{% url 'admin:password_change' %}">Change password</a> /
+{% endif %}
+<form id="logout-form" method="post" action="{% url 'admin:logout' %}">
+    {% csrf_token %}
+    <button type="submit">Log out</button>
+</form>
+{% endblock %}

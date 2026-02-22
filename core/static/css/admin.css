@@ -1,0 +1,897 @@
+/**
+ * Django admin — PatternFly 5 theme overlay
+ *
+ * Loads after Django admin's own CSS and after PF CSS.
+ * Uses PF design tokens (CSS variables) so light/dark mode is automatic.
+ *
+ * Sections:
+ *   1. Base / typography
+ *   2. Links
+ *   3. Header / masthead
+ *   4. Breadcrumbs
+ *   5. Nav sidebar
+ *   6. Content area
+ *   7. Modules (card boxes)
+ *   8. Tables (change list)
+ *   9. Action bar (search, filters, object-tools)
+ *  10. Filters panel
+ *  11. Pagination
+ *  12. Forms
+ *  13. Buttons
+ *  14. Submit row
+ *  15. Messages / alerts
+ *  16. Inline formsets
+ *  17. Dark mode explicit overrides (for elements that use hardcoded bg)
+ */
+
+/* ============================================================
+   1. Base / typography
+   ============================================================ */
+
+body {
+    font-family: var(--pf-v5-global--FontFamily--text, "RedHatText", "Red Hat Text", Helvetica, Arial, sans-serif);
+    font-size: var(--pf-v5-global--FontSize--md, 1rem);
+    background-color: var(--pf-v5-global--BackgroundColor--200, #f0f0f0);
+    color: var(--pf-v5-global--Color--100, #151515);
+}
+
+/* ============================================================
+   2. Links
+   ============================================================ */
+
+a:link,
+a:visited {
+    color: var(--pf-v5-global--link--Color, #0066cc);
+}
+
+a:hover {
+    color: var(--pf-v5-global--link--Color--hover, #004d99);
+}
+
+/* ============================================================
+   3. Header / masthead
+   ============================================================ */
+
+#header {
+    background-color: #212427;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--pf-v5-global--spacer--lg, 1.5rem);
+    height: 4rem;
+    line-height: 1;
+    overflow: visible;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+#branding {
+    display: flex;
+    align-items: center;
+}
+
+.sam-admin-brand,
+.sam-admin-brand:link,
+.sam-admin-brand:visited {
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.125rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.sam-admin-brand:hover {
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+}
+
+.sam-admin-brand__suffix {
+    font-weight: 400;
+    font-size: 0.9375rem;
+    opacity: 0.7;
+    margin-left: 0.375rem;
+}
+
+#user-tools {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: var(--pf-v5-global--FontSize--sm, 0.875rem);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+#user-tools strong {
+    font-weight: 600;
+    margin-right: 0.5rem;
+}
+
+#user-tools a,
+#user-tools a:link,
+#user-tools a:visited {
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+}
+
+#user-tools a:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+/* Logout button — matches the link style in the header */
+#logout-form {
+    display: inline;
+    margin: 0;
+    padding: 0;
+}
+
+#logout-form button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: var(--pf-v5-global--FontSize--sm, 0.875rem);
+    padding: 0;
+    font-family: inherit;
+}
+
+#logout-form button:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+/* Hide Django's built-in theme toggle — we manage theme via PF */
+.theme-toggle {
+    display: none !important;
+}
+
+/* ============================================================
+   4. Breadcrumbs
+   ============================================================ */
+
+.breadcrumbs {
+    background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
+    border-bottom: 1px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+    padding: 0.625rem var(--pf-v5-global--spacer--lg, 1.5rem);
+    font-size: var(--pf-v5-global--FontSize--sm, 0.875rem);
+    color: var(--pf-v5-global--Color--200, #6a6e73);
+}
+
+.breadcrumbs a {
+    color: var(--pf-v5-global--link--Color, #0066cc);
+}
+
+/* ============================================================
+   5. Nav sidebar
+   ============================================================ */
+
+#nav-sidebar {
+    background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
+    border-right: 1px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+}
+
+.toggle-nav-sidebar {
+    background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
+    border-right: 1px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+}
+
+#nav-filter {
+    background-color: var(--pf-v5-global--BackgroundColor--200, #f0f0f0);
+    border: 1px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+    color: var(--pf-v5-global--Color--100, #151515);
+    font-family: inherit;
+    font-size: var(--pf-v5-global--FontSize--sm, 0.875rem);
+}
+
+/* App group headers */
+.app-health caption,
+#nav-sidebar th[scope="row"],
+.app-list-caption {
+    color: var(--pf-v5-global--Color--200, #6a6e73);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background-color: transparent;
+}
+
+#nav-sidebar a,
+#nav-sidebar a:link,
+#nav-sidebar a:visited {
+    color: var(--pf-v5-global--Color--100, #151515);
+}
+
+#nav-sidebar a:hover {
+    color: var(--pf-v5-global--link--Color, #0066cc);
+    background-color: var(--pf-v5-global--BackgroundColor--200, #f0f0f0);
+}
+
+/* ============================================================
+   6. Content area
+   ============================================================ */
+
+#container {
+    background-color: var(--pf-v5-global--BackgroundColor--200, #f0f0f0);
+}
+
+.main {
+    background-color: var(--pf-v5-global--BackgroundColor--200, #f0f0f0);
+}
+
+#content {
+    padding: var(--pf-v5-global--spacer--lg, 1.5rem);
+    background-color: var(--pf-v5-global--BackgroundColor--200, #f0f0f0);
+}
+
+#content h1 {
+    font-size: 1.375rem;
+    font-weight: 400;
+    margin: 0 0 1rem 0;
+    color: var(--pf-v5-global--Color--100, #151515);
+    line-height: 1.3;
+}
+
+#content-main {
+    background-color: var(--pf-v5-global--BackgroundColor--200, #f0f0f0);
+}
+
+/* ============================================================
+   7. Modules (card-like containers)
+   ============================================================ */
+
+.module {
+    background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
+    border: 1px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+    border-radius: var(--pf-v5-global--BorderRadius--sm, 3px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    margin-bottom: var(--pf-v5-global--spacer--md, 1rem);
+}
+
+.module h2,
+.module caption {
+    background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
+    color: var(--pf-v5-global--Color--100, #151515);
+    border-bottom: 1px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.module h3 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--pf-v5-global--Color--100, #151515);
+}
+
+/* App modules on dashboard */
+.app-health .module h2 {
+    background-color: var(--pf-v5-global--BackgroundColor--200, #f0f0f0);
+}
+
+/* ============================================================
+   8. Tables (change list)
+   ============================================================ */
+
+#result_list {
+    background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
+    border: 1px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+    border-radius: var(--pf-v5-global--BorderRadius--sm, 3px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    border-collapse: collapse;
+    width: 100%;
+}
+
+#result_list thead th {
+    background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
+    color: var(--pf-v5-global--Color--100, #151515);
+    border-bottom: 2px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+}
+
+#result_list thead th a,
+#result_list thead th a:link,
+#result_list thead th a:visited {
+    color: var(--pf-v5-global--Color--100, #151515);
+    text-decoration: none;
+}
+
+#result_list thead th a:hover {
+    color: var(--pf-v5-global--link--Color, #0066cc);
+}
+
+#result_list thead th.sorted,
+#result_list thead th.ascending,
+#result_list thead th.descending {
+    background-color: var(--pf-v5-global--BackgroundColor--200, #f0f0f0);
+}
+
+#result_list tbody tr {
+    border-bottom: 1px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+}
+
+#result_list tbody tr:last-child {
+    border-bottom: none;
+}
+
+#result_list tbody tr:hover {
+    background-color: var(--pf-v5-global--BackgroundColor--200, #f0f0f0);
+}
+
+#result_list tbody td,
+#result_list tbody th {
+    padding: 0.6875rem 1rem;
+    font-size: 0.875rem;
+    color: var(--pf-v5-global--Color--100, #151515);
+    background-color: transparent;
+}
+
+/* ============================================================
+   9. Action bar (search, object-tools)
+   ============================================================ */
+
+#changelist-search {
+    margin-bottom: 1rem;
+}
+
+.object-tools {
+    margin: 0 0 1rem 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    float: none;
+}
+
+.object-tools li {
+    display: inline;
+}
+
+.object-tools a,
+.object-tools a:link,
+.object-tools a:visited {
+    background-color: var(--pf-v5-global--primary-color--100, #0066cc);
+    color: #fff;
+    text-decoration: none;
+    padding: 0.375rem 1rem;
+    border-radius: var(--pf-v5-global--BorderRadius--sm, 3px);
+    font-size: 0.8125rem;
+    font-weight: 400;
+    border: 1px solid var(--pf-v5-global--primary-color--100, #0066cc);
+    display: inline-block;
+    line-height: 1.5;
+}
+
+.object-tools a:hover {
+    background-color: #004d99;
+    border-color: #004d99;
+    color: #fff;
+    text-decoration: none;
+}
+
+.object-tools a.viewlink,
+.object-tools a.viewlink:visited {
+    background-color: transparent;
+    border-color: var(--pf-v5-global--BorderColor--100, #d2d2d2);
+    color: var(--pf-v5-global--link--Color, #0066cc);
+}
+
+.object-tools a.viewlink:hover {
+    background-color: var(--pf-v5-global--BackgroundColor--200, #f0f0f0);
+    color: var(--pf-v5-global--link--Color--hover, #004d99);
+}
+
+/* ============================================================
+   10. Filters panel
+   ============================================================ */
+
+#changelist-filter {
+    background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
+    border: 1px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+    border-radius: var(--pf-v5-global--BorderRadius--sm, 3px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+#changelist-filter h2 {
+    background-color: var(--pf-v5-global--BackgroundColor--200, #f0f0f0);
+    color: var(--pf-v5-global--Color--200, #6a6e73);
+    padding: 0.625rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+}
+
+#changelist-filter h3 {
+    padding: 0.625rem 1rem 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--pf-v5-global--Color--100, #151515);
+}
+
+#changelist-filter ul {
+    padding: 0 1rem 0.75rem;
+    list-style: none;
+    margin: 0;
+}
+
+#changelist-filter li {
+    padding: 0.1875rem 0;
+    font-size: 0.875rem;
+}
+
+#changelist-filter li a {
+    color: var(--pf-v5-global--Color--100, #151515);
+}
+
+#changelist-filter li.selected a {
+    color: var(--pf-v5-global--primary-color--100, #0066cc);
+    font-weight: 600;
+}
+
+/* ============================================================
+   11. Pagination
+   ============================================================ */
+
+.paginator {
+    font-size: 0.875rem;
+    padding: 0.75rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.3125rem;
+    flex-wrap: wrap;
+    color: var(--pf-v5-global--Color--200, #6a6e73);
+}
+
+.paginator a,
+.paginator span.current {
+    padding: 0.25rem 0.625rem;
+    border: 1px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+    border-radius: var(--pf-v5-global--BorderRadius--sm, 3px);
+    text-decoration: none;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+
+.paginator a {
+    color: var(--pf-v5-global--link--Color, #0066cc);
+    background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
+}
+
+.paginator a:hover {
+    background-color: var(--pf-v5-global--BackgroundColor--200, #f0f0f0);
+}
+
+.paginator span.current {
+    background-color: var(--pf-v5-global--primary-color--100, #0066cc);
+    border-color: var(--pf-v5-global--primary-color--100, #0066cc);
+    color: #fff;
+}
+
+/* ============================================================
+   12. Forms
+   ============================================================ */
+
+fieldset {
+    border: 1px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+    border-radius: var(--pf-v5-global--BorderRadius--sm, 3px);
+    padding: 1rem 1rem 0.5rem;
+    margin-bottom: 1rem;
+    background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
+}
+
+fieldset legend,
+fieldset h2 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--pf-v5-global--Color--100, #151515);
+    padding: 0 0.5rem;
+    background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
+}
+
+.form-row {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+    background-color: transparent;
+}
+
+.form-row:last-child {
+    border-bottom: none;
+}
+
+label {
+    color: var(--pf-v5-global--Color--100, #151515);
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.help,
+p.help,
+.help-tooltip {
+    color: var(--pf-v5-global--Color--200, #6a6e73);
+    font-size: 0.8125rem;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="url"],
+input[type="number"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+input[type="search"],
+textarea,
+select {
+    background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
+    color: var(--pf-v5-global--Color--100, #151515);
+    border: 1px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+    border-radius: var(--pf-v5-global--BorderRadius--sm, 3px);
+    padding: 0.375rem 0.625rem;
+    font-size: var(--pf-v5-global--FontSize--md, 1rem);
+    font-family: inherit;
+    transition: border-color 0.1s;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input[type="datetime-local"]:focus,
+input[type="time"]:focus,
+input[type="search"]:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--pf-v5-global--primary-color--100, #0066cc);
+    box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
+}
+
+/* Search input in changelist */
+#changelist-search input[type="text"],
+#changelist-search input[type="search"] {
+    width: 18rem;
+    max-width: 100%;
+}
+
+/* ============================================================
+   13. Buttons
+   ============================================================ */
+
+.button,
+input[type="submit"],
+input[type="button"],
+.submit-row input[type="submit"] {
+    background-color: var(--pf-v5-global--primary-color--100, #0066cc);
+    color: #fff;
+    border: 1px solid var(--pf-v5-global--primary-color--100, #0066cc);
+    border-radius: var(--pf-v5-global--BorderRadius--sm, 3px);
+    padding: 0.375rem 1rem;
+    font-size: var(--pf-v5-global--FontSize--sm, 0.875rem);
+    font-weight: 400;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    line-height: 1.5;
+    transition: background-color 0.1s, border-color 0.1s;
+}
+
+.button:hover,
+input[type="submit"]:hover,
+input[type="button"]:hover,
+.submit-row input[type="submit"]:hover {
+    background-color: #004d99;
+    border-color: #004d99;
+    color: #fff;
+    text-decoration: none;
+}
+
+.button.default,
+input[type="submit"].default {
+    background-color: var(--pf-v5-global--primary-color--100, #0066cc);
+}
+
+/* Delete / danger button */
+.deletelink,
+a.deletelink,
+a.deletelink:link,
+a.deletelink:visited {
+    background-color: var(--pf-v5-global--danger-color--100, #c9190b);
+    color: #fff;
+    border: 1px solid var(--pf-v5-global--danger-color--100, #c9190b);
+    border-radius: var(--pf-v5-global--BorderRadius--sm, 3px);
+    padding: 0.375rem 1rem;
+    font-size: var(--pf-v5-global--FontSize--sm, 0.875rem);
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    line-height: 1.5;
+}
+
+.deletelink:hover,
+a.deletelink:hover {
+    background-color: #a01500;
+    border-color: #a01500;
+    color: #fff;
+    text-decoration: none;
+}
+
+/* Secondary / cancel link */
+a.addlink,
+.addlink {
+    background-color: var(--pf-v5-global--primary-color--100, #0066cc);
+    color: #fff;
+    border: 1px solid var(--pf-v5-global--primary-color--100, #0066cc);
+    border-radius: var(--pf-v5-global--BorderRadius--sm, 3px);
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8125rem;
+    text-decoration: none;
+    display: inline-block;
+}
+
+a.addlink:hover {
+    background-color: #004d99;
+    border-color: #004d99;
+    color: #fff;
+    text-decoration: none;
+}
+
+/* ============================================================
+   14. Submit row
+   ============================================================ */
+
+.submit-row {
+    background-color: var(--pf-v5-global--BackgroundColor--200, #f0f0f0);
+    border-top: 1px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+    padding: 1rem var(--pf-v5-global--spacer--lg, 1.5rem);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin: 1rem -1rem -1rem;
+}
+
+.submit-row p {
+    margin: 0;
+}
+
+.submit-row p.deletelink-box {
+    margin-left: auto;
+}
+
+/* ============================================================
+   15. Messages / alerts
+   ============================================================ */
+
+ul.messagelist {
+    padding: 0;
+    margin: 0 0 1rem 0;
+    list-style: none;
+}
+
+ul.messagelist li {
+    padding: 0.625rem 1rem;
+    border-radius: var(--pf-v5-global--BorderRadius--sm, 3px);
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    border-left: 4px solid;
+    background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
+}
+
+ul.messagelist .success {
+    border-left-color: var(--pf-v5-global--success-color--100, #3e8635);
+    background-color: #f3faf2;
+    color: #1e4f18;
+}
+
+ul.messagelist .error {
+    border-left-color: var(--pf-v5-global--danger-color--100, #c9190b);
+    background-color: #faeae8;
+    color: #7d1007;
+}
+
+ul.messagelist .warning {
+    border-left-color: var(--pf-v5-global--warning-color--100, #f0ab00);
+    background-color: #fdf7e7;
+    color: #3d3000;
+}
+
+ul.messagelist .info {
+    border-left-color: var(--pf-v5-global--info-color--100, #2b9af3);
+    background-color: #e8f4fd;
+    color: #003d7a;
+}
+
+/* ============================================================
+   16. Inline formsets
+   ============================================================ */
+
+.inline-related .module h3 {
+    background-color: var(--pf-v5-global--BackgroundColor--200, #f0f0f0);
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--pf-v5-global--Color--100, #151515);
+    border-bottom: 1px solid var(--pf-v5-global--BorderColor--100, #d2d2d2);
+}
+
+.inline-group .tabular .module {
+    box-shadow: none;
+}
+
+/* Add inline row link */
+.add-row td a {
+    color: var(--pf-v5-global--link--Color, #0066cc);
+    font-size: 0.875rem;
+}
+
+/* ============================================================
+   17. Dark mode explicit overrides
+       PF CSS variables automatically resolve dark values when
+       .pf-v5-theme-dark is on <html>, but elements with
+       hardcoded background-color in Django's own CSS need help.
+   ============================================================ */
+
+.pf-v5-theme-dark body,
+.pf-v5-theme-dark #container,
+.pf-v5-theme-dark .main,
+.pf-v5-theme-dark #content,
+.pf-v5-theme-dark #content-main {
+    background-color: var(--pf-v5-global--BackgroundColor--200);
+}
+
+.pf-v5-theme-dark .breadcrumbs {
+    background-color: var(--pf-v5-global--BackgroundColor--100);
+    border-bottom-color: var(--pf-v5-global--BorderColor--100);
+    color: var(--pf-v5-global--Color--200);
+}
+
+.pf-v5-theme-dark #nav-sidebar,
+.pf-v5-theme-dark .toggle-nav-sidebar {
+    background-color: var(--pf-v5-global--BackgroundColor--100);
+    border-right-color: var(--pf-v5-global--BorderColor--100);
+}
+
+.pf-v5-theme-dark .module,
+.pf-v5-theme-dark fieldset,
+.pf-v5-theme-dark #changelist-filter {
+    background-color: var(--pf-v5-global--BackgroundColor--100);
+    border-color: var(--pf-v5-global--BorderColor--100);
+}
+
+.pf-v5-theme-dark .module h2,
+.pf-v5-theme-dark .module caption {
+    background-color: var(--pf-v5-global--BackgroundColor--100);
+    color: var(--pf-v5-global--Color--100);
+    border-bottom-color: var(--pf-v5-global--BorderColor--100);
+}
+
+.pf-v5-theme-dark .app-health .module h2 {
+    background-color: var(--pf-v5-global--BackgroundColor--200);
+}
+
+.pf-v5-theme-dark #result_list {
+    background-color: var(--pf-v5-global--BackgroundColor--100);
+    border-color: var(--pf-v5-global--BorderColor--100);
+}
+
+.pf-v5-theme-dark #result_list thead th {
+    background-color: var(--pf-v5-global--BackgroundColor--100);
+    color: var(--pf-v5-global--Color--100);
+    border-bottom-color: var(--pf-v5-global--BorderColor--100);
+}
+
+.pf-v5-theme-dark #result_list thead th.sorted,
+.pf-v5-theme-dark #result_list thead th.ascending,
+.pf-v5-theme-dark #result_list thead th.descending {
+    background-color: var(--pf-v5-global--BackgroundColor--200);
+}
+
+.pf-v5-theme-dark #result_list tbody tr {
+    border-bottom-color: var(--pf-v5-global--BorderColor--100);
+}
+
+.pf-v5-theme-dark #result_list tbody tr:hover {
+    background-color: var(--pf-v5-global--BackgroundColor--200);
+}
+
+.pf-v5-theme-dark #result_list tbody td,
+.pf-v5-theme-dark #result_list tbody th {
+    color: var(--pf-v5-global--Color--100);
+}
+
+.pf-v5-theme-dark input[type="text"],
+.pf-v5-theme-dark input[type="password"],
+.pf-v5-theme-dark input[type="email"],
+.pf-v5-theme-dark input[type="url"],
+.pf-v5-theme-dark input[type="number"],
+.pf-v5-theme-dark input[type="date"],
+.pf-v5-theme-dark input[type="datetime-local"],
+.pf-v5-theme-dark input[type="time"],
+.pf-v5-theme-dark input[type="search"],
+.pf-v5-theme-dark textarea,
+.pf-v5-theme-dark select {
+    background-color: var(--pf-v5-global--BackgroundColor--100);
+    color: var(--pf-v5-global--Color--100);
+    border-color: var(--pf-v5-global--BorderColor--100);
+}
+
+.pf-v5-theme-dark #changelist-filter h2 {
+    background-color: var(--pf-v5-global--BackgroundColor--200);
+    color: var(--pf-v5-global--Color--200);
+    border-bottom-color: var(--pf-v5-global--BorderColor--100);
+}
+
+.pf-v5-theme-dark #changelist-filter h3 {
+    color: var(--pf-v5-global--Color--100);
+}
+
+.pf-v5-theme-dark .paginator a {
+    background-color: var(--pf-v5-global--BackgroundColor--100);
+    border-color: var(--pf-v5-global--BorderColor--100);
+}
+
+.pf-v5-theme-dark .paginator a:hover {
+    background-color: var(--pf-v5-global--BackgroundColor--200);
+}
+
+.pf-v5-theme-dark .submit-row {
+    background-color: var(--pf-v5-global--BackgroundColor--200);
+    border-top-color: var(--pf-v5-global--BorderColor--100);
+}
+
+.pf-v5-theme-dark .form-row {
+    border-bottom-color: var(--pf-v5-global--BorderColor--100);
+}
+
+.pf-v5-theme-dark fieldset legend,
+.pf-v5-theme-dark fieldset h2 {
+    background-color: var(--pf-v5-global--BackgroundColor--100);
+    color: var(--pf-v5-global--Color--100);
+}
+
+.pf-v5-theme-dark ul.messagelist .success {
+    background-color: rgba(62, 134, 53, 0.12);
+    color: #9ef0a0;
+}
+
+.pf-v5-theme-dark ul.messagelist .error {
+    background-color: rgba(201, 25, 11, 0.12);
+    color: #f4a09a;
+}
+
+.pf-v5-theme-dark ul.messagelist .warning {
+    background-color: rgba(240, 171, 0, 0.12);
+    color: #f4d076;
+}
+
+.pf-v5-theme-dark ul.messagelist .info {
+    background-color: rgba(43, 154, 243, 0.12);
+    color: #7dc3f8;
+}
+
+.pf-v5-theme-dark .inline-related .module h3 {
+    background-color: var(--pf-v5-global--BackgroundColor--200);
+    color: var(--pf-v5-global--Color--100);
+    border-bottom-color: var(--pf-v5-global--BorderColor--100);
+}
+
+#nav-filter {
+    border-color: var(--pf-v5-global--BorderColor--100);
+}
+
+.pf-v5-theme-dark #nav-filter {
+    background-color: var(--pf-v5-global--BackgroundColor--200);
+    color: var(--pf-v5-global--Color--100);
+    border-color: var(--pf-v5-global--BorderColor--100);
+}
