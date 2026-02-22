@@ -683,7 +683,8 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
                         aircraft=new_aircraft,
                         name=col_data.get('name', 'Imported Collection'),
                         description=col_data.get('description', ''),
-                        shared=col_data.get('shared', False),
+                        visibility=col_data.get('visibility', 'private'),
+                        starred=col_data.get('starred', False),
                     )
                     # M2M components
                     component_m2m = [
@@ -708,7 +709,7 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
                         doc_type=doc_data.get('doc_type', 'OTHER'),
                         name=doc_data.get('name', 'Imported Document'),
                         description=doc_data.get('description', ''),
-                        shared=doc_data.get('shared'),
+                        visibility=doc_data.get('visibility'),
                     )
                     component_m2m = [
                         id_map['component'][cid]

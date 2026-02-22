@@ -127,7 +127,8 @@ def _document_collection_dict(col):
         'aircraft_id': _str(col.aircraft_id),
         'name': col.name,
         'description': col.description,
-        'shared': col.shared,
+        'visibility': col.visibility,
+        'starred': col.starred,
         'components': [_str(c_id) for c_id in col.components.values_list('id', flat=True)],
     }
 
@@ -140,7 +141,7 @@ def _document_dict(doc):
         'doc_type': doc.doc_type,
         'name': doc.name,
         'description': doc.description,
-        'shared': doc.shared,
+        'visibility': doc.visibility,
         'components': [_str(c_id) for c_id in doc.components.values_list('id', flat=True)],
     }
 
