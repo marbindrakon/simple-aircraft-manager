@@ -331,7 +331,7 @@ class MajorRepairAlterationNestedSerializer(serializers.ModelSerializer):
             'form_337_document', 'form_337_document_name',
             'stc_number', 'stc_holder', 'stc_document', 'stc_document_name',
             'logbook_entry', 'logbook_entry_date',
-            'aircraft_hours', 'notes', 'created_at',
+            'aircraft_hours', 'has_ica', 'ica_notes', 'notes', 'created_at',
         ]
         read_only_fields = ['id', 'created_at', 'record_type_display', 'component_name',
                             'form_337_document_name', 'stc_document_name', 'logbook_entry_date']

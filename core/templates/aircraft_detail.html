@@ -1203,25 +1203,34 @@
                         <table class="pf-v5-c-table pf-m-grid-md pf-m-compact pf-m-striped">
                             <thead>
                                 <tr>
+                                    <th></th>
                                     <th>Title</th>
                                     <th>Date</th>
                                     <th>Component</th>
-                                    <th>Performed By</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <template x-for="record in majorRepairs" :key="record.id">
+                            <template x-for="record in majorRepairs" :key="record.id">
+                                <tbody>
                                     <tr>
+                                        <td class="pf-v5-c-table__toggle">
+                                            <button class="pf-v5-c-button pf-m-plain"
+                                                    @click="toggleMajorRecordExpand(record.id)"
+                                                    :aria-expanded="isMajorRecordExpanded(record.id).toString()">
+                                                <i class="fas fa-angle-down"
+                                                   :style="isMajorRecordExpanded(record.id) ? 'transform: rotate(180deg)' : ''"></i>
+                                            </button>
+                                        </td>
                                         <td>
-                                            <span x-text="record.title"></span>
-                                            <template x-if="record.description">
-                                                <div style="font-size: 0.8rem; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;" x-text="record.description.substring(0, 100) + (record.description.length > 100 ? '...' : '')"></div>
-                                            </template>
+                                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                                <span x-text="record.title"></span>
+                                                <span class="pf-v5-c-label pf-m-compact pf-m-gold" x-show="record.has_ica" title="Includes Instructions for Continued Airworthiness">
+                                                    <span class="pf-v5-c-label__content"><i class="fas fa-book-open" style="margin-right: 0.25rem; font-size: 0.7rem;"></i>ICA</span>
+                                                </span>
+                                            </div>
                                         </td>
                                         <td x-text="formatDate(record.date_performed)"></td>
                                         <td x-text="record.component_name || '-'"></td>
-                                        <td x-text="record.performed_by || '-'"></td>
                                         <td>
                                             <div style="display: flex; gap: 0.25rem; align-items: center;">
                                                 <div class="related-popup-trigger" x-show="record.logbook_entry || canViewDocument(record.form_337_document)" @click.outside="if (openRelatedPopup === record.id) openRelatedPopup = null">
@@ -1254,8 +1263,51 @@
                                             </div>
                                         </td>
                                     </tr>
-                                </template>
-                            </tbody>
+                                    <tr x-show="isMajorRecordExpanded(record.id)"
+                                        :class="{'pf-m-expanded': isMajorRecordExpanded(record.id)}"
+                                        class="pf-v5-c-table__expandable-row">
+                                        <td></td>
+                                        <td colspan="4" style="padding: 0.75rem 1rem;">
+                                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 2.5rem; margin-bottom: 0.75rem;">
+                                                <div>
+                                                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Performed By</div>
+                                                    <div x-text="record.performed_by || '—'"></div>
+                                                </div>
+                                                <div>
+                                                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Aircraft Hours</div>
+                                                    <div x-text="record.aircraft_hours ? formatHours(record.aircraft_hours) : '—'"></div>
+                                                </div>
+                                                <template x-if="record.has_ica">
+                                                    <div>
+                                                        <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">ICAs</div>
+                                                        <span class="pf-v5-c-label pf-m-compact pf-m-gold">
+                                                            <span class="pf-v5-c-label__content"><i class="fas fa-book-open" style="margin-right: 0.25rem; font-size: 0.7rem;"></i>Has ICAs</span>
+                                                        </span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <template x-if="record.has_ica && record.ica_notes">
+                                                <div style="margin-bottom: 0.75rem;">
+                                                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">ICA Notes</div>
+                                                    <div x-text="record.ica_notes" style="white-space: pre-wrap;"></div>
+                                                </div>
+                                            </template>
+                                            <template x-if="record.description">
+                                                <div style="margin-bottom: 0.75rem;">
+                                                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Description</div>
+                                                    <div x-text="record.description" style="white-space: pre-wrap;"></div>
+                                                </div>
+                                            </template>
+                                            <template x-if="record.notes">
+                                                <div>
+                                                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Notes</div>
+                                                    <div x-text="record.notes" style="white-space: pre-wrap;"></div>
+                                                </div>
+                                            </template>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </template>
                         </table>
                     </div>
                 </template>
@@ -1267,6 +1319,7 @@
                         <table class="pf-v5-c-table pf-m-grid-md pf-m-compact pf-m-striped">
                             <thead>
                                 <tr>
+                                    <th></th>
                                     <th>Title</th>
                                     <th>Date</th>
                                     <th>Component</th>
@@ -1275,14 +1328,24 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <template x-for="record in majorAlterations" :key="record.id">
+                            <template x-for="record in majorAlterations" :key="record.id">
+                                <tbody>
                                     <tr>
+                                        <td class="pf-v5-c-table__toggle">
+                                            <button class="pf-v5-c-button pf-m-plain"
+                                                    @click="toggleMajorRecordExpand(record.id)"
+                                                    :aria-expanded="isMajorRecordExpanded(record.id).toString()">
+                                                <i class="fas fa-angle-down"
+                                                   :style="isMajorRecordExpanded(record.id) ? 'transform: rotate(180deg)' : ''"></i>
+                                            </button>
+                                        </td>
                                         <td>
-                                            <span x-text="record.title"></span>
-                                            <template x-if="record.description">
-                                                <div style="font-size: 0.8rem; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;" x-text="record.description.substring(0, 100) + (record.description.length > 100 ? '...' : '')"></div>
-                                            </template>
+                                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                                <span x-text="record.title"></span>
+                                                <span class="pf-v5-c-label pf-m-compact pf-m-gold" x-show="record.has_ica" title="Includes Instructions for Continued Airworthiness">
+                                                    <span class="pf-v5-c-label__content"><i class="fas fa-book-open" style="margin-right: 0.25rem; font-size: 0.7rem;"></i>ICA</span>
+                                                </span>
+                                            </div>
                                         </td>
                                         <td x-text="formatDate(record.date_performed)"></td>
                                         <td x-text="record.component_name || '-'"></td>
@@ -1325,8 +1388,51 @@
                                             </div>
                                         </td>
                                     </tr>
-                                </template>
-                            </tbody>
+                                    <tr x-show="isMajorRecordExpanded(record.id)"
+                                        :class="{'pf-m-expanded': isMajorRecordExpanded(record.id)}"
+                                        class="pf-v5-c-table__expandable-row">
+                                        <td></td>
+                                        <td colspan="6" style="padding: 0.75rem 1rem;">
+                                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 2.5rem; margin-bottom: 0.75rem;">
+                                                <div>
+                                                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Performed By</div>
+                                                    <div x-text="record.performed_by || '—'"></div>
+                                                </div>
+                                                <div>
+                                                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Aircraft Hours</div>
+                                                    <div x-text="record.aircraft_hours ? formatHours(record.aircraft_hours) : '—'"></div>
+                                                </div>
+                                                <template x-if="record.has_ica">
+                                                    <div>
+                                                        <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">ICAs</div>
+                                                        <span class="pf-v5-c-label pf-m-compact pf-m-gold">
+                                                            <span class="pf-v5-c-label__content"><i class="fas fa-book-open" style="margin-right: 0.25rem; font-size: 0.7rem;"></i>Has ICAs</span>
+                                                        </span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <template x-if="record.has_ica && record.ica_notes">
+                                                <div style="margin-bottom: 0.75rem;">
+                                                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">ICA Notes</div>
+                                                    <div x-text="record.ica_notes" style="white-space: pre-wrap;"></div>
+                                                </div>
+                                            </template>
+                                            <template x-if="record.description">
+                                                <div style="margin-bottom: 0.75rem;">
+                                                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Description</div>
+                                                    <div x-text="record.description" style="white-space: pre-wrap;"></div>
+                                                </div>
+                                            </template>
+                                            <template x-if="record.notes">
+                                                <div>
+                                                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Notes</div>
+                                                    <div x-text="record.notes" style="white-space: pre-wrap;"></div>
+                                                </div>
+                                            </template>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </template>
                         </table>
                     </div>
                 </template>
@@ -1541,6 +1647,30 @@
                                 </template>
                             </div>
                         </div>
+
+                        <!-- ICA -->
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label">
+                                <span class="pf-v5-c-form__label-text">Instructions for Continued Airworthiness (ICAs)</span>
+                            </label>
+                            <div class="pf-v5-c-form__group-control">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" x-model="majorRecordForm.has_ica">
+                                    <span>This record includes ICAs</span>
+                                </label>
+                            </div>
+                        </div>
+                        <template x-if="majorRecordForm.has_ica">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label">
+                                    <span class="pf-v5-c-form__label-text">ICA Notes</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <textarea class="pf-v5-c-form-control" x-model="majorRecordForm.ica_notes" rows="2"
+                                              placeholder="Where the ICAs are located and what they cover"></textarea>
+                                </div>
+                            </div>
+                        </template>
 
                         <!-- Notes -->
                         <div class="pf-v5-c-form__group">

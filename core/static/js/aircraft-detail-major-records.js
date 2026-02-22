@@ -7,6 +7,7 @@ function majorRecordsMixin() {
         majorRecordSubmitting: false,
         majorRecordFilter: 'all',
         openRelatedPopup: null,
+        expandedMajorRecords: {},
         majorRecordForm: {
             record_type: 'repair',
             title: '',
@@ -20,7 +21,18 @@ function majorRecordsMixin() {
             stc_document: '',
             logbook_entry: '',
             aircraft_hours: '',
+            has_ica: false,
+            ica_notes: '',
             notes: '',
+        },
+
+        toggleMajorRecordExpand(id) {
+            this.expandedMajorRecords[id] = !this.expandedMajorRecords[id];
+            this.expandedMajorRecords = { ...this.expandedMajorRecords };
+        },
+
+        isMajorRecordExpanded(id) {
+            return !!this.expandedMajorRecords[id];
         },
 
         get filteredMajorRecords() {
@@ -63,6 +75,8 @@ function majorRecordsMixin() {
                 stc_document: '',
                 logbook_entry: '',
                 aircraft_hours: this.aircraft ? parseFloat(this.aircraft.flight_time || 0).toFixed(1) : '',
+                has_ica: false,
+                ica_notes: '',
                 notes: '',
             };
             this.pickerInit('majorRecordForm', 'logbook_entry', '');
@@ -88,6 +102,8 @@ function majorRecordsMixin() {
                 stc_document: record.stc_document || '',
                 logbook_entry: lbId,
                 aircraft_hours: record.aircraft_hours != null ? parseFloat(record.aircraft_hours).toFixed(1) : '',
+                has_ica: record.has_ica || false,
+                ica_notes: record.ica_notes || '',
                 notes: record.notes || '',
             };
             await this.pickerInit('majorRecordForm', 'logbook_entry', lbId);
@@ -118,6 +134,8 @@ function majorRecordsMixin() {
                     stc_document: this.majorRecordForm.stc_document || null,
                     logbook_entry: this.majorRecordForm.logbook_entry || null,
                     aircraft_hours: this.majorRecordForm.aircraft_hours ? parseFloat(this.majorRecordForm.aircraft_hours) : null,
+                    has_ica: this.majorRecordForm.has_ica,
+                    ica_notes: this.majorRecordForm.ica_notes,
                     notes: this.majorRecordForm.notes,
                 };
 

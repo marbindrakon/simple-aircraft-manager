@@ -15,29 +15,47 @@ Use the toggle buttons at the top to filter between:
 
 .. TODO: Screenshot of the Repairs & Alterations tab showing both sections with the filter toggle
 
+ICA Indicator
+-------------
+
+Records that include **Instructions for Continued Airworthiness (ICAs)** are
+flagged with a gold **ICA** badge next to the title in both the repairs and
+alterations tables. This makes it easy for a mechanic to quickly identify
+which repairs or alterations have associated ICA requirements.
+
 Major Repairs
 -------------
 
 The repairs table shows:
 
-- **Title** -- A description of the repair, with a truncated preview of the
-  full description.
+- **Title** -- A brief title. A gold **ICA** badge appears here if the record
+  includes ICAs.
 - **Date** -- When the repair was performed.
 - **Component** -- The affected component, if linked.
-- **Performed By** -- The person or shop that performed the repair.
 - **Actions** -- Edit and delete buttons (owners only), plus a **paperclip
   icon** that appears when the record has linked files. Click the paperclip to
   open a popup with links to the associated logbook entry and/or Form 337
   document. Click the icon again (or anywhere outside the popup) to dismiss it.
 
+Click the **chevron** (▸) at the left of any row to expand it and reveal
+additional detail:
+
+- **Performed By** -- The mechanic, shop, or IA who performed the work.
+- **Aircraft Hours** -- The aircraft's total time at the time of the repair.
+- **ICAs / ICA Notes** -- Whether the record includes Instructions for
+  Continued Airworthiness, and any notes about where they can be found.
+- **Description** -- The full work description.
+- **Notes** -- Any additional notes.
+
 Major Alterations
 -----------------
 
-The alterations table includes the same fields as repairs, plus:
+The alterations table includes the same columns as repairs, plus:
 
 - **STC #** -- The Supplemental Type Certificate number, if applicable.
 - **STC Holder** -- The STC holder's name.
 
+Expanding an alteration row reveals the same detail fields as repairs.
 The paperclip popup for alterations may also include a link to the STC
 document when one is attached.
 
@@ -61,6 +79,15 @@ Adding a Record
    - **STC Number** -- The STC number.
    - **STC Holder** -- The STC holder.
    - **STC Document** -- Optionally link to the STC document.
+
+   To flag ICAs:
+
+   - **Instructions for Continued Airworthiness (ICAs)** -- Check this box if
+     the repair or alteration includes ICAs. The record will display a gold
+     **ICA** badge in the table.
+   - **ICA Notes** -- (Appears when the ICA checkbox is checked.) Describe
+     where the ICAs are located and what they cover, e.g. the document they
+     appear in or the maintenance tasks they define.
 
 3. Click **Save**.
 

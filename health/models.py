@@ -303,6 +303,10 @@ class MajorRepairAlteration(models.Model):
     aircraft_hours = models.DecimalField(max_digits=8, decimal_places=1, blank=True, null=True,
                                          help_text="Aircraft total hours at time of work")
 
+    # Instructions for Continued Airworthiness (ICAs)
+    has_ica = models.BooleanField(default=False, help_text="This record includes Instructions for Continued Airworthiness (ICAs)")
+    ica_notes = models.TextField(blank=True, help_text="Notes about where the ICAs are located and what they cover")
+
     # Metadata
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
