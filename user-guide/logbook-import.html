@@ -255,20 +255,20 @@
         <article role="main" id="furo-main-content">
           <section id="logbook-import">
 <h1>Logbook Import<a class="headerlink" href="#logbook-import" title="Link to this heading">¶</a></h1>
-<p>The Logbook Import feature uses AI to transcribe scanned aircraft logbook pages
-into structured digital entries. It can process images of handwritten or typed
-maintenance logbook pages and extract individual entries with dates, descriptions,
-hours, and signoff information.</p>
+<p>The Logbook Import feature uploads scanned aircraft logbook pages as documents
+and, when an AI provider is configured, can also transcribe them into structured
+digital entries with dates, descriptions, hours, and signoff information.</p>
 <section id="accessing-the-import-page">
 <h2>Accessing the Import Page<a class="headerlink" href="#accessing-the-import-page" title="Link to this heading">¶</a></h2>
 <p>Click <strong>Import Logbooks</strong> in the navigation bar to access this page. This
 feature is available to aircraft owners.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The import feature requires at least one AI provider to be configured by the
+<p>AI transcription requires at least one AI provider to be configured by the
 system administrator (Anthropic API key for Claude, or an Ollama instance
-URL for self-hosted models). If no provider is configured, the import page
-will not be available.</p>
+URL for self-hosted models). If no provider is configured, the page operates
+in upload-only mode: images are saved as documents but no logbook entries are
+extracted.</p>
 </div>
 </section>
 <section id="uploading-source-files">
@@ -300,7 +300,9 @@ collection name.</p></li>
 <h2>Import Options<a class="headerlink" href="#import-options" title="Link to this heading">¶</a></h2>
 <dl class="simple">
 <dt><strong>Upload only (no transcription)</strong></dt><dd><p>Check this to save the images as documents without running AI transcription.
-Useful if you just want to archive scanned pages without extracting entries.</p>
+Useful if you just want to archive scanned pages without extracting entries.
+If no AI provider is configured, this mode is used automatically and the
+option is not shown.</p>
 </dd>
 <dt><strong>Document type</strong></dt><dd><p>Categorize the uploaded document: Log, Alteration, Report, Invoice, Aircraft
 Record, or Other.</p>

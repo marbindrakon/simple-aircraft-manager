@@ -1,10 +1,9 @@
 Logbook Import
 ==============
 
-The Logbook Import feature uses AI to transcribe scanned aircraft logbook pages
-into structured digital entries. It can process images of handwritten or typed
-maintenance logbook pages and extract individual entries with dates, descriptions,
-hours, and signoff information.
+The Logbook Import feature uploads scanned aircraft logbook pages as documents
+and, when an AI provider is configured, can also transcribe them into structured
+digital entries with dates, descriptions, hours, and signoff information.
 
 .. TODO: Screenshot of the Logbook Import page showing the form layout
 
@@ -16,10 +15,11 @@ feature is available to aircraft owners.
 
 .. note::
 
-   The import feature requires at least one AI provider to be configured by the
+   AI transcription requires at least one AI provider to be configured by the
    system administrator (Anthropic API key for Claude, or an Ollama instance
-   URL for self-hosted models). If no provider is configured, the import page
-   will not be available.
+   URL for self-hosted models). If no provider is configured, the page operates
+   in upload-only mode: images are saved as documents but no logbook entries are
+   extracted.
 
 Uploading Source Files
 ----------------------
@@ -54,6 +54,8 @@ Import Options
 **Upload only (no transcription)**
    Check this to save the images as documents without running AI transcription.
    Useful if you just want to archive scanned pages without extracting entries.
+   If no AI provider is configured, this mode is used automatically and the
+   option is not shown.
 
 **Document type**
    Categorize the uploaded document: Log, Alteration, Report, Invoice, Aircraft
