@@ -3,10 +3,10 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Getting Started" href="getting-started.html"><link rel="prev" title="Simple Aircraft Manager" href="../index.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Features" href="../features.html"><link rel="prev" title="Airworthiness Status" href="airworthiness.html">
 
     <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
-        <title>Overview - Simple Aircraft Manager</title>
+        <title>Management Portal - Simple Aircraft Manager</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -172,7 +172,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -192,7 +192,7 @@
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
 <ul class="current">
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="dashboard.html">Aircraft Fleet</a></li>
 <li class="toctree-l1"><a class="reference internal" href="aircraft-detail.html">Aircraft Detail Page</a></li>
@@ -207,7 +207,7 @@
 <li class="toctree-l1"><a class="reference internal" href="sharing-and-access.html">Sharing &amp; Access</a></li>
 <li class="toctree-l1"><a class="reference internal" href="logbook-import.html">Logbook Import</a></li>
 <li class="toctree-l1"><a class="reference internal" href="airworthiness.html">Airworthiness Status</a></li>
-<li class="toctree-l1"><a class="reference internal" href="management.html">Management Portal</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Management Portal</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Developer Reference</span></p>
 <ul>
@@ -236,7 +236,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../_sources/user-guide/index.rst.txt" title="View this page">
+  <a class="muted-link" href="../_sources/user-guide/management.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -249,18 +249,119 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="overview">
-<h1>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h1>
-<p>Simple Aircraft Manager is a web application for tracking aircraft maintenance,
-flight hours, and regulatory compliance. It provides a centralized place to manage
-your fleet’s airworthiness status, component life limits, maintenance logbooks,
-Airworthiness Directives, inspections, and more.</p>
-<p>Continue reading through the topics in this section using the navigation sidebar.</p>
+          <section id="management-portal">
+<h1>Management Portal<a class="headerlink" href="#management-portal" title="Link to this heading">¶</a></h1>
+<p>Staff users (accounts with the <em>staff</em> flag) have access to a <strong>Manage</strong> item
+in the top navigation bar. The management portal provides operational workflows
+for controlling who can register and what aircraft they can access.</p>
+<p>The themed Django admin (<code class="docutils literal notranslate"><span class="pre">/admin/</span></code>) is still available to superusers for raw
+data access, but the management portal covers the day-to-day workflows.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The Manage nav item is only visible to staff accounts. Regular owners and
+pilots do not see it.</p>
+</div>
+<section id="invitation-codes">
+<h2>Invitation Codes<a class="headerlink" href="#invitation-codes" title="Link to this heading">¶</a></h2>
+<p>Invitation codes are the mechanism for creating new user accounts. Each code
+contains a unique registration link; anyone who opens that link can create an
+account (subject to any restrictions you configure).</p>
+<p>Navigate to <strong>Manage → Invitation Codes</strong> to see all codes.</p>
+<p>The table shows:</p>
+<ul class="simple">
+<li><p><strong>Label</strong> – An internal name for the code (e.g., “Club XYZ - Spring 2026”).
+Click the label to open the code’s detail page.</p></li>
+<li><p><strong>Email</strong> – If set, the registration form will be pre-filled with this
+address.</p></li>
+<li><p><strong>Uses</strong> – How many times the code has been redeemed vs. the maximum
+(<code class="docutils literal notranslate"><span class="pre">∞</span></code> means unlimited).</p></li>
+<li><p><strong>Expires</strong> – The expiration date, or “Never”.</p></li>
+<li><p><strong>Status</strong> – Green “Active”, grey “Inactive”, or red “Expired/Exhausted”.</p></li>
+<li><p><strong>Actions</strong> – Copy the registration link, toggle active/inactive, or delete.</p></li>
+</ul>
+<section id="creating-an-invitation-code">
+<h3>Creating an Invitation Code<a class="headerlink" href="#creating-an-invitation-code" title="Link to this heading">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Click <strong>New Invitation Code</strong>.</p></li>
+<li><p>Fill in the fields:</p>
+<ul class="simple">
+<li><p><strong>Label</strong> <em>(required)</em> – A descriptive name for your own reference.</p></li>
+<li><p><strong>Email</strong> <em>(optional)</em> – Pre-fills the registration form. Effectively
+makes the code single-use for one specific person.</p></li>
+<li><p><strong>Name</strong> <em>(optional)</em> – Pre-fills the name field on the registration form.</p></li>
+<li><p><strong>Max Uses</strong> <em>(optional)</em> – Leave blank for unlimited uses.</p></li>
+<li><p><strong>Expires At</strong> <em>(optional)</em> – Leave blank for no expiration.</p></li>
+</ul>
+</li>
+<li><p>Click <strong>Create Code</strong>.</p></li>
+</ol>
+<p>The new code appears in the table with an “Active” badge.</p>
+</section>
+<section id="sharing-the-link">
+<h3>Sharing the Link<a class="headerlink" href="#sharing-the-link" title="Link to this heading">¶</a></h3>
+<p>Click the <strong>copy icon</strong> (clipboard) next to a code to copy its registration URL
+to your clipboard. Send this URL to the person you want to invite. When they
+open it, they will see a registration form and can create their account.</p>
+</section>
+<section id="toggling-a-code">
+<h3>Toggling a Code<a class="headerlink" href="#toggling-a-code" title="Link to this heading">¶</a></h3>
+<p>Click <strong>Deactivate</strong> to disable a code without deleting it. Deactivated codes
+can be re-activated at any time by clicking <strong>Activate</strong>. Links to a deactivated
+code will show an “invalid code” message to anyone who opens them.</p>
+</section>
+<section id="deleting-a-code">
+<h3>Deleting a Code<a class="headerlink" href="#deleting-a-code" title="Link to this heading">¶</a></h3>
+<p>Click the <strong>trash icon</strong> and confirm to permanently delete a code. Existing
+accounts created with the code are not affected.</p>
+</section>
+<section id="invitation-code-detail">
+<h3>Invitation Code Detail<a class="headerlink" href="#invitation-code-detail" title="Link to this heading">¶</a></h3>
+<p>Click a code’s label to open its detail page. From here you can:</p>
+<ul class="simple">
+<li><p><strong>Edit</strong> the label, email, name, max uses, expires at, and active status,
+then click <strong>Save Changes</strong>.</p></li>
+<li><p><strong>Copy</strong> the full registration link.</p></li>
+<li><p>Manage <strong>Initial Aircraft Roles</strong> — roles automatically granted when someone
+redeems the code (see below).</p></li>
+<li><p>View <strong>Redemptions</strong> — a read-only table of users who have redeemed the code
+and when.</p></li>
+</ul>
+<section id="initial-aircraft-roles">
+<h4>Initial Aircraft Roles<a class="headerlink" href="#initial-aircraft-roles" title="Link to this heading">¶</a></h4>
+<p>You can pre-assign aircraft roles to a code so that anyone who registers with it
+is automatically granted access to specific aircraft.</p>
+<p>To add a role:</p>
+<ol class="arabic simple">
+<li><p>On the code detail page, select an <strong>Aircraft</strong> from the dropdown.</p></li>
+<li><p>Choose a <strong>Role</strong> (Pilot or Owner).</p></li>
+<li><p>Click <strong>Add</strong>.</p></li>
+</ol>
+<p>The role appears in the table. Click the <strong>X</strong> to remove it. Changes take effect
+for future redemptions only; users who already redeemed the code are not affected.</p>
+</section>
+</section>
+</section>
+<section id="users">
+<h2>Users<a class="headerlink" href="#users" title="Link to this heading">¶</a></h2>
+<p>Navigate to <strong>Manage → Users</strong> to see a table of all registered users.</p>
+<p>The table shows:</p>
+<ul class="simple">
+<li><p><strong>Username</strong>, <strong>Name</strong>, <strong>Email</strong></p></li>
+<li><p><strong>Staff</strong> badge (if the account has staff privileges)</p></li>
+<li><p><strong>Active</strong> / <strong>Inactive</strong> badge</p></li>
+<li><p><strong>Joined</strong> date and <strong>Last Login</strong> date</p></li>
+<li><p><strong>Aircraft Access</strong> – A summary of the aircraft roles granted to this user
+(e.g., <code class="docutils literal notranslate"><span class="pre">N12345</span> <span class="pre">(owner),</span> <span class="pre">N67890</span> <span class="pre">(pilot)</span></code>). Shown as “—” if the user has no
+aircraft roles.</p></li>
+</ul>
+<p>Superusers see an <strong>Edit in Admin</strong> link next to each user that opens the Django
+admin edit page for that account.</p>
+</section>
 </section>
 
         </article>
@@ -268,23 +369,23 @@ Airworthiness Directives, inspections, and more.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="getting-started.html">
+          <a class="next-page" href="../features.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Getting Started</div>
+                <div class="title">Features</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="../index.html">
+          <a class="prev-page" href="airworthiness.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Home</div>
+                <div class="title">Airworthiness Status</div>
                 
               </div>
             </a>
@@ -306,8 +407,38 @@ Airworthiness Directives, inspections, and more.</p>
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Management Portal</a><ul>
+<li><a class="reference internal" href="#invitation-codes">Invitation Codes</a><ul>
+<li><a class="reference internal" href="#creating-an-invitation-code">Creating an Invitation Code</a></li>
+<li><a class="reference internal" href="#sharing-the-link">Sharing the Link</a></li>
+<li><a class="reference internal" href="#toggling-a-code">Toggling a Code</a></li>
+<li><a class="reference internal" href="#deleting-a-code">Deleting a Code</a></li>
+<li><a class="reference internal" href="#invitation-code-detail">Invitation Code Detail</a><ul>
+<li><a class="reference internal" href="#initial-aircraft-roles">Initial Aircraft Roles</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#users">Users</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>

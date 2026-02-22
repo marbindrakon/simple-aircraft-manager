@@ -12,8 +12,8 @@ Simple Aircraft Manager supports two authentication methods:
   provider. Your account is created automatically on first login.
 
 - **Local accounts** with a username and password. Local accounts always work,
-  even when SSO is enabled. An administrator must create your local account
-  for you.
+  even when SSO is enabled. An administrator will send you an **invitation
+  link**; open it to create your account with a username and password.
 
 .. TODO: Screenshot of the login page showing both SSO and local login options
 
