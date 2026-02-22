@@ -24,6 +24,7 @@ and individual owners.
    user-guide/sharing-and-access
    user-guide/logbook-import
    user-guide/airworthiness
+   user-guide/management
 
 .. toctree::
    :maxdepth: 2
