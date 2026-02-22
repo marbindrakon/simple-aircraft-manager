@@ -121,3 +121,67 @@ class AircraftShareToken(models.Model):
 
     def __str__(self):
         return f"{self.aircraft.tail_number} - {self.label or self.privilege} share token"
+
+
+class InvitationCode(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    label = models.CharField(max_length=200, help_text="Admin label, e.g. 'Club XYZ Pilots - Spring 2026'")
+
+    # Optional per-user fields — when set, the registration form is pre-filled
+    # and the code is effectively single-use for that person
+    invited_email = models.EmailField(blank=True)
+    invited_name = models.CharField(max_length=200, blank=True)
+
+    # Usage control (null = unlimited)
+    max_uses = models.PositiveIntegerField(null=True, blank=True, help_text="Leave blank for unlimited uses")
+    use_count = models.PositiveIntegerField(default=0, editable=False)
+
+    # Lifecycle
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(null=True, blank=True, help_text="Leave blank to never expire")
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.label
+
+    @property
+    def is_valid(self):
+        from django.utils import timezone
+        if not self.is_active:
+            return False
+        if self.expires_at and self.expires_at < timezone.now():
+            return False
+        if self.max_uses is not None and self.use_count >= self.max_uses:
+            return False
+        return True
+
+
+class InvitationCodeAircraftRole(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    invitation_code = models.ForeignKey(InvitationCode, on_delete=models.CASCADE, related_name='initial_roles')
+    aircraft = models.ForeignKey(Aircraft, on_delete=models.CASCADE)
+    role = models.CharField(max_length=20, choices=AIRCRAFT_ROLES)
+
+    class Meta:
+        unique_together = ('invitation_code', 'aircraft')
+
+    def __str__(self):
+        return f"{self.invitation_code.label} → {self.role} on {self.aircraft.tail_number}"
+
+
+class InvitationCodeRedemption(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.ForeignKey(InvitationCode, on_delete=models.CASCADE, related_name='redemptions')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    redeemed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('code', 'user')
+
+    def __str__(self):
+        return f"{self.user} redeemed '{self.code.label}'"

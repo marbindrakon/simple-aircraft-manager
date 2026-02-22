@@ -58,6 +58,8 @@ urlpatterns = [
     path('api/aircraft/<uuid:pk>/export/', core_views.ExportView.as_view(), name='aircraft-export'),
     path('api/aircraft/import/', core_views.ImportView.as_view(), name='aircraft-import'),
     path('api/aircraft/import/<uuid:job_id>/', core_views.ImportJobStatusView.as_view(), name='aircraft-import-status'),
+    path('register/<uuid:token>/', core_views.RegisterView.as_view(), name='register'),
+    path('accounts/profile/', core_views.ProfileView.as_view(), name='profile'),
     path('api/user-search/', core_views.UserSearchView.as_view(), name='user-search'),
     path('api/', include(router.urls)),
     path('admin/', admin.site.urls),

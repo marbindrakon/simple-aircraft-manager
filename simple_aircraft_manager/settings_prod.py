@@ -41,7 +41,6 @@ REST_FRAMEWORK = {
 
 # Application definition
 INSTALLED_APPS = [
-    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -51,6 +50,7 @@ INSTALLED_APPS = [
     'django_filters',
     'core',
     'health',
+    'django.contrib.admin',
 ]
 
 # OIDC Configuration

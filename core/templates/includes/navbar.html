@@ -32,6 +32,12 @@
                     </span>
                 </button>
                 <ul class="pf-v5-c-dropdown__menu" hidden id="user-dropdown-menu">
+                    {% if user.has_usable_password %}
+                    <li>
+                        <a class="pf-v5-c-dropdown__menu-item" href="{% url 'profile' %}">My Profile</a>
+                    </li>
+                    <li class="pf-v5-c-dropdown__separator" role="separator"></li>
+                    {% endif %}
                     <li>
                         <a class="pf-v5-c-dropdown__menu-item" href="https://docs.simple-aircraft.app" target="_blank" rel="noopener noreferrer">Documentation</a>
                     </li>

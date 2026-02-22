@@ -13,7 +13,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from django.conf import settings
-from django.contrib.auth import get_user_model, logout
+from django.contrib.auth import get_user_model, login, logout
 from django.db import transaction
 from django.db.models import Q
 from django.http import JsonResponse
@@ -31,7 +31,8 @@ from rest_framework.views import APIView
 
 from core.events import log_event
 from core.mixins import AircraftScopedMixin, EventLoggingMixin
-from core.models import Aircraft, AircraftNote, AircraftEvent, AircraftRole, AircraftShareToken
+from core.forms import RegistrationForm, UserProfileForm
+from core.models import Aircraft, AircraftNote, AircraftEvent, AircraftRole, AircraftShareToken, InvitationCode, InvitationCodeRedemption
 from core.permissions import (
     get_user_role, has_aircraft_permission, user_can_create_aircraft,
     CanCreateAircraft, IsAircraftOwnerOrAdmin, IsAircraftPilotOrAbove,
@@ -1762,6 +1763,90 @@ class ImportJobStatusView(LoginRequiredMixin, View):
             'events': job.events[after:],
             'result': job.result,
         })
+
+
+class RegisterView(View):
+    """Redeem an invitation code and create a local account."""
+
+    def _get_code(self, token):
+        try:
+            return InvitationCode.objects.get(token=token)
+        except InvitationCode.DoesNotExist:
+            return None
+
+    def get(self, request, token):
+        if request.user.is_authenticated:
+            return redirect('dashboard')
+
+        code = self._get_code(token)
+        if code is None or not code.is_valid:
+            return render(request, 'registration/register.html', {'invalid': True})
+
+        form = RegistrationForm(invited_email=code.invited_email, invited_name=code.invited_name)
+        return render(request, 'registration/register.html', {'form': form, 'code': code})
+
+    def post(self, request, token):
+        if request.user.is_authenticated:
+            return redirect('dashboard')
+
+        code = self._get_code(token)
+        if code is None or not code.is_valid:
+            return render(request, 'registration/register.html', {'invalid': True})
+
+        form = RegistrationForm(
+            request.POST,
+            invited_email=code.invited_email,
+            invited_name=code.invited_name,
+        )
+        if not form.is_valid():
+            return render(request, 'registration/register.html', {'form': form, 'code': code})
+
+        with transaction.atomic():
+            user = form.save()
+
+            # Re-check validity inside the transaction to prevent races
+            code.refresh_from_db()
+            if not code.is_valid:
+                return render(request, 'registration/register.html', {'invalid': True})
+
+            InvitationCodeRedemption.objects.create(code=code, user=user)
+            InvitationCode.objects.filter(pk=code.pk).update(use_count=code.use_count + 1)
+
+            # Grant any configured initial aircraft roles
+            for initial_role in code.initial_roles.select_related('aircraft').all():
+                AircraftRole.objects.get_or_create(
+                    aircraft=initial_role.aircraft,
+                    user=user,
+                    defaults={'role': initial_role.role},
+                )
+
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        return redirect('dashboard')
+
+
+class ProfileView(LoginRequiredMixin, View):
+    """Allow local-account users to edit their own profile."""
+
+    def _check_local_account(self, request):
+        """Return None if the user has a local account, or a redirect if not."""
+        if not request.user.has_usable_password():
+            return redirect('dashboard')
+        return None
+
+    def get(self, request):
+        if redirect_response := self._check_local_account(request):
+            return redirect_response
+        form = UserProfileForm(instance=request.user)
+        return render(request, 'core/profile.html', {'form': form})
+
+    def post(self, request):
+        if redirect_response := self._check_local_account(request):
+            return redirect_response
+        form = UserProfileForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            return render(request, 'core/profile.html', {'form': form, 'saved': True})
+        return render(request, 'core/profile.html', {'form': form})
 
 
 class UserSearchView(APIView):

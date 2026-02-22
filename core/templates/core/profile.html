@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}My Profile: Simple Aircraft Manager{% endblock %}
+
+{% block content %}
+<div class="pf-v5-c-page__main-section pf-m-light">
+    <h1 class="pf-v5-c-title pf-m-2xl">My Profile</h1>
+</div>
+
+<div class="pf-v5-c-page__main-section" style="display: flex; justify-content: center;">
+    <div style="max-width: 540px; width: 100%; display: flex; flex-direction: column; gap: 1.5rem;">
+
+        {% if saved %}
+        <div class="pf-v5-c-alert pf-m-success pf-m-inline" role="alert">
+            <div class="pf-v5-c-alert__icon"><i class="fas fa-check-circle"></i></div>
+            <p class="pf-v5-c-alert__title">Profile updated successfully.</p>
+        </div>
+        {% endif %}
+
+        <div class="pf-v5-c-card">
+            <div class="pf-v5-c-card__title">
+                <h2 class="pf-v5-c-title pf-m-lg">Profile Information</h2>
+            </div>
+            <div class="pf-v5-c-card__body">
+                <form action="" method="post" class="pf-v5-c-form">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="pf-v5-c-alert pf-m-danger pf-m-inline" role="alert">
+                        <div class="pf-v5-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div>
+                        <div class="pf-v5-c-alert__description">{{ form.non_field_errors }}</div>
+                    </div>
+                    {% endif %}
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="{{ form.first_name.id_for_label }}">
+                                <span class="pf-v5-c-form__label-text">First name</span>
+                            </label>
+                            <input type="text"
+                                   id="{{ form.first_name.id_for_label }}"
+                                   name="{{ form.first_name.name }}"
+                                   value="{{ form.first_name.value|default:'' }}"
+                                   class="pf-v5-c-form-control{% if form.first_name.errors %} pf-m-error{% endif %}">
+                            {% if form.first_name.errors %}
+                            <div class="pf-v5-c-form__helper-text pf-m-error">{{ form.first_name.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="{{ form.last_name.id_for_label }}">
+                                <span class="pf-v5-c-form__label-text">Last name</span>
+                            </label>
+                            <input type="text"
+                                   id="{{ form.last_name.id_for_label }}"
+                                   name="{{ form.last_name.name }}"
+                                   value="{{ form.last_name.value|default:'' }}"
+                                   class="pf-v5-c-form-control{% if form.last_name.errors %} pf-m-error{% endif %}">
+                            {% if form.last_name.errors %}
+                            <div class="pf-v5-c-form__helper-text pf-m-error">{{ form.last_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="pf-v5-c-form__group">
+                        <label class="pf-v5-c-form__label" for="{{ form.email.id_for_label }}">
+                            <span class="pf-v5-c-form__label-text">Email address</span>
+                        </label>
+                        <input type="email"
+                               id="{{ form.email.id_for_label }}"
+                               name="{{ form.email.name }}"
+                               value="{{ form.email.value|default:'' }}"
+                               class="pf-v5-c-form-control{% if form.email.errors %} pf-m-error{% endif %}">
+                        {% if form.email.errors %}
+                        <div class="pf-v5-c-form__helper-text pf-m-error">{{ form.email.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="pf-v5-c-form__group">
+                        <label class="pf-v5-c-form__label">
+                            <span class="pf-v5-c-form__label-text">Username</span>
+                        </label>
+                        <span class="pf-v5-c-form-control pf-m-plain" style="display: flex; align-items: center;">{{ user.username }}</span>
+                        <div class="pf-v5-c-form__helper-text">Username cannot be changed.</div>
+                    </div>
+
+                    <div class="pf-v5-c-form__group pf-m-action">
+                        <button type="submit" class="pf-v5-c-button pf-m-primary">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if user.has_usable_password %}
+        <div class="pf-v5-c-card">
+            <div class="pf-v5-c-card__title">
+                <h2 class="pf-v5-c-title pf-m-lg">Password</h2>
+            </div>
+            <div class="pf-v5-c-card__body">
+                <p style="margin-bottom: 1rem; color: var(--pf-v5-global--Color--200);">
+                    Change your password to keep your account secure.
+                </p>
+                <a href="/accounts/password_change/" class="pf-v5-c-button pf-m-secondary">Change Password</a>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

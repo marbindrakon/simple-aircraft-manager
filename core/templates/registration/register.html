@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Create Account: Simple Aircraft Manager{% endblock %}
+
+{% block content %}
+<div class="pf-v5-c-page__main-section pf-m-light" style="text-align: center; padding: 3rem 0;">
+    <h1>Simple Aircraft Manager</h1>
+    <p>Create your account</p>
+</div>
+
+<div class="pf-v5-c-page__main-section" style="display: flex; justify-content: center;">
+    <div class="pf-v5-c-card" style="max-width: 540px; width: 100%;">
+        <div class="pf-v5-c-card__title">
+            <h2>Create Account</h2>
+        </div>
+        <div class="pf-v5-c-card__body">
+
+            {% if invalid %}
+            <div class="pf-v5-c-alert pf-m-danger" role="alert">
+                <div class="pf-v5-c-alert__icon">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <p class="pf-v5-c-alert__title">Invalid or expired invitation</p>
+                <div class="pf-v5-c-alert__description">
+                    <p>This invitation link is invalid, has already been used the maximum number of times, or has expired. Please contact an administrator.</p>
+                </div>
+            </div>
+
+            {% else %}
+
+            {% if code.invited_name %}
+            <p style="margin-bottom: 1rem; color: var(--pf-v5-global--Color--200);">
+                You have been invited to join Simple Aircraft Manager{% if code.label %} ({{ code.label }}){% endif %}.
+            </p>
+            {% endif %}
+
+            <form action="" method="post" class="pf-v5-c-form">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="pf-v5-c-alert pf-m-danger pf-m-inline" role="alert">
+                    <div class="pf-v5-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div>
+                    <div class="pf-v5-c-alert__description">{{ form.non_field_errors }}</div>
+                </div>
+                {% endif %}
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="pf-v5-c-form__group">
+                        <label class="pf-v5-c-form__label" for="{{ form.first_name.id_for_label }}">
+                            <span class="pf-v5-c-form__label-text">First name</span>
+                            <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                        </label>
+                        <input type="text"
+                               id="{{ form.first_name.id_for_label }}"
+                               name="{{ form.first_name.name }}"
+                               value="{{ form.first_name.value|default:'' }}"
+                               class="pf-v5-c-form-control{% if form.first_name.errors %} pf-m-error{% endif %}"
+                               required>
+                        {% if form.first_name.errors %}
+                        <div class="pf-v5-c-form__helper-text pf-m-error">{{ form.first_name.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="pf-v5-c-form__group">
+                        <label class="pf-v5-c-form__label" for="{{ form.last_name.id_for_label }}">
+                            <span class="pf-v5-c-form__label-text">Last name</span>
+                            <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                        </label>
+                        <input type="text"
+                               id="{{ form.last_name.id_for_label }}"
+                               name="{{ form.last_name.name }}"
+                               value="{{ form.last_name.value|default:'' }}"
+                               class="pf-v5-c-form-control{% if form.last_name.errors %} pf-m-error{% endif %}"
+                               required>
+                        {% if form.last_name.errors %}
+                        <div class="pf-v5-c-form__helper-text pf-m-error">{{ form.last_name.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="pf-v5-c-form__group">
+                    <label class="pf-v5-c-form__label" for="{{ form.email.id_for_label }}">
+                        <span class="pf-v5-c-form__label-text">Email address</span>
+                        <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                    </label>
+                    <input type="email"
+                           id="{{ form.email.id_for_label }}"
+                           name="{{ form.email.name }}"
+                           value="{{ form.email.value|default:'' }}"
+                           class="pf-v5-c-form-control{% if form.email.errors %} pf-m-error{% endif %}"
+                           {% if form.email.field.widget.attrs.readonly %}readonly{% endif %}
+                           required>
+                    {% if form.email.errors %}
+                    <div class="pf-v5-c-form__helper-text pf-m-error">{{ form.email.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="pf-v5-c-form__group">
+                    <label class="pf-v5-c-form__label" for="{{ form.username.id_for_label }}">
+                        <span class="pf-v5-c-form__label-text">Username</span>
+                        <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                    </label>
+                    <input type="text"
+                           id="{{ form.username.id_for_label }}"
+                           name="{{ form.username.name }}"
+                           value="{{ form.username.value|default:'' }}"
+                           class="pf-v5-c-form-control{% if form.username.errors %} pf-m-error{% endif %}"
+                           autocomplete="username"
+                           required>
+                    <div class="pf-v5-c-form__helper-text">{{ form.username.help_text }}</div>
+                    {% if form.username.errors %}
+                    <div class="pf-v5-c-form__helper-text pf-m-error">{{ form.username.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="pf-v5-c-form__group">
+                    <label class="pf-v5-c-form__label" for="{{ form.password1.id_for_label }}">
+                        <span class="pf-v5-c-form__label-text">Password</span>
+                        <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                    </label>
+                    <input type="password"
+                           id="{{ form.password1.id_for_label }}"
+                           name="{{ form.password1.name }}"
+                           class="pf-v5-c-form-control{% if form.password1.errors %} pf-m-error{% endif %}"
+                           autocomplete="new-password"
+                           required>
+                    {% if form.password1.errors %}
+                    <div class="pf-v5-c-form__helper-text pf-m-error">{{ form.password1.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="pf-v5-c-form__group">
+                    <label class="pf-v5-c-form__label" for="{{ form.password2.id_for_label }}">
+                        <span class="pf-v5-c-form__label-text">Confirm password</span>
+                        <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                    </label>
+                    <input type="password"
+                           id="{{ form.password2.id_for_label }}"
+                           name="{{ form.password2.name }}"
+                           class="pf-v5-c-form-control{% if form.password2.errors %} pf-m-error{% endif %}"
+                           autocomplete="new-password"
+                           required>
+                    {% if form.password2.errors %}
+                    <div class="pf-v5-c-form__helper-text pf-m-error">{{ form.password2.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="pf-v5-c-form__group pf-m-action">
+                    <button type="submit" class="pf-v5-c-button pf-m-primary pf-m-block">
+                        Create Account
+                    </button>
+                </div>
+            </form>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}
