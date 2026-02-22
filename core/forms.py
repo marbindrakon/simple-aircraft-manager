@@ -18,6 +18,7 @@ class RegistrationForm(forms.Form):
 
     def __init__(self, *args, invited_email=None, invited_name=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self._invited_email = invited_email
         # Pre-fill and lock email/name fields for per-user invitation codes
         if invited_email:
             self.fields['email'].initial = invited_email
@@ -35,6 +36,8 @@ class RegistrationForm(forms.Form):
 
     def clean_email(self):
         email = self.cleaned_data['email']
+        if self._invited_email and email != self._invited_email:
+            raise ValidationError("You must register with the invited email address.")
         if User.objects.filter(email=email).exists():
             raise ValidationError("An account with this email address already exists.")
         return email

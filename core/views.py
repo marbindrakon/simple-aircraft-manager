@@ -15,6 +15,7 @@ from pathlib import Path
 from django.conf import settings
 from django.contrib.auth import get_user_model, login, logout
 from django.db import transaction
+from django.db.models import F
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -1801,24 +1802,27 @@ class RegisterView(View):
         if not form.is_valid():
             return render(request, 'registration/register.html', {'form': form, 'code': code})
 
-        with transaction.atomic():
-            user = form.save()
+        try:
+            with transaction.atomic():
+                user = form.save()
 
-            # Re-check validity inside the transaction to prevent races
-            code.refresh_from_db()
-            if not code.is_valid:
-                return render(request, 'registration/register.html', {'invalid': True})
+                # Re-fetch with a row-level lock to prevent concurrent over-redemption
+                code = InvitationCode.objects.select_for_update().get(pk=code.pk)
+                if not code.is_valid:
+                    raise ValueError("Invitation code is no longer valid")
 
-            InvitationCodeRedemption.objects.create(code=code, user=user)
-            InvitationCode.objects.filter(pk=code.pk).update(use_count=code.use_count + 1)
+                InvitationCodeRedemption.objects.create(code=code, user=user)
+                InvitationCode.objects.filter(pk=code.pk).update(use_count=F('use_count') + 1)
 
-            # Grant any configured initial aircraft roles
-            for initial_role in code.initial_roles.select_related('aircraft').all():
-                AircraftRole.objects.get_or_create(
-                    aircraft=initial_role.aircraft,
-                    user=user,
-                    defaults={'role': initial_role.role},
-                )
+                # Grant any configured initial aircraft roles
+                for initial_role in code.initial_roles.select_related('aircraft').all():
+                    AircraftRole.objects.get_or_create(
+                        aircraft=initial_role.aircraft,
+                        user=user,
+                        defaults={'role': initial_role.role},
+                    )
+        except ValueError:
+            return render(request, 'registration/register.html', {'invalid': True})
 
         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
         return redirect('dashboard')
