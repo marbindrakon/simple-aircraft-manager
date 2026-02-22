@@ -420,7 +420,7 @@ function componentsMixin() {
         },
 
         get sortedComponents() {
-            const byName = (a, b) => a.name.localeCompare(b.name);
+            const byName = (a, b) => (a.name || '').localeCompare(b.name || '');
             const roots = this.components.filter(c => !c.parent_component_id).sort(byName);
             const result = [];
 
