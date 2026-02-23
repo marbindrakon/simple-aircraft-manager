@@ -124,7 +124,7 @@ class DocumentImageViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.Mode
     aircraft_field = 'document.aircraft'
 
 class LogbookEntryViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelViewSet):
-    queryset = LogbookEntry.objects.all().order_by('-date')
+    queryset = LogbookEntry.objects.all().order_by('-date', 'id')
     serializer_class = LogbookEntrySerializer
     aircraft_fk_path = 'aircraft'
     event_category = 'logbook'

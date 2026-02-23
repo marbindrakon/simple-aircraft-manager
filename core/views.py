@@ -1516,7 +1516,7 @@ class PublicLogbookEntriesAPI(View):
         from rest_framework.parsers import JSONParser
         drf_request = Request(request, parsers=[JSONParser()])
 
-        qs = aircraft.logbook_entries.order_by('-date')
+        qs = aircraft.logbook_entries.order_by('-date', 'id')
 
         # Filter params (same field names the private endpoint uses)
         log_type = request.GET.get('log_type', '').strip()
