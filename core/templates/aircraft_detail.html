@@ -1913,7 +1913,7 @@
                         <div class="pf-v5-c-card__title"><h3>Oil Consumption Trend (Hours per Quart)</h3></div>
                         <div class="pf-v5-c-card__body">
                             <canvas id="oilChart" style="max-height: 300px;"></canvas>
-                            <p class="pf-v5-u-color-200 pf-v5-u-font-size-sm pf-v5-u-mt-sm">Average is based on the most recent 20 data points.</p>
+                            <p class="pf-v5-u-color-200 pf-v5-u-font-size-sm pf-v5-u-mt-sm">Average is based on the most recent 20 data points, with statistical outliers excluded. Outlier records are marked with <i class="fas fa-exclamation-triangle" style="color: #f0ab00;"></i> in the table below.</p>
                         </div>
                     </div>
                 </template>
@@ -1935,7 +1935,10 @@
                         <tbody>
                             <template x-for="record in oilRecords" :key="record.id">
                                 <tr>
-                                    <td x-text="formatDate(record.date)"></td>
+                                    <td>
+                                        <span x-text="formatDate(record.date)"></span>
+                                        <span x-show="isOilOutlier(record.id)" style="color: #f0ab00; margin-left: 0.3rem;" title="This record's consumption rate is a statistical outlier and was excluded from the average."><i class="fas fa-exclamation-triangle"></i></span>
+                                    </td>
                                     <td x-text="formatHours(record.flight_hours)"></td>
                                     <td x-text="record.quantity_added"></td>
                                     <td x-text="record.level_after || '-'"></td>
@@ -1991,7 +1994,7 @@
                         <div class="pf-v5-c-card__title"><h3>Fuel Consumption Trend (Gallons per Hour)</h3></div>
                         <div class="pf-v5-c-card__body">
                             <canvas id="fuelChart" style="max-height: 300px;"></canvas>
-                            <p class="pf-v5-u-color-200 pf-v5-u-font-size-sm pf-v5-u-mt-sm">Average is based on the most recent 20 data points.</p>
+                            <p class="pf-v5-u-color-200 pf-v5-u-font-size-sm pf-v5-u-mt-sm">Average is based on the most recent 20 data points, with statistical outliers excluded. Outlier records are marked with <i class="fas fa-exclamation-triangle" style="color: #f0ab00;"></i> in the table below.</p>
                         </div>
                     </div>
                 </template>
@@ -2013,7 +2016,10 @@
                         <tbody>
                             <template x-for="record in fuelRecords" :key="record.id">
                                 <tr>
-                                    <td x-text="formatDate(record.date)"></td>
+                                    <td>
+                                        <span x-text="formatDate(record.date)"></span>
+                                        <span x-show="isFuelOutlier(record.id)" style="color: #f0ab00; margin-left: 0.3rem;" title="This record's consumption rate is a statistical outlier and was excluded from the average."><i class="fas fa-exclamation-triangle"></i></span>
+                                    </td>
                                     <td x-text="formatHours(record.flight_hours)"></td>
                                     <td x-text="record.quantity_added"></td>
                                     <td x-text="record.level_after || '-'"></td>
