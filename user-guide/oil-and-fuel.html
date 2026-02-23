@@ -284,13 +284,32 @@ to help identify consumption patterns.</p>
 consumption over time in <strong>hours per quart</strong>. This helps you monitor engine
 health – increasing oil consumption can indicate wear.</p>
 <p>The chart plots each data point against flight hours so you can spot trends
-over the life of the engine.</p>
+over the life of the engine. The dashed line shows the <strong>average</strong> consumption
+rate, calculated from the most recent 20 data points.</p>
+<section id="outlier-detection">
+<h4>Outlier Detection<a class="headerlink" href="#outlier-detection" title="Link to this heading">¶</a></h4>
+<p>Events like an oil change (where a large quantity is added after only a few
+hours) can skew the average. When there are five or more data points, the
+chart automatically identifies statistical outliers using the
+<strong>IQR (Interquartile Range)</strong> method: any data point that falls outside
+Q1 − 1.5 × IQR or Q3 + 1.5 × IQR is considered an outlier.</p>
+<ul class="simple">
+<li><p>Outlier points appear as <strong>larger orange dots</strong> on the chart.</p></li>
+<li><p>The average line is recalculated <strong>excluding those outliers</strong>, and the legend
+notes how many were excluded (e.g., <em>Average (8.2, 1 outlier excluded)</em>).</p></li>
+<li><p>In the records table, outlier records are flagged with a <strong>⚠ warning icon</strong>
+next to the date. Hover over the icon for an explanation.</p></li>
+</ul>
+<p>Outlier detection requires at least five inter-record intervals and does not
+fire when all consumption rates are identical.</p>
+</section>
 </section>
 <section id="oil-records-table">
 <h3>Oil Records Table<a class="headerlink" href="#oil-records-table" title="Link to this heading">¶</a></h3>
 <p>Below the chart, a table lists all oil records with date, hours, quantity,
-level after, type, and notes. Owners can click the <strong>pencil</strong> icon to edit a
-record.</p>
+level after, type, and notes. Records whose consumption rate was identified as
+an outlier are marked with a <strong>⚠ icon</strong> next to the date. Owners can click
+the <strong>pencil</strong> icon to edit a record.</p>
 </section>
 </section>
 <section id="fuel-tab">
@@ -317,7 +336,13 @@ record.</p>
 <h3>Fuel Consumption Chart<a class="headerlink" href="#fuel-consumption-chart" title="Link to this heading">¶</a></h3>
 <p>With two or more records, a trend chart displays fuel burn rate in <strong>gallons
 per hour</strong>. This helps verify that fuel consumption is within expected
-parameters for your engine and flight profile.</p>
+parameters for your engine and flight profile. The dashed line shows the
+<strong>average</strong> burn rate, calculated from the most recent 20 data points.</p>
+<p>Outlier detection works the same way as for oil: records whose burn rate falls
+outside the IQR bounds are rendered as <strong>larger orange dots</strong> on the chart,
+excluded from the average, and flagged with a <strong>⚠ icon</strong> in the records table
+below. Common causes include a missed refueling entry (which inflates the
+hours between two records) or an unusually large top-off after a long flight.</p>
 </section>
 </section>
 </section>
@@ -380,7 +405,10 @@ parameters for your engine and flight profile.</p>
 <li><a class="reference internal" href="#">Oil &amp; Fuel Tracking</a><ul>
 <li><a class="reference internal" href="#oil-tab">Oil Tab</a><ul>
 <li><a class="reference internal" href="#adding-an-oil-record">Adding an Oil Record</a></li>
-<li><a class="reference internal" href="#oil-consumption-chart">Oil Consumption Chart</a></li>
+<li><a class="reference internal" href="#oil-consumption-chart">Oil Consumption Chart</a><ul>
+<li><a class="reference internal" href="#outlier-detection">Outlier Detection</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#oil-records-table">Oil Records Table</a></li>
 </ul>
 </li>
