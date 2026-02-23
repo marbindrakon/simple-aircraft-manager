@@ -923,6 +923,240 @@ html.pf-v5-theme-dark .loading-spinner {
     }
 }
 
+/* ---- ADs & Bulletins tab: card layout on mobile ------------------- */
+@media (max-width: 768px) {
+    .ads-table thead {
+        display: none;
+    }
+
+    /* Each <tbody class="ad-row-group"> = one AD entry card */
+    .ad-row-group {
+        display: block;
+        border: 1px solid var(--pf-v5-global--BorderColor--100);
+        border-radius: var(--pf-v5-global--BorderRadius--sm);
+        margin-bottom: 0.75rem;
+        overflow: hidden;
+    }
+
+    .ad-row-group tr:not(.pf-v5-c-table__expandable-row) {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        padding: 0.75rem;
+        gap: 0.3rem 0.5rem;
+    }
+
+    .ad-row-group td.pf-v5-c-table__toggle {
+        grid-column: 2;
+        grid-row: 1 / span 4;
+        display: flex;
+        align-items: flex-start;
+        padding: 0;
+    }
+
+    /* Name: AD number / bulletin ID — primary identifier */
+    .ad-row-group td[data-label="Name"] {
+        grid-column: 1; grid-row: 1;
+        display: block; padding: 0; font-weight: 600;
+    }
+
+    /* Type badge: AD / SB / SIL etc. */
+    .ad-row-group td[data-label="Type"] {
+        grid-column: 1; grid-row: 2;
+        display: block; padding: 0;
+    }
+
+    .ad-row-group td[data-label="Status"] {
+        grid-column: 1; grid-row: 3;
+        display: block; padding: 0;
+    }
+
+    .ad-row-group td[data-label="Next Due"] {
+        grid-column: 1; grid-row: 4;
+        display: block; padding: 0; font-size: 0.875rem;
+    }
+
+    /* Secondary — in expand detail */
+    .ad-row-group td[data-label="Description"],
+    .ad-row-group td[data-label="Recurring"],
+    .ad-row-group td[data-label="Last Complied"] {
+        display: none;
+    }
+
+    .ad-row-group td[data-label="Actions"] {
+        grid-column: 1 / span 2; grid-row: 5;
+        display: block; padding: 0.4rem 0 0 0;
+        margin-top: 0.25rem;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+    }
+
+    .ad-row-group tr.pf-v5-c-table__expandable-row {
+        display: block;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+        background: var(--pf-v5-global--BackgroundColor--200);
+    }
+
+    .ad-row-group tr.pf-v5-c-table__expandable-row > td:first-child {
+        display: none;
+    }
+
+    .ad-row-group tr.pf-v5-c-table__expandable-row > td:last-child {
+        display: block;
+        padding: 0.75rem !important;
+    }
+}
+
+/* ---- Major Records tab: card layout on mobile --------------------- */
+@media (max-width: 768px) {
+    .major-records-table thead {
+        display: none;
+    }
+
+    /* Shared by both repairs and alterations tbody loops */
+    .major-record-row-group {
+        display: block;
+        border: 1px solid var(--pf-v5-global--BorderColor--100);
+        border-radius: var(--pf-v5-global--BorderRadius--sm);
+        margin-bottom: 0.75rem;
+        overflow: hidden;
+    }
+
+    .major-record-row-group tr:not(.pf-v5-c-table__expandable-row) {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        padding: 0.75rem;
+        gap: 0.3rem 0.5rem;
+    }
+
+    .major-record-row-group td.pf-v5-c-table__toggle {
+        grid-column: 2;
+        grid-row: 1 / span 5;
+        display: flex;
+        align-items: flex-start;
+        padding: 0;
+    }
+
+    .major-record-row-group td[data-label="Title"] {
+        grid-column: 1; grid-row: 1;
+        display: block; padding: 0; font-weight: 600;
+    }
+
+    .major-record-row-group td[data-label="Date"] {
+        grid-column: 1; grid-row: 2;
+        display: block; padding: 0;
+        font-size: 0.875rem; color: var(--pf-v5-global--Color--200);
+    }
+
+    .major-record-row-group td[data-label="Component"] {
+        grid-column: 1; grid-row: 3;
+        display: block; padding: 0; font-size: 0.875rem;
+    }
+
+    /* Alterations only — silently ignored on repairs (no matching td) */
+    .major-record-row-group td[data-label="STC #"] {
+        grid-column: 1; grid-row: 4;
+        display: block; padding: 0; font-size: 0.875rem;
+    }
+
+    .major-record-row-group td[data-label="STC Holder"] {
+        grid-column: 1; grid-row: 5;
+        display: block; padding: 0;
+        font-size: 0.875rem; color: var(--pf-v5-global--Color--200);
+    }
+
+    .major-record-row-group td[data-label="Actions"] {
+        grid-column: 1 / span 2; grid-row: 6;
+        display: block; padding: 0.4rem 0 0 0;
+        margin-top: 0.25rem;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+    }
+
+    .major-record-row-group tr.pf-v5-c-table__expandable-row {
+        display: block;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+        background: var(--pf-v5-global--BackgroundColor--200);
+    }
+
+    .major-record-row-group tr.pf-v5-c-table__expandable-row > td:first-child {
+        display: none;
+    }
+
+    .major-record-row-group tr.pf-v5-c-table__expandable-row > td:last-child {
+        display: block;
+        padding: 0.75rem !important;
+    }
+}
+
+/* ---- Oil & Fuel tabs: card layout on mobile ----------------------- */
+/*
+ * Flat tables (no expandable rows) — each <tr> becomes its own card.
+ * 3-column grid: [main info left] [qty right] [edit button far right]
+ * with Hours/Level After/Type/Notes stacking below.
+ */
+@media (max-width: 768px) {
+    .consumable-table thead {
+        display: none;
+    }
+
+    .consumable-table tbody {
+        display: block;
+    }
+
+    .consumable-table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        padding: 0.75rem;
+        gap: 0.35rem 0.75rem;
+        border: 1px solid var(--pf-v5-global--BorderColor--100);
+        border-radius: var(--pf-v5-global--BorderRadius--sm);
+        margin-bottom: 0.75rem;
+    }
+
+    /* Date: full-width top row, bold */
+    .consumable-table td[data-label="Date"] {
+        grid-column: 1 / span 2; grid-row: 1;
+        display: block; padding: 0; font-weight: 600;
+    }
+
+    /* Edit button: right column, top 3 rows */
+    .consumable-table td[data-label="Actions"] {
+        grid-column: 3; grid-row: 1 / span 3;
+        display: flex; align-items: flex-start;
+        justify-content: center; padding: 0;
+    }
+
+    /* Hours | Qty side by side */
+    .consumable-table td[data-label="Hours"] {
+        grid-column: 1; grid-row: 2;
+        display: block; padding: 0; font-size: 0.875rem;
+    }
+
+    /* Matches "Qty (qt)" and "Qty (gal)" */
+    .consumable-table td[data-label^="Qty"] {
+        grid-column: 2; grid-row: 2;
+        display: block; padding: 0; font-size: 0.875rem; font-weight: 600;
+    }
+
+    /* Level After | Type side by side */
+    .consumable-table td[data-label="Level After"] {
+        grid-column: 1; grid-row: 3;
+        display: block; padding: 0; font-size: 0.875rem;
+        color: var(--pf-v5-global--Color--200);
+    }
+
+    .consumable-table td[data-label="Type"] {
+        grid-column: 2; grid-row: 3;
+        display: block; padding: 0; font-size: 0.875rem;
+        color: var(--pf-v5-global--Color--200);
+    }
+
+    /* Notes: full width, only shown when non-empty (always rendered but '-' if empty) */
+    .consumable-table td[data-label="Notes"] {
+        grid-column: 1 / span 2; grid-row: 4;
+        display: block; padding: 0; font-size: 0.875rem;
+        color: var(--pf-v5-global--Color--200);
+    }
+}
+
 /* ---- Modals: full-width on phones --------------------------------- */
 @media (max-width: 600px) {
     .pf-v5-c-backdrop {

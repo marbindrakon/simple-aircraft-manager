@@ -934,7 +934,7 @@
                 <!-- Mandatory section -->
                 <div x-show="mandatoryAds.length > 0">
                     <h3 style="margin-bottom: 0.75rem;">Mandatory</h3>
-                    <table class="pf-v5-c-table pf-m-grid-md pf-m-expandable" style="margin-bottom: 1.5rem;">
+                    <table class="pf-v5-c-table ads-table" style="margin-bottom: 1.5rem;">
                         <thead>
                             <tr>
                                 <th></th>
@@ -949,7 +949,7 @@
                             </tr>
                         </thead>
                         <template x-for="ad in mandatoryAds" :key="ad.id">
-                            <tbody :class="{'pf-m-expanded': expandedAdIds[ad.id]}">
+                            <tbody class="ad-row-group" :class="{'pf-m-expanded': expandedAdIds[ad.id]}">
                                 <tr>
                                     <td class="pf-v5-c-table__toggle">
                                         <button class="pf-v5-c-button pf-m-plain"
@@ -1071,7 +1071,7 @@
                 <div x-show="nonMandatoryAds.length > 0">
                     <hr style="margin-bottom: 1.25rem; border-color: var(--pf-v5-global--BorderColor--100);" x-show="mandatoryAds.length > 0">
                     <h3 style="margin-bottom: 0.75rem;">Optional / Advisory</h3>
-                    <table class="pf-v5-c-table pf-m-grid-md pf-m-expandable">
+                    <table class="pf-v5-c-table ads-table">
                         <thead>
                             <tr>
                                 <th></th>
@@ -1086,7 +1086,7 @@
                             </tr>
                         </thead>
                         <template x-for="ad in nonMandatoryAds" :key="ad.id">
-                            <tbody :class="{'pf-m-expanded': expandedAdIds[ad.id]}">
+                            <tbody class="ad-row-group" :class="{'pf-m-expanded': expandedAdIds[ad.id]}">
                                 <tr>
                                     <td class="pf-v5-c-table__toggle">
                                         <button class="pf-v5-c-button pf-m-plain"
@@ -1382,7 +1382,7 @@
                 <template x-if="majorRecordFilter !== 'alteration' && majorRepairs.length > 0">
                     <div style="margin-bottom: 2rem;">
                         <h3 style="margin-bottom: 0.75rem; color: var(--pf-v5-global--Color--200);">Major Repairs</h3>
-                        <table class="pf-v5-c-table pf-m-grid-md pf-m-compact pf-m-striped">
+                        <table class="pf-v5-c-table pf-m-compact major-records-table">
                             <thead>
                                 <tr>
                                     <th></th>
@@ -1393,7 +1393,7 @@
                                 </tr>
                             </thead>
                             <template x-for="record in majorRepairs" :key="record.id">
-                                <tbody>
+                                <tbody class="major-record-row-group">
                                     <tr>
                                         <td class="pf-v5-c-table__toggle">
                                             <button class="pf-v5-c-button pf-m-plain"
@@ -1498,7 +1498,7 @@
                 <template x-if="majorRecordFilter !== 'repair' && majorAlterations.length > 0">
                     <div>
                         <h3 style="margin-bottom: 0.75rem; color: var(--pf-v5-global--Color--200);">Major Alterations</h3>
-                        <table class="pf-v5-c-table pf-m-grid-md pf-m-compact pf-m-striped">
+                        <table class="pf-v5-c-table pf-m-compact major-records-table">
                             <thead>
                                 <tr>
                                     <th></th>
@@ -1511,7 +1511,7 @@
                                 </tr>
                             </thead>
                             <template x-for="record in majorAlterations" :key="record.id">
-                                <tbody>
+                                <tbody class="major-record-row-group">
                                     <tr>
                                         <td class="pf-v5-c-table__toggle">
                                             <button class="pf-v5-c-button pf-m-plain"
@@ -1920,7 +1920,7 @@
 
                 <!-- Oil Records Table -->
                 <template x-if="oilRecords.length > 0">
-                    <table class="pf-v5-c-table pf-m-grid-md">
+                    <table class="pf-v5-c-table consumable-table">
                         <thead>
                             <tr>
                                 <th>Date</th>
@@ -1935,16 +1935,16 @@
                         <tbody>
                             <template x-for="record in oilRecords" :key="record.id">
                                 <tr>
-                                    <td>
+                                    <td data-label="Date">
                                         <span x-text="formatDate(record.date)"></span>
                                         <span x-show="isOilOutlier(record.id)" style="color: #f0ab00; margin-left: 0.3rem;" title="This record's consumption rate is a statistical outlier and was excluded from the average."><i class="fas fa-exclamation-triangle"></i></span>
                                     </td>
-                                    <td x-text="formatHours(record.flight_hours)"></td>
-                                    <td x-text="record.quantity_added"></td>
-                                    <td x-text="record.level_after || '-'"></td>
-                                    <td x-text="record.consumable_type || '-'"></td>
-                                    <td x-text="record.notes || '-'"></td>
-                                    <td>
+                                    <td data-label="Hours" x-text="formatHours(record.flight_hours)"></td>
+                                    <td data-label="Qty (qt)" x-text="record.quantity_added"></td>
+                                    <td data-label="Level After" x-text="record.level_after || '-'"></td>
+                                    <td data-label="Type" x-text="record.consumable_type || '-'"></td>
+                                    <td data-label="Notes" x-text="record.notes || '-'"></td>
+                                    <td data-label="Actions">
                                         <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editOilRecord(record)" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
@@ -2001,7 +2001,7 @@
 
                 <!-- Fuel Records Table -->
                 <template x-if="fuelRecords.length > 0">
-                    <table class="pf-v5-c-table pf-m-grid-md">
+                    <table class="pf-v5-c-table consumable-table">
                         <thead>
                             <tr>
                                 <th>Date</th>
@@ -2016,16 +2016,16 @@
                         <tbody>
                             <template x-for="record in fuelRecords" :key="record.id">
                                 <tr>
-                                    <td>
+                                    <td data-label="Date">
                                         <span x-text="formatDate(record.date)"></span>
                                         <span x-show="isFuelOutlier(record.id)" style="color: #f0ab00; margin-left: 0.3rem;" title="This record's consumption rate is a statistical outlier and was excluded from the average."><i class="fas fa-exclamation-triangle"></i></span>
                                     </td>
-                                    <td x-text="formatHours(record.flight_hours)"></td>
-                                    <td x-text="record.quantity_added"></td>
-                                    <td x-text="record.level_after || '-'"></td>
-                                    <td x-text="record.consumable_type || '-'"></td>
-                                    <td x-text="record.notes || '-'"></td>
-                                    <td>
+                                    <td data-label="Hours" x-text="formatHours(record.flight_hours)"></td>
+                                    <td data-label="Qty (gal)" x-text="record.quantity_added"></td>
+                                    <td data-label="Level After" x-text="record.level_after || '-'"></td>
+                                    <td data-label="Type" x-text="record.consumable_type || '-'"></td>
+                                    <td data-label="Notes" x-text="record.notes || '-'"></td>
+                                    <td data-label="Actions">
                                         <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editFuelRecord(record)" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
