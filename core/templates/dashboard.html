@@ -12,7 +12,7 @@
                     <p>Manage your aircraft hours and maintenance</p>
                 </div>
                 {% if can_create_aircraft %}
-                <div style="display: flex; gap: 0.5rem;">
+                <div class="dashboard-header-actions" style="display: flex; gap: 0.5rem;">
                     <button class="pf-v5-c-button pf-m-secondary"
                             @click="window.dispatchEvent(new CustomEvent('open-import-modal'))">
                         <i class="fas fa-file-import"></i> Import Aircraft

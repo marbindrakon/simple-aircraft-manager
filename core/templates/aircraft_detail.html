@@ -406,7 +406,7 @@
         <!-- Components Tab -->
         <div x-show="activeTab === 'components'" class="pf-v5-c-page__main-section">
             <!-- Header with Add Button -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div class="tab-section-header">
                 <h2>Components</h2>
                 <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openComponentModal()">
                     <i class="fas fa-plus"></i> Add Component
@@ -444,7 +444,7 @@
                                        :style="isComponentExpanded(component.id) ? 'transform: rotate(90deg)' : ''"></i>
                                 </button>
                             </td>
-                            <td>
+                            <td data-label="Type">
                                 <div style="display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap;">
                                     <span :style="'padding-left: ' + (getComponentDepth(component) * 1.5) + 'rem'">
                                         <template x-if="getComponentDepth(component) > 0">
@@ -463,31 +463,31 @@
                                     </template>
                                 </div>
                             </td>
-                            <td x-text="`${component.manufacturer} ${component.model}`"></td>
-                            <td>
+                            <td data-label="Manufacturer/Model" x-text="`${component.manufacturer} ${component.model}`"></td>
+                            <td data-label="In Service">
                                 <div x-text="formatHours(component.hours_in_service || 0)"></div>
                                 <div x-show="getCalendarTimeSince(component.date_in_service)"
                                      x-text="'(' + getCalendarTimeSince(component.date_in_service) + ')'"
                                      style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
                             </td>
-                            <td>
+                            <td data-label="Since OH/SVC">
                                 <div x-text="(component.hours_since_overhaul > 0) ? formatHours(component.hours_since_overhaul) : '—'"></div>
                                 <div x-show="component.overhaul_date && getCalendarTimeSince(component.overhaul_date)"
                                      x-text="'(' + getCalendarTimeSince(component.overhaul_date) + ')'"
                                      style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
                             </td>
-                            <td :class="getHoursRemainingClass(component)">
+                            <td data-label="Remaining" :class="getHoursRemainingClass(component)">
                                 <div x-text="getHoursRemainingDisplay(component)"></div>
                                 <div x-show="getRemainingLabel(component)"
                                      x-text="getRemainingLabel(component)"
                                      style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
                             </td>
-                            <td>
+                            <td data-label="Status">
                                 <span class="pf-v5-c-label"
                                       :class="getStatusClass(component)"
                                       x-text="component.status"></span>
                             </td>
-                            <td>
+                            <td data-label="Actions">
                                 <div x-show="isOwner" style="display: flex; gap: 0.25rem;">
                                     <button class="pf-v5-c-button pf-m-plain"
                                             @click="editComponent(component)"
@@ -516,7 +516,7 @@
                             <td colspan="7" style="padding: 0.75rem 1rem;">
 
                                 <!-- Row 1: Serial Number | Notes -->
-                                <div style="display: grid; grid-template-columns: auto 1fr; gap: 1.5rem; margin-bottom: 1rem; align-items: start;">
+                                <div class="component-detail-grid" style="display: grid; grid-template-columns: auto 1fr; gap: 1.5rem; margin-bottom: 1rem; align-items: start;">
                                     <div>
                                         <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.4rem;">Serial Number</div>
                                         <div x-show="component.serial_number" x-text="component.serial_number"></div>
@@ -529,7 +529,7 @@
                                 </div>
 
                                 <!-- Row 2: In Service | Since OH/SVC | Calendar Remaining -->
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1rem;">
+                                <div class="component-detail-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1rem;">
                                     <div>
                                         <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.4rem;">In Service</div>
                                         <div style="font-size: 1.1em; font-weight: 600;" x-text="formatHours(component.hours_in_service || 0)"></div>
@@ -576,7 +576,7 @@
                                 <!-- Row 3: Tracking Settings -->
                                 <div style="margin-bottom: 0;">
                                     <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.5rem;">Tracking</div>
-                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+                                    <div class="component-detail-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
                                         <!-- TBO -->
                                         <div>
                                             <span class="pf-v5-c-label pf-m-compact"
@@ -640,7 +640,7 @@
 
         <!-- Logbook Tab -->
         <div x-show="activeTab === 'logbook'" class="pf-v5-c-page__main-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div class="tab-section-header">
                 <!-- Sub-tab toggle group -->
                 <div class="pf-v5-c-toggle-group">
                     <template x-for="tab in ['ALL', 'AC', 'ENG', 'PROP', 'OTHER']" :key="tab">
@@ -879,12 +879,12 @@
                         <tbody>
                             <template x-for="squawk in resolvedSquawks" :key="squawk.id">
                                 <tr>
-                                    <td x-text="formatDate(squawk.created_at)"></td>
-                                    <td>
+                                    <td data-label="Date Reported" x-text="formatDate(squawk.created_at)"></td>
+                                    <td data-label="Priority">
                                         <span class="pf-v5-c-label" :class="getSquawkPriorityClass(squawk)" x-text="squawk.priority_display"></span>
                                     </td>
-                                    <td x-text="squawk.component_name || '-'"></td>
-                                    <td>
+                                    <td data-label="Component" x-text="squawk.component_name || '-'"></td>
+                                    <td data-label="Issue">
                                         <span x-text="squawk.issue_reported"></span>
                                         <template x-if="squawk.notes">
                                             <div style="font-size: 0.875rem; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;">
@@ -902,7 +902,7 @@
 
         <!-- ADs & Bulletins Tab -->
         <div x-show="activeTab === 'ads'" class="pf-v5-c-page__main-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div class="tab-section-header">
                 <h2>ADs & Bulletins</h2>
                 <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openAdModal()">
                     <i class="fas fa-plus"></i> Add Bulletin
@@ -960,11 +960,11 @@
                                                :style="expandedAdIds[ad.id] ? 'transform: rotate(90deg)' : ''"></i>
                                         </button>
                                     </td>
-                                    <td>
+                                    <td data-label="Type">
                                         <span class="pf-v5-c-label" :class="getBulletinTypeClass(ad.bulletin_type)" x-text="getBulletinTypeLabel(ad.bulletin_type)"></span>
                                     </td>
-                                    <td x-text="ad.name"></td>
-                                    <td>
+                                    <td data-label="Name" x-text="ad.name"></td>
+                                    <td data-label="Description">
                                         <span x-text="ad.short_description"></span>
                                         <template x-if="ad.compliance_type === 'conditional' && ad.trigger_condition">
                                             <div style="font-size: 0.85em; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;">
@@ -972,7 +972,7 @@
                                             </div>
                                         </template>
                                     </td>
-                                    <td>
+                                    <td data-label="Recurring">
                                         <template x-if="ad.recurring">
                                             <span>
                                                 Yes
@@ -988,11 +988,11 @@
                                             <span>No</span>
                                         </template>
                                     </td>
-                                    <td>
+                                    <td data-label="Status">
                                         <span class="pf-v5-c-label" :class="getAdStatusClass(ad)" x-text="getAdStatusText(ad)"></span>
                                     </td>
-                                    <td x-text="ad.latest_compliance ? formatDate(ad.latest_compliance.date_complied) : '-'"></td>
-                                    <td>
+                                    <td data-label="Last Complied" x-text="ad.latest_compliance ? formatDate(ad.latest_compliance.date_complied) : '-'"></td>
+                                    <td data-label="Next Due">
                                         <template x-if="ad.latest_compliance && ad.latest_compliance.permanent">
                                             <span>Permanent</span>
                                         </template>
@@ -1006,7 +1006,7 @@
                                             <span>-</span>
                                         </template>
                                     </td>
-                                    <td>
+                                    <td data-label="Actions">
                                         <div style="display: flex; gap: 0.25rem;">
                                             <button class="pf-v5-c-button pf-m-plain" x-show="isMaintenance"
                                                     @click="openComplianceHistory(ad)"
@@ -1097,11 +1097,11 @@
                                                :style="expandedAdIds[ad.id] ? 'transform: rotate(90deg)' : ''"></i>
                                         </button>
                                     </td>
-                                    <td>
+                                    <td data-label="Type">
                                         <span class="pf-v5-c-label" :class="getBulletinTypeClass(ad.bulletin_type)" x-text="getBulletinTypeLabel(ad.bulletin_type)"></span>
                                     </td>
-                                    <td x-text="ad.name"></td>
-                                    <td>
+                                    <td data-label="Name" x-text="ad.name"></td>
+                                    <td data-label="Description">
                                         <span x-text="ad.short_description"></span>
                                         <template x-if="ad.compliance_type === 'conditional' && ad.trigger_condition">
                                             <div style="font-size: 0.85em; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;">
@@ -1109,7 +1109,7 @@
                                             </div>
                                         </template>
                                     </td>
-                                    <td>
+                                    <td data-label="Recurring">
                                         <template x-if="ad.recurring">
                                             <span>
                                                 Yes
@@ -1125,11 +1125,11 @@
                                             <span>No</span>
                                         </template>
                                     </td>
-                                    <td>
+                                    <td data-label="Status">
                                         <span class="pf-v5-c-label" :class="getAdStatusClass(ad)" x-text="getAdStatusText(ad)"></span>
                                     </td>
-                                    <td x-text="ad.latest_compliance ? formatDate(ad.latest_compliance.date_complied) : '-'"></td>
-                                    <td>
+                                    <td data-label="Last Complied" x-text="ad.latest_compliance ? formatDate(ad.latest_compliance.date_complied) : '-'"></td>
+                                    <td data-label="Next Due">
                                         <template x-if="ad.latest_compliance && ad.latest_compliance.permanent">
                                             <span>Permanent</span>
                                         </template>
@@ -1143,7 +1143,7 @@
                                             <span>-</span>
                                         </template>
                                     </td>
-                                    <td>
+                                    <td data-label="Actions">
                                         <div style="display: flex; gap: 0.25rem;">
                                             <button class="pf-v5-c-button pf-m-plain" x-show="isMaintenance"
                                                     @click="openComplianceHistory(ad)"
@@ -1208,7 +1208,7 @@
 
         <!-- Inspections Tab -->
         <div x-show="activeTab === 'inspections'" class="pf-v5-c-page__main-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div class="tab-section-header">
                 <h2>Inspections</h2>
                 <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openInspectionTypeModal()">
                     <i class="fas fa-plus"></i> Add Inspection Type
@@ -1253,8 +1253,8 @@
                         <tbody>
                             <template x-for="insp in sortedInspectionTypes" :key="insp.id">
                                 <tr>
-                                    <td x-text="insp.name"></td>
-                                    <td>
+                                    <td data-label="Name" x-text="insp.name"></td>
+                                    <td data-label="Recurring">
                                         <template x-if="insp.recurring">
                                             <span>
                                                 Yes
@@ -1273,11 +1273,11 @@
                                             <span>No</span>
                                         </template>
                                     </td>
-                                    <td>
+                                    <td data-label="Status">
                                         <span class="pf-v5-c-label" :class="getInspectionStatusClass(insp)" x-text="getInspectionStatusText(insp)"></span>
                                     </td>
-                                    <td x-text="insp.latest_record ? formatDate(insp.latest_record.date) : '-'"></td>
-                                    <td>
+                                    <td data-label="Last Completed" x-text="insp.latest_record ? formatDate(insp.latest_record.date) : '-'"></td>
+                                    <td data-label="Next Due">
                                         <template x-if="!insp.recurring || !insp.latest_record">
                                             <span>-</span>
                                         </template>
@@ -1288,7 +1288,7 @@
                                             <span x-text="formatHours(insp.next_due_hours) + ' hrs'"></span>
                                         </template>
                                     </td>
-                                    <td>
+                                    <td data-label="Actions">
                                         <div style="display: flex; gap: 0.25rem;">
                                             <button class="pf-v5-c-button pf-m-plain" x-show="isMaintenance"
                                                     @click="openInspectionHistory(insp)"
@@ -1323,7 +1323,7 @@
 
         <!-- Repairs & Alterations Tab -->
         <div x-show="activeTab === 'major-records'" class="pf-v5-c-page__main-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div class="tab-section-header">
                 <h2>Repairs &amp; Alterations</h2>
                 <div x-show="isOwner" style="display: flex; gap: 0.5rem;">
                     <button class="pf-v5-c-button pf-m-primary" @click="openMajorRecordModal('repair')">
@@ -1403,7 +1403,7 @@
                                                    :style="isMajorRecordExpanded(record.id) ? 'transform: rotate(90deg)' : ''"></i>
                                             </button>
                                         </td>
-                                        <td>
+                                        <td data-label="Title">
                                             <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                                                 <span x-text="record.title"></span>
                                                 <span class="pf-v5-c-label pf-m-compact pf-m-gold" x-show="record.has_ica" title="Includes Instructions for Continued Airworthiness">
@@ -1411,9 +1411,9 @@
                                                 </span>
                                             </div>
                                         </td>
-                                        <td x-text="formatDate(record.date_performed)"></td>
-                                        <td x-text="record.component_name || '-'"></td>
-                                        <td>
+                                        <td data-label="Date" x-text="formatDate(record.date_performed)"></td>
+                                        <td data-label="Component" x-text="record.component_name || '-'"></td>
+                                        <td data-label="Actions">
                                             <div style="display: flex; gap: 0.25rem; align-items: center;">
                                                 <div class="related-popup-trigger" x-show="record.logbook_entry || canViewDocument(record.form_337_document)" @click.outside="if (openRelatedPopup === record.id) openRelatedPopup = null">
                                                     <button class="pf-v5-c-button pf-m-plain" title="View related documents" style="color: var(--pf-v5-global--link--Color);" @click.stop="openRelatedPopup = openRelatedPopup === record.id ? null : record.id">
@@ -1521,7 +1521,7 @@
                                                    :style="isMajorRecordExpanded(record.id) ? 'transform: rotate(90deg)' : ''"></i>
                                             </button>
                                         </td>
-                                        <td>
+                                        <td data-label="Title">
                                             <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                                                 <span x-text="record.title"></span>
                                                 <span class="pf-v5-c-label pf-m-compact pf-m-gold" x-show="record.has_ica" title="Includes Instructions for Continued Airworthiness">
@@ -1529,11 +1529,11 @@
                                                 </span>
                                             </div>
                                         </td>
-                                        <td x-text="formatDate(record.date_performed)"></td>
-                                        <td x-text="record.component_name || '-'"></td>
-                                        <td x-text="record.stc_number || '-'"></td>
-                                        <td x-text="record.stc_holder || '-'"></td>
-                                        <td>
+                                        <td data-label="Date" x-text="formatDate(record.date_performed)"></td>
+                                        <td data-label="Component" x-text="record.component_name || '-'"></td>
+                                        <td data-label="STC #" x-text="record.stc_number || '-'"></td>
+                                        <td data-label="STC Holder" x-text="record.stc_holder || '-'"></td>
+                                        <td data-label="Actions">
                                             <div style="display: flex; gap: 0.25rem; align-items: center;">
                                                 <div class="related-popup-trigger" x-show="record.logbook_entry || canViewDocument(record.form_337_document) || canViewDocument(record.stc_document)" @click.outside="if (openRelatedPopup === record.id) openRelatedPopup = null">
                                                     <button class="pf-v5-c-button pf-m-plain" title="View related documents" style="color: var(--pf-v5-global--link--Color);" @click.stop="openRelatedPopup = openRelatedPopup === record.id ? null : record.id">

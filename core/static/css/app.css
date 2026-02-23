@@ -689,6 +689,155 @@ html.pf-v5-theme-dark .loading-spinner {
     background: var(--pf-v5-global--BackgroundColor--200);
 }
 
+/* ========================================
+   Mobile Responsive
+   ======================================== */
+
+/* Tab section header helper — use on flex rows containing a heading + action button */
+.tab-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+/* Hamburger button: hidden on desktop, shown on mobile */
+#nav-mobile-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.25rem;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+@media (max-width: 768px) {
+    /* ---- Navbar: hamburger + collapsible nav ----------------------- */
+    #nav-mobile-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .pf-v5-c-page__header {
+        flex-wrap: wrap;
+    }
+
+    .pf-v5-c-page__header-brand {
+        flex: 1;
+    }
+
+    /* Truncate long brand name on very narrow screens */
+    .pf-v5-c-page__header-brand-link span {
+        font-size: 1rem !important;
+    }
+
+    /* Nav hidden by default; revealed by JS toggle */
+    .pf-v5-c-page__header-nav {
+        display: none;
+        width: 100%;
+        order: 10;
+        background: #151515;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .pf-v5-c-page__header-nav.nav-open {
+        display: block;
+    }
+
+    /* Stack nav links vertically when open */
+    .pf-v5-c-page__header-nav .pf-v5-c-nav__list {
+        flex-direction: column;
+        padding: 0.25rem 0;
+    }
+
+    .pf-v5-c-page__header-nav .pf-v5-c-nav__link {
+        padding: 0.85rem 1.5rem;
+        display: block;
+        border-inline-start: none;
+    }
+
+    /* ---- Tab bar: horizontally scrollable, no wrap ---------------- */
+    .pf-v5-c-tabs__list {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        /* prevent active tab underline from clipping */
+        padding-bottom: 2px;
+    }
+
+    .pf-v5-c-tabs__list::-webkit-scrollbar {
+        display: none;
+    }
+
+    .pf-v5-c-tabs__item {
+        flex-shrink: 0;
+    }
+
+    /* ---- Tab section headers: wrap when space is tight ------------ */
+    .tab-section-header {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    /* ---- Dashboard header actions: wrap buttons ------------------- */
+    .dashboard-header-actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+
+    /* ---- Component expand detail grids: single column ------------- */
+    .component-detail-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+
+    /* ---- Touch targets: minimum 44px for icon buttons ------------- */
+    .pf-v5-c-button.pf-m-plain {
+        min-width: 2.75rem;
+        min-height: 2.75rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* ---- Alert container: full-width banner at top ---------------- */
+    .alert-container {
+        top: 0;
+        right: 0;
+        left: 0;
+        width: 100%;
+        padding: 0;
+    }
+
+    .alert-container .pf-v5-c-alert {
+        border-radius: 0;
+    }
+}
+
+/* ---- Modals: full-width on phones --------------------------------- */
+@media (max-width: 600px) {
+    .pf-v5-c-backdrop {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .pf-v5-c-modal-box {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        min-width: unset !important;
+        max-height: 88vh;
+        overflow-y: auto;
+        border-radius: 0.75rem 0.75rem 0 0;
+        margin: 0 !important;
+    }
+}
+
 /* Striped table rows (pf-m-striped not defined in loaded PF5 bundle) */
 .pf-v5-c-table.pf-m-striped tbody tr:nth-child(odd) {
     background-color: var(--pf-v5-global--BackgroundColor--200);
