@@ -867,7 +867,7 @@
             <template x-if="isPublicView && isMaintenance && resolvedSquawks.length > 0">
                 <div style="margin-top: 1.5rem;">
                     <h2 style="margin-bottom: 1rem;">Resolved Squawks</h2>
-                    <table class="pf-v5-c-table pf-m-grid-md">
+                    <table class="pf-v5-c-table resolved-squawks-table">
                         <thead>
                             <tr>
                                 <th>Date Reported</th>
@@ -1239,7 +1239,7 @@
 
                 <!-- Inspection Types Table -->
                 <template x-if="inspectionTypes.length > 0">
-                    <table class="pf-v5-c-table pf-m-grid-md">
+                    <table class="pf-v5-c-table inspections-table">
                         <thead>
                             <tr>
                                 <th>Name</th>
@@ -2898,7 +2898,7 @@
 
                     <!-- Compliance records table -->
                     <template x-if="!complianceHistoryLoading && complianceHistory.length > 0">
-                        <table class="pf-v5-c-table pf-m-grid-md">
+                        <table class="pf-v5-c-table compliance-history-table">
                             <thead>
                                 <tr>
                                     <th>Date Complied</th>
@@ -2913,8 +2913,8 @@
                             <tbody>
                                 <template x-for="record in complianceHistory" :key="record.id">
                                     <tr>
-                                        <td x-text="formatDate(record.date_complied)"></td>
-                                        <td>
+                                        <td data-label="Date Complied" x-text="formatDate(record.date_complied)"></td>
+                                        <td data-label="Aircraft Hours">
                                             <template x-if="record.aircraft_hours_at_compliance">
                                                 <span x-text="formatHours(record.aircraft_hours_at_compliance)"></span>
                                             </template>
@@ -2922,8 +2922,8 @@
                                                 <span>—</span>
                                             </template>
                                         </td>
-                                        <td x-text="record.compliance_notes || '—'"></td>
-                                        <td>
+                                        <td data-label="Notes" x-text="record.compliance_notes || '—'"></td>
+                                        <td data-label="Permanent">
                                             <template x-if="record.permanent">
                                                 <span class="pf-v5-c-label pf-m-green pf-m-compact">Yes</span>
                                             </template>
@@ -2931,7 +2931,7 @@
                                                 <span>No</span>
                                             </template>
                                         </td>
-                                        <td>
+                                        <td data-label="Next Due (hrs)">
                                             <template x-if="record.next_due_at_time && record.next_due_at_time > 0">
                                                 <span x-text="formatHours(record.next_due_at_time) + ' hrs'"></span>
                                             </template>
@@ -2939,7 +2939,7 @@
                                                 <span>—</span>
                                             </template>
                                         </td>
-                                        <td>
+                                        <td data-label="Logbook Entry">
                                             <template x-if="record.logbook_entry">
                                                 <button class="pf-v5-c-button pf-m-link pf-m-inline"
                                                         @click="viewLogEntryFromCompliance(record.logbook_entry)">
@@ -2950,7 +2950,7 @@
                                                 <span style="color: var(--pf-v5-global--Color--200);">—</span>
                                             </template>
                                         </td>
-                                        <td x-show="isOwner" style="white-space: nowrap;">
+                                        <td data-label="Actions" x-show="isOwner" style="white-space: nowrap;">
                                             <button class="pf-v5-c-button pf-m-plain" title="Edit" @click="openEditComplianceModal(record)">
                                                 <i class="fas fa-pencil-alt"></i>
                                             </button>
@@ -4275,7 +4275,7 @@
 
                     <!-- Records table -->
                     <template x-if="!inspectionHistoryLoading && inspectionHistory.length > 0">
-                        <table class="pf-v5-c-table pf-m-grid-md">
+                        <table class="pf-v5-c-table inspection-history-table">
                             <thead>
                                 <tr>
                                     <th>Date</th>
@@ -4287,8 +4287,8 @@
                             <tbody>
                                 <template x-for="record in inspectionHistory" :key="record.id">
                                     <tr>
-                                        <td x-text="formatDate(record.date)"></td>
-                                        <td>
+                                        <td data-label="Date" x-text="formatDate(record.date)"></td>
+                                        <td data-label="Aircraft Hours">
                                             <template x-if="record.aircraft_hours != null">
                                                 <span x-text="formatHours(record.aircraft_hours)"></span>
                                             </template>
@@ -4296,7 +4296,7 @@
                                                 <span style="color: var(--pf-v5-global--Color--200);">—</span>
                                             </template>
                                         </td>
-                                        <td>
+                                        <td data-label="Logbook Entry">
                                             <template x-if="record.logbook_entry">
                                                 <button class="pf-v5-c-button pf-m-link pf-m-inline"
                                                         @click="viewLogEntryFromCompliance(record.logbook_entry)">
@@ -4307,7 +4307,7 @@
                                                 <span style="color: var(--pf-v5-global--Color--200);">—</span>
                                             </template>
                                         </td>
-                                        <td x-show="isOwner">
+                                        <td data-label="Actions" x-show="isOwner">
                                             <div style="display: flex; gap: 0.25rem;">
                                                 <button class="pf-v5-c-button pf-m-plain"
                                                         @click="editInspectionRecord(record)"

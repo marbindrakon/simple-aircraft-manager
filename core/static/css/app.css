@@ -1157,6 +1157,214 @@ html.pf-v5-theme-dark .loading-spinner {
     }
 }
 
+/* ---- Resolved Squawks (public view): card layout on mobile -------- */
+@media (max-width: 768px) {
+    .resolved-squawks-table thead {
+        display: none;
+    }
+
+    .resolved-squawks-table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        padding: 0.75rem;
+        gap: 0.3rem 0.5rem;
+        border: 1px solid var(--pf-v5-global--BorderColor--100);
+        border-radius: var(--pf-v5-global--BorderRadius--sm);
+        margin-bottom: 0.75rem;
+    }
+
+    /* Issue — full width, primary identifier */
+    .resolved-squawks-table td[data-label="Issue"] {
+        grid-column: 1; grid-row: 1;
+        display: block; padding: 0; font-weight: 600;
+    }
+
+    /* Priority badge — right column, aligns with Issue row */
+    .resolved-squawks-table td[data-label="Priority"] {
+        grid-column: 2; grid-row: 1;
+        display: block; padding: 0;
+    }
+
+    /* Component — full width, secondary */
+    .resolved-squawks-table td[data-label="Component"] {
+        grid-column: 1 / span 2; grid-row: 2;
+        display: block; padding: 0; font-size: 0.875rem;
+        color: var(--pf-v5-global--Color--200);
+    }
+
+    /* Date Reported — full width, small */
+    .resolved-squawks-table td[data-label="Date Reported"] {
+        grid-column: 1 / span 2; grid-row: 3;
+        display: block; padding: 0; font-size: 0.8rem;
+        color: var(--pf-v5-global--Color--200);
+    }
+}
+
+/* ---- AD Compliance History modal: card layout on mobile ----------- */
+@media (max-width: 768px) {
+    .compliance-history-table thead {
+        display: none;
+    }
+
+    .compliance-history-table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 0.75rem;
+        gap: 0.3rem 0.5rem;
+        border: 1px solid var(--pf-v5-global--BorderColor--100);
+        border-radius: var(--pf-v5-global--BorderRadius--sm);
+        margin-bottom: 0.75rem;
+    }
+
+    /* Date Complied — full width, bold */
+    .compliance-history-table td[data-label="Date Complied"] {
+        grid-column: 1 / span 2; grid-row: 1;
+        display: block; padding: 0; font-weight: 600;
+    }
+
+    /* Aircraft Hours — left */
+    .compliance-history-table td[data-label="Aircraft Hours"] {
+        grid-column: 1; grid-row: 2;
+        display: block; padding: 0; font-size: 0.875rem;
+    }
+
+    /* Permanent badge — right */
+    .compliance-history-table td[data-label="Permanent"] {
+        grid-column: 2; grid-row: 2;
+        display: block; padding: 0; font-size: 0.875rem;
+        text-align: right;
+    }
+
+    /* Next Due (hrs) — left */
+    .compliance-history-table td[data-label="Next Due (hrs)"] {
+        grid-column: 1; grid-row: 3;
+        display: block; padding: 0; font-size: 0.875rem;
+    }
+
+    /* Logbook Entry — right */
+    .compliance-history-table td[data-label="Logbook Entry"] {
+        grid-column: 2; grid-row: 3;
+        display: block; padding: 0; font-size: 0.875rem;
+        text-align: right;
+    }
+
+    /* Notes — full width */
+    .compliance-history-table td[data-label="Notes"] {
+        grid-column: 1 / span 2; grid-row: 4;
+        display: block; padding: 0; font-size: 0.875rem;
+        color: var(--pf-v5-global--Color--200);
+    }
+
+    /* Actions footer */
+    .compliance-history-table td[data-label="Actions"] {
+        grid-column: 1 / span 2; grid-row: 5;
+        display: block; padding: 0.4rem 0 0 0;
+        margin-top: 0.25rem;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+    }
+}
+
+/* ---- Inspections tab: card layout on mobile ----------------------- */
+@media (max-width: 768px) {
+    .inspections-table thead {
+        display: none;
+    }
+
+    .inspections-table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 0.75rem;
+        gap: 0.3rem 0.5rem;
+        border: 1px solid var(--pf-v5-global--BorderColor--100);
+        border-radius: var(--pf-v5-global--BorderRadius--sm);
+        margin-bottom: 0.75rem;
+    }
+
+    /* Name — primary identifier, full width */
+    .inspections-table td[data-label="Name"] {
+        grid-column: 1 / span 2; grid-row: 1;
+        display: block; padding: 0; font-weight: 600;
+    }
+
+    /* Status badge — left of row 2 */
+    .inspections-table td[data-label="Status"] {
+        grid-column: 1; grid-row: 2;
+        display: block; padding: 0;
+    }
+
+    /* Recurring — right of row 2 */
+    .inspections-table td[data-label="Recurring"] {
+        grid-column: 2; grid-row: 2;
+        display: block; padding: 0; font-size: 0.875rem;
+        color: var(--pf-v5-global--Color--200); text-align: right;
+    }
+
+    /* Last Completed — left of row 3 */
+    .inspections-table td[data-label="Last Completed"] {
+        grid-column: 1; grid-row: 3;
+        display: block; padding: 0; font-size: 0.875rem;
+    }
+
+    /* Next Due — right of row 3 */
+    .inspections-table td[data-label="Next Due"] {
+        grid-column: 2; grid-row: 3;
+        display: block; padding: 0; font-size: 0.875rem;
+        text-align: right;
+    }
+
+    /* Actions footer */
+    .inspections-table td[data-label="Actions"] {
+        grid-column: 1 / span 2; grid-row: 4;
+        display: block; padding: 0.4rem 0 0 0;
+        margin-top: 0.25rem;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+    }
+}
+
+/* ---- Inspection History modal: card layout on mobile -------------- */
+@media (max-width: 768px) {
+    .inspection-history-table thead {
+        display: none;
+    }
+
+    .inspection-history-table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 0.75rem;
+        gap: 0.3rem 0.5rem;
+        border: 1px solid var(--pf-v5-global--BorderColor--100);
+        border-radius: var(--pf-v5-global--BorderRadius--sm);
+        margin-bottom: 0.75rem;
+    }
+
+    /* Date — full width, bold */
+    .inspection-history-table td[data-label="Date"] {
+        grid-column: 1 / span 2; grid-row: 1;
+        display: block; padding: 0; font-weight: 600;
+    }
+
+    /* Aircraft Hours — left */
+    .inspection-history-table td[data-label="Aircraft Hours"] {
+        grid-column: 1; grid-row: 2;
+        display: block; padding: 0; font-size: 0.875rem;
+    }
+
+    /* Logbook Entry — right */
+    .inspection-history-table td[data-label="Logbook Entry"] {
+        grid-column: 2; grid-row: 2;
+        display: block; padding: 0; font-size: 0.875rem;
+        text-align: right;
+    }
+
+    /* Actions footer */
+    .inspection-history-table td[data-label="Actions"] {
+        grid-column: 1 / span 2; grid-row: 3;
+        display: block; padding: 0.4rem 0 0 0;
+        margin-top: 0.25rem;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+    }
+}
+
 /* ---- Modals: full-width on phones --------------------------------- */
 @media (max-width: 600px) {
     .pf-v5-c-backdrop {
