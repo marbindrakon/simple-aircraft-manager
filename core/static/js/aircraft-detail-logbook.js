@@ -3,6 +3,7 @@ function logbookMixin() {
         // Logbook state
         logbookEntries: [],
         logbookLoaded: false,
+        logbookLoading: false,
         logbookActiveTab: 'ALL',         // 'ALL' | 'AC' | 'ENG' | 'PROP' | 'OTHER'
         logbookSearch: '',               // text search input
         logbookEntryTypeFilter: '',      // '' = all entry types
@@ -124,6 +125,8 @@ function logbookMixin() {
         },
 
         async loadLogbookEntries(append = false) {
+            if (this.logbookLoading) return;
+            this.logbookLoading = true;
             const offset = append ? this.logbookEntries.length : 0;
             if (!append) {
                 this.logbookEntries = [];
@@ -149,14 +152,18 @@ function logbookMixin() {
                 const response = await fetch(url);
                 const data = await response.json();
                 const newEntries = data.results || [];
-                this.logbookEntries = append
-                    ? [...this.logbookEntries, ...newEntries]
-                    : newEntries;
+                if (append) {
+                    this.logbookEntries.push(...newEntries);
+                } else {
+                    this.logbookEntries = newEntries;
+                }
                 this.logbookTotal = data.count ?? 0;
                 this.logbookLoaded = true;
             } catch (error) {
                 console.error('Error loading logbook entries:', error);
                 showNotification('Failed to load logbook entries', 'danger');
+            } finally {
+                this.logbookLoading = false;
             }
         },
 
