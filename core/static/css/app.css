@@ -820,6 +820,109 @@ html.pf-v5-theme-dark .loading-spinner {
     }
 }
 
+/* ---- Components tab: card layout on mobile ------------------------ */
+/*
+ * At ≤768px each <tbody class="component-row-group"> becomes a card.
+ * The main <tr> is a 2-column grid: content (left) | toggle (right).
+ * Secondary columns (Mfr/Model, In Service, Since OH/SVC) are hidden —
+ * they're already visible in the expandable detail row.
+ * pf-m-grid-md is removed from the table; we own the mobile layout.
+ */
+@media (max-width: 768px) {
+    .components-table thead {
+        display: none;
+    }
+
+    /* Each component's <tbody> becomes a bordered card */
+    .component-row-group {
+        display: block;
+        border: 1px solid var(--pf-v5-global--BorderColor--100);
+        border-radius: var(--pf-v5-global--BorderRadius--sm);
+        margin-bottom: 0.75rem;
+        overflow: hidden;
+    }
+
+    /* Main row: compact card grid */
+    .component-row-group tr:not(.pf-v5-c-table__expandable-row) {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        padding: 0.75rem;
+        gap: 0.3rem 0.5rem;
+    }
+
+    /* Toggle chevron: right column, vertically centered */
+    .component-row-group td.pf-v5-c-table__toggle {
+        grid-column: 2;
+        grid-row: 1 / 4;
+        display: flex;
+        align-items: center;
+        padding: 0;
+    }
+
+    /* Type: component name + install location + service badges */
+    .component-row-group td[data-label="Type"] {
+        grid-column: 1;
+        grid-row: 1;
+        display: block;
+        padding: 0;
+        font-weight: 600;
+    }
+
+    /* Status badge */
+    .component-row-group td[data-label="Status"] {
+        grid-column: 1;
+        grid-row: 2;
+        display: block;
+        padding: 0;
+    }
+
+    /* Hours/days remaining — most actionable info */
+    .component-row-group td[data-label="Remaining"] {
+        grid-column: 1;
+        grid-row: 3;
+        display: block;
+        padding: 0;
+        font-size: 0.875rem;
+    }
+
+    /* Secondary columns hidden on mobile — detail in the expand row */
+    .component-row-group td[data-label="Manufacturer/Model"],
+    .component-row-group td[data-label="In Service"],
+    .component-row-group td[data-label="Since OH/SVC"] {
+        display: none;
+    }
+
+    /* Actions: footer strip below the main content */
+    .component-row-group td[data-label="Actions"] {
+        grid-column: 1 / span 2;
+        grid-row: 4;
+        display: block;
+        padding: 0.4rem 0 0 0;
+        margin-top: 0.25rem;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+    }
+
+    /* Expandable detail row — display managed by Alpine x-show,
+       so we set display: block here WITHOUT !important so that
+       Alpine's inline display: none can still override it */
+    .component-row-group tr.pf-v5-c-table__expandable-row {
+        display: block;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+        background: var(--pf-v5-global--BackgroundColor--200);
+    }
+
+    /* First td in expand row is the empty toggle placeholder — hide it */
+    .component-row-group tr.pf-v5-c-table__expandable-row > td:first-child {
+        display: none;
+    }
+
+    /* Second td holds the actual expand content */
+    .component-row-group tr.pf-v5-c-table__expandable-row > td:last-child {
+        display: block;
+        padding: 0.75rem !important;
+    }
+}
+
 /* ---- Modals: full-width on phones --------------------------------- */
 @media (max-width: 600px) {
     .pf-v5-c-backdrop {

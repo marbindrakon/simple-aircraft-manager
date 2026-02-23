@@ -413,7 +413,7 @@
                 </button>
             </div>
 
-            <table class="pf-v5-c-table pf-m-grid-md pf-m-striped">
+            <table class="pf-v5-c-table pf-m-striped components-table">
                 <thead>
                     <tr>
                         <th style="width: 2rem;"></th>
@@ -434,7 +434,7 @@
                     </template>
                 </tbody>
                 <template x-for="component in sortedComponents" :key="component.id">
-                    <tbody>
+                    <tbody class="component-row-group">
                         <tr>
                             <td class="pf-v5-c-table__toggle">
                                 <button class="pf-v5-c-button pf-m-plain"
