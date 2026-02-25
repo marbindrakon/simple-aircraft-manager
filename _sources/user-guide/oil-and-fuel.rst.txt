@@ -1,15 +1,16 @@
 Oil & Fuel Tracking
 ===================
 
-The Oil and Fuel tabs track consumable usage over time and display trend charts
-to help identify consumption patterns.
+The **Oil** and **Fuel** sub-tabs (under the **Consumables** tab) track
+consumable usage over time and display trend charts to help identify consumption
+patterns.
 
-Oil Tab
--------
+Oil Sub-Tab
+-----------
 
-The Oil tab tracks oil additions and consumption.
+The Oil sub-tab tracks oil additions and consumption.
 
-.. TODO: Screenshot of the Oil tab showing the consumption trend chart and records table
+.. TODO: Screenshot of the Oil sub-tab showing the consumption trend chart and records table
 
 Adding an Oil Record
 ^^^^^^^^^^^^^^^^^^^^
@@ -63,12 +64,12 @@ level after, type, and notes. Records whose consumption rate was identified as
 an outlier are marked with a **⚠ icon** next to the date. Owners can click
 the **pencil** icon to edit a record.
 
-Fuel Tab
---------
+Fuel Sub-Tab
+------------
 
-The Fuel tab works identically to the Oil tab but tracks fuel consumption.
+The Fuel sub-tab works identically to the Oil sub-tab but tracks fuel consumption.
 
-.. TODO: Screenshot of the Fuel tab showing the burn rate chart and records table
+.. TODO: Screenshot of the Fuel sub-tab showing the burn rate chart and records table
 
 Adding a Fuel Record
 ^^^^^^^^^^^^^^^^^^^^

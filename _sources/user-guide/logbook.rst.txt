@@ -1,14 +1,19 @@
 Logbook
 =======
 
-The Logbook tab is a chronological record of maintenance performed on the
-aircraft, including inspections, parts replaced, and mechanic signoffs.
+The **Logbook** sub-tab (under the **Records** tab) is a chronological record
+of maintenance performed on the aircraft, including inspections, parts replaced,
+and mechanic signoffs.
 
 .. image:: ../screenshots/logbook.png
    :alt: Logbook tab
    :width: 100%
 
 Logbook entries document *maintenance events* -- they are not per-flight records.
+
+The **Records** tab is visible to all authenticated users (owners, pilots, and
+admins) and to visitors using a maintenance share link. It is hidden from
+visitors using a status-only share link.
 
 Sub-Tabs
 --------

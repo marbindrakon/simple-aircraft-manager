@@ -1,13 +1,15 @@
 ADs / Bulletins
 ===============
 
-The **ADs / Bulletins** tab tracks Airworthiness Directives and other maintenance
-bulletins that apply to your aircraft. Mandatory bulletins (such as FAA ADs) affect
-airworthiness status; optional/advisory bulletins are tracked for completeness but
-do not affect the airworthiness badge.
+The **ADs / Bulletins** sub-tab (under the **Compliance** tab) tracks
+Airworthiness Directives and other maintenance bulletins that apply to your
+aircraft. Mandatory bulletins (such as FAA ADs) affect airworthiness status;
+optional/advisory bulletins are tracked for completeness but do not affect the
+airworthiness badge.
 
-The tab in the navigation shows a **badge count** when mandatory bulletins have
-overdue or missing compliance records.
+The **Compliance** tab in the navigation shows a **badge count** when mandatory
+bulletins have overdue or missing compliance records, or when inspections are
+overdue or upcoming.
 
 Bulletin Types
 --------------

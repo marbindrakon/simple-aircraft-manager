@@ -1,11 +1,13 @@
 Inspections
 ===========
 
-The Inspections tab tracks periodic inspection requirements for the aircraft,
-such as annual inspections, 100-hour inspections, and transponder checks.
+The **Inspections** sub-tab (under the **Compliance** tab) tracks periodic
+inspection requirements for the aircraft, such as annual inspections, 100-hour
+inspections, and transponder checks.
 
-The Inspections tab in the navigation shows a **badge count** when there are
-overdue or upcoming inspections.
+The **Compliance** tab in the navigation shows a **badge count** when there are
+overdue or upcoming inspections, or when mandatory bulletins have overdue or
+missing compliance records.
 
 Inspection Types
 ----------------
