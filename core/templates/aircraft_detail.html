@@ -1981,14 +1981,23 @@
                                         <span x-text="formatDate(record.date)"></span>
                                         <span x-show="isOilOutlier(record.id)" style="color: #f0ab00; margin-left: 0.3rem;" title="This record's consumption rate is a statistical outlier and was excluded from the average."><i class="fas fa-exclamation-triangle"></i></span>
                                     </td>
-                                    <td data-label="Hours" x-text="formatHours(record.flight_hours)"></td>
-                                    <td data-label="Qty (qt)" x-text="record.quantity_added"></td>
-                                    <td data-label="Level After" x-text="record.level_after || '-'"></td>
-                                    <td data-label="Type" x-text="record.consumable_type || '-'"></td>
-                                    <td data-label="Notes" x-text="record.notes || '-'"></td>
+                                    <td data-label="Hours">
+                                        <span class="consumable-field-label">At </span><span x-text="formatHours(record.flight_hours)"></span>
+                                    </td>
+                                    <td data-label="Qty (qt)">
+                                        <span class="consumable-field-label">Added </span><span x-text="record.quantity_added"></span>
+                                    </td>
+                                    <td data-label="Level After" :class="{ 'consumable-empty-field': !record.level_after }">
+                                        <span class="consumable-field-label">Level </span><span x-text="record.level_after || '-'"></span>
+                                    </td>
+                                    <td data-label="Type" :class="{ 'consumable-empty-field': !record.consumable_type }" x-text="record.consumable_type || '-'"></td>
+                                    <td data-label="Notes" :class="{ 'consumable-empty-field': !record.notes }" x-text="record.notes || '-'"></td>
                                     <td data-label="Actions">
                                         <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editOilRecord(record)" title="Edit">
                                             <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="cardDeleteOilRecord(record)" title="Delete" style="color: var(--pf-v5-global--danger-color--100);">
+                                            <i class="fas fa-trash"></i>
                                         </button>
                                     </td>
                                 </tr>
@@ -2062,14 +2071,23 @@
                                         <span x-text="formatDate(record.date)"></span>
                                         <span x-show="isFuelOutlier(record.id)" style="color: #f0ab00; margin-left: 0.3rem;" title="This record's consumption rate is a statistical outlier and was excluded from the average."><i class="fas fa-exclamation-triangle"></i></span>
                                     </td>
-                                    <td data-label="Hours" x-text="formatHours(record.flight_hours)"></td>
-                                    <td data-label="Qty (gal)" x-text="record.quantity_added"></td>
-                                    <td data-label="Level After" x-text="record.level_after || '-'"></td>
-                                    <td data-label="Type" x-text="record.consumable_type || '-'"></td>
-                                    <td data-label="Notes" x-text="record.notes || '-'"></td>
+                                    <td data-label="Hours">
+                                        <span class="consumable-field-label">At </span><span x-text="formatHours(record.flight_hours)"></span>
+                                    </td>
+                                    <td data-label="Qty (gal)">
+                                        <span class="consumable-field-label">Added </span><span x-text="record.quantity_added"></span>
+                                    </td>
+                                    <td data-label="Level After" :class="{ 'consumable-empty-field': !record.level_after }">
+                                        <span class="consumable-field-label">Level </span><span x-text="record.level_after || '-'"></span>
+                                    </td>
+                                    <td data-label="Type" :class="{ 'consumable-empty-field': !record.consumable_type }" x-text="record.consumable_type || '-'"></td>
+                                    <td data-label="Notes" :class="{ 'consumable-empty-field': !record.notes }" x-text="record.notes || '-'"></td>
                                     <td data-label="Actions">
                                         <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editFuelRecord(record)" title="Edit">
                                             <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="cardDeleteFuelRecord(record)" title="Delete" style="color: var(--pf-v5-global--danger-color--100);">
+                                            <i class="fas fa-trash"></i>
                                         </button>
                                     </td>
                                 </tr>

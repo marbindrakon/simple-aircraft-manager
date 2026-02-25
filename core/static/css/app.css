@@ -1145,10 +1145,20 @@ html.pf-v5-theme-dark .loading-spinner {
     }
 }
 
+/* ---- Oil & Fuel: inline field labels (hidden on desktop, visible on mobile) ---- */
+/*
+ * consumable-field-label spans sit before the value in each cell.
+ * On desktop the column headers provide context, so labels are hidden.
+ * On mobile the headers are hidden, so labels are revealed.
+ */
+.consumable-field-label {
+    display: none;
+}
+
 /* ---- Oil & Fuel tabs: card layout on mobile ----------------------- */
 /*
  * Flat tables (no expandable rows) — each <tr> becomes its own card.
- * 3-column grid: [main info left] [qty right] [edit button far right]
+ * 3-column grid: [main info left] [qty right] [action buttons far right]
  * with Hours/Level After/Type/Notes stacking below.
  */
 @media (max-width: 768px) {
@@ -1176,11 +1186,12 @@ html.pf-v5-theme-dark .loading-spinner {
         display: block; padding: 0; font-weight: 600;
     }
 
-    /* Edit button: right column, top 3 rows */
+    /* Action buttons: right column, spanning top 3 rows, side by side */
     .consumable-table td[data-label="Actions"] {
         grid-column: 3; grid-row: 1 / span 3;
-        display: flex; align-items: flex-start;
-        justify-content: center; padding: 0;
+        display: flex; flex-direction: row;
+        align-items: flex-start; justify-content: flex-start;
+        gap: 0.1rem; padding: 0;
     }
 
     /* Hours | Qty side by side */
@@ -1208,11 +1219,24 @@ html.pf-v5-theme-dark .loading-spinner {
         color: var(--pf-v5-global--Color--200);
     }
 
-    /* Notes: full width, only shown when non-empty (always rendered but '-' if empty) */
+    /* Notes: full width, only shown when non-empty */
     .consumable-table td[data-label="Notes"] {
         grid-column: 1 / span 2; grid-row: 4;
         display: block; padding: 0; font-size: 0.875rem;
         color: var(--pf-v5-global--Color--200);
+    }
+
+    /* Show inline field labels on mobile (desktop uses column headers) */
+    .consumable-field-label {
+        display: inline;
+        color: var(--pf-v5-global--Color--200);
+        font-size: 0.8em;
+        font-weight: 400;
+    }
+
+    /* Hide empty optional fields on mobile (desktop keeps '-' for column alignment) */
+    .consumable-table td.consumable-empty-field {
+        display: none;
     }
 }
 
