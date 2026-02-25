@@ -2148,49 +2148,63 @@
                 <div class="pf-v5-l-stack pf-m-gutter" x-show="documentCollections.length > 0 || uncollectedDocuments.length > 0">
                     <!-- Collections -->
                     <template x-for="collection in [...documentCollections].sort((a, b) => { if (a.starred && !b.starred) return -1; if (!a.starred && b.starred) return 1; return (a.name || '').localeCompare(b.name || ''); })" :key="collection.id">
-                        <div class="pf-v5-c-card" x-data="{ collapsed: true }">
+                        <div class="pf-v5-c-card" x-data="{ collapsed: true, collMenuOpen: false }">
                             <div class="pf-v5-c-card__header">
                                 <div class="pf-v5-c-card__header-main">
                                     <div class="pf-v5-c-card__title" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;" @click="collapsed = !collapsed">
                                         <i class="fas" :class="collapsed ? 'fa-chevron-right' : 'fa-chevron-down'" style="font-size: 0.75rem; opacity: 0.6;"></i>
                                         <h2 x-text="collection.name"></h2>
+                                        <i x-show="collection.starred" class="fas fa-star" style="font-size: 0.7rem; color: var(--pf-v5-global--warning-color--100); opacity: 0.8;"></i>
                                     </div>
                                 </div>
-                                <div class="pf-v5-c-card__actions" style="display: flex; align-items: center; gap: 0.25rem;">
-                                    <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="starCollection(collection)"
-                                            :title="collection.starred ? 'Unpin collection' : 'Pin collection to top'"
-                                            :style="collection.starred ? 'color: var(--pf-v5-global--warning-color--100);' : 'opacity: 0.35;'">
-                                        <i class="fas fa-star"></i>
-                                    </button>
-                                    <div x-show="isOwner" style="display: flex; gap: 0; align-items: center; border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 3px; overflow: hidden;">
-                                        <button class="pf-v5-c-button pf-m-plain" style="padding: 0.2rem 0.4rem; font-size: 0.75rem; border-radius: 0;"
-                                                @click="setCollectionVisibility(collection, 'private')" title="Private — not visible on share links"
-                                                :style="collection.visibility === 'private' ? 'background: var(--pf-v5-global--BackgroundColor--200); box-shadow: inset 0 -3px 0 0 var(--pf-v5-global--Color--100);' : ''">
-                                            <i class="fas fa-lock" :style="collection.visibility === 'private' ? 'color: var(--pf-v5-global--Color--100);' : 'opacity: 0.35;'"></i>
-                                        </button>
-                                        <button class="pf-v5-c-button pf-m-plain" style="padding: 0.2rem 0.4rem; font-size: 0.75rem; border-radius: 0; border-left: 1px solid var(--pf-v5-global--BorderColor--100);"
-                                                @click="setCollectionVisibility(collection, 'status')" title="All share links — visible to status and maintenance tokens"
-                                                :style="collection.visibility === 'status' ? 'background: var(--pf-v5-global--BackgroundColor--200); box-shadow: inset 0 -3px 0 0 var(--pf-v5-global--success-color--100);' : ''">
-                                            <i class="fas fa-globe" :style="collection.visibility === 'status' ? 'color: var(--pf-v5-global--success-color--100);' : 'opacity: 0.35;'"></i>
-                                        </button>
-                                        <button class="pf-v5-c-button pf-m-plain" style="padding: 0.2rem 0.4rem; font-size: 0.75rem; border-radius: 0; border-left: 1px solid var(--pf-v5-global--BorderColor--100);"
-                                                @click="setCollectionVisibility(collection, 'maintenance')" title="Maintenance only — hidden from status-only share links"
-                                                :style="collection.visibility === 'maintenance' ? 'background: var(--pf-v5-global--BackgroundColor--200); box-shadow: inset 0 -3px 0 0 var(--pf-v5-global--info-color--100);' : ''">
-                                            <i class="fas fa-tools" :style="collection.visibility === 'maintenance' ? 'color: var(--pf-v5-global--info-color--100);' : 'opacity: 0.35;'"></i>
-                                        </button>
-                                    </div>
-                                    <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="openDocumentModalForCollection(collection)" title="Add document to collection">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                    <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editCollection(collection)" title="Edit collection">
-                                        <i class="fas fa-pencil-alt"></i>
-                                    </button>
-                                    <button class="pf-v5-c-button pf-m-plain pf-m-danger" x-show="isOwner" @click="deleteCollection(collection)" title="Delete collection">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                <div class="pf-v5-c-card__actions" style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <!-- Visibility badge -->
+                                    <span x-show="isOwner"
+                                          class="pf-v5-c-label"
+                                          :class="collection.visibility === 'status' ? 'pf-m-green' : collection.visibility === 'maintenance' ? 'pf-m-blue' : 'pf-m-grey'"
+                                          x-text="collection.visibility === 'private' ? 'Private' : collection.visibility === 'status' ? 'Public' : 'Maintenance'">
+                                    </span>
+                                    <!-- Page count -->
                                     <span class="pf-v5-c-label pf-m-blue">
                                         <span x-text="collection.document_count + ' pages'"></span>
                                     </span>
+                                    <!-- Overflow menu (owners only) -->
+                                    <div x-show="isOwner" class="doc-coll-overflow" @click.outside="collMenuOpen = false">
+                                        <button class="pf-v5-c-button pf-m-plain"
+                                                @click.stop="collMenuOpen = !collMenuOpen"
+                                                title="More actions" aria-label="More actions">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <div class="doc-coll-overflow-menu" x-show="collMenuOpen">
+                                            <button class="doc-coll-overflow-item" @click="starCollection(collection); collMenuOpen = false">
+                                                <i class="fas fa-star" :style="collection.starred ? 'color: var(--pf-v5-global--warning-color--100);' : 'opacity: 0.4;'"></i>
+                                                <span x-text="collection.starred ? 'Unpin from top' : 'Pin to top'"></span>
+                                            </button>
+                                            <div class="doc-coll-overflow-section">Visibility</div>
+                                            <button class="doc-coll-overflow-item" @click="setCollectionVisibility(collection, 'private'); collMenuOpen = false">
+                                                <i class="fas fa-lock"></i> Private
+                                                <i class="fas fa-check doc-coll-overflow-check" x-show="collection.visibility === 'private'"></i>
+                                            </button>
+                                            <button class="doc-coll-overflow-item" @click="setCollectionVisibility(collection, 'status'); collMenuOpen = false">
+                                                <i class="fas fa-globe"></i> Public
+                                                <i class="fas fa-check doc-coll-overflow-check" x-show="collection.visibility === 'status'"></i>
+                                            </button>
+                                            <button class="doc-coll-overflow-item" @click="setCollectionVisibility(collection, 'maintenance'); collMenuOpen = false">
+                                                <i class="fas fa-tools"></i> Maintenance only
+                                                <i class="fas fa-check doc-coll-overflow-check" x-show="collection.visibility === 'maintenance'"></i>
+                                            </button>
+                                            <div class="doc-coll-overflow-section">Actions</div>
+                                            <button class="doc-coll-overflow-item" @click="openDocumentModalForCollection(collection); collMenuOpen = false">
+                                                <i class="fas fa-plus"></i> Add document
+                                            </button>
+                                            <button class="doc-coll-overflow-item" @click="editCollection(collection); collMenuOpen = false">
+                                                <i class="fas fa-pencil-alt"></i> Edit
+                                            </button>
+                                            <button class="doc-coll-overflow-item doc-coll-overflow-danger" @click="deleteCollection(collection); collMenuOpen = false">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <template x-if="collection.description && !collapsed">

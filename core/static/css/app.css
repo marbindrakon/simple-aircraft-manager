@@ -1553,3 +1553,66 @@ html.pf-v5-theme-dark .loading-spinner {
 .logbook-overflow-item.logbook-overflow-danger {
     color: var(--pf-v5-global--danger-color--100);
 }
+
+/* ---- Document collection: overflow menu ---------------------------- */
+.doc-coll-overflow {
+    position: relative;
+}
+
+.doc-coll-overflow-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--pf-v5-global--BackgroundColor--100);
+    border: 1px solid var(--pf-v5-global--BorderColor--100);
+    border-radius: var(--pf-v5-global--BorderRadius--sm);
+    box-shadow: var(--pf-v5-global--BoxShadow--md);
+    z-index: 200;
+    min-width: 14rem;
+    padding: 0.25rem 0;
+}
+
+.doc-coll-overflow-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.875rem;
+    color: var(--pf-v5-global--Color--100);
+    white-space: nowrap;
+}
+
+.doc-coll-overflow-item:hover {
+    background: var(--pf-v5-global--BackgroundColor--200);
+}
+
+.doc-coll-overflow-item.doc-coll-overflow-danger {
+    color: var(--pf-v5-global--danger-color--100);
+}
+
+.doc-coll-overflow-check {
+    margin-left: auto;
+    color: var(--pf-v5-global--success-color--100);
+    font-size: 0.75rem;
+}
+
+.doc-coll-overflow-section {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--pf-v5-global--Color--200);
+    padding: 0.4rem 0.75rem 0.2rem;
+    border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+    margin-top: 0.25rem;
+}
+
+.doc-coll-overflow-section:first-child {
+    border-top: none;
+    margin-top: 0;
+}
