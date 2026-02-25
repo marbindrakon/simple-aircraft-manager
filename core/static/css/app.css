@@ -1006,7 +1006,7 @@ html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--pa
         border: 1px solid var(--pf-v5-global--BorderColor--100);
         border-radius: var(--pf-v5-global--BorderRadius--sm);
         margin-bottom: 0.75rem;
-        overflow: hidden;
+        /* overflow:hidden omitted — would clip absolutely-positioned action overflow menus */
     }
 
     .ad-row-group tr:not(.pf-v5-c-table__expandable-row) {
@@ -1064,6 +1064,7 @@ html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--pa
         display: block;
         border-top: 1px solid var(--pf-v5-global--BorderColor--100);
         background: var(--pf-v5-global--BackgroundColor--200);
+        border-radius: 0 0 var(--pf-v5-global--BorderRadius--sm) var(--pf-v5-global--BorderRadius--sm);
     }
 
     .ad-row-group tr.pf-v5-c-table__expandable-row > td:first-child {
@@ -1088,7 +1089,7 @@ html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--pa
         border: 1px solid var(--pf-v5-global--BorderColor--100);
         border-radius: var(--pf-v5-global--BorderRadius--sm);
         margin-bottom: 0.75rem;
-        overflow: hidden;
+        /* overflow:hidden omitted — would clip absolutely-positioned action overflow menus */
     }
 
     .major-record-row-group tr:not(.pf-v5-c-table__expandable-row) {
@@ -1145,6 +1146,7 @@ html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--pa
         display: block;
         border-top: 1px solid var(--pf-v5-global--BorderColor--100);
         background: var(--pf-v5-global--BackgroundColor--200);
+        border-radius: 0 0 var(--pf-v5-global--BorderRadius--sm) var(--pf-v5-global--BorderRadius--sm);
     }
 
     .major-record-row-group tr.pf-v5-c-table__expandable-row > td:first-child {
@@ -1462,6 +1464,47 @@ html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--pa
         display: block; padding: 0.4rem 0 0 0;
         margin-top: 0.25rem;
         border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+    }
+}
+
+/* ---- Inspection cards: inline date labels (mobile only) ----------- */
+/*
+ * Small muted label rendered above the date value in the Last/Due cells.
+ * Hidden on desktop where column headers provide context.
+ */
+.insp-mobile-label {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .insp-mobile-label {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--pf-v5-global--Color--200);
+        margin-bottom: 0.1rem;
+    }
+}
+
+/* ---- Inspection cards: overflow menu ------------------------------ */
+.insp-overflow {
+    position: relative;
+}
+
+/* ---- Major records: inline component label (mobile only) ---------- */
+.major-record-mobile-label {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .major-record-mobile-label {
+        display: inline;
+        color: var(--pf-v5-global--Color--200);
+        font-size: 0.8em;
+        font-weight: 400;
+        margin-right: 0.25rem;
     }
 }
 

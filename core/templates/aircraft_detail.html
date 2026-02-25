@@ -992,7 +992,7 @@
                         </thead>
                         <template x-for="ad in mandatoryAds" :key="ad.id">
                             <tbody class="ad-row-group" :class="{'pf-m-expanded': expandedAdIds[ad.id]}">
-                                <tr>
+                                <tr x-data="{ overflowOpen: false }">
                                     <td class="pf-v5-c-table__toggle">
                                         <button class="pf-v5-c-button pf-m-plain"
                                                 @click="toggleAdExpand(ad.id)"
@@ -1049,28 +1049,38 @@
                                         </template>
                                     </td>
                                     <td data-label="Actions">
-                                        <div style="display: flex; gap: 0.25rem;">
-                                            <button class="pf-v5-c-button pf-m-plain" x-show="isMaintenance"
-                                                    @click="openComplianceHistory(ad)"
-                                                    title="View Compliance History">
-                                                <i class="fas fa-history"></i>
-                                            </button>
-                                            <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
-                                                    @click="editAd(ad)"
-                                                    title="Edit"
-                                                    aria-label="Edit bulletin">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                        <div style="display: flex; gap: 0.25rem; align-items: center;">
+                                            <!-- Primary: Record Compliance -->
+                                            <button class="pf-v5-c-button pf-m-primary squawk-resolve-btn" x-show="isOwner"
                                                     @click="openComplianceModal(ad)"
                                                     title="Record Compliance">
-                                                <i class="fas fa-check"></i>
+                                                <i class="fas fa-check"></i> Record
                                             </button>
-                                            <button class="pf-v5-c-button pf-m-plain pf-m-danger" x-show="isOwner"
-                                                    @click="removeAd(ad)"
-                                                    title="Remove">
-                                                <i class="fas fa-times"></i>
+                                            <!-- Secondary: History -->
+                                            <button class="pf-v5-c-button pf-m-secondary" x-show="isMaintenance"
+                                                    @click="openComplianceHistory(ad)"
+                                                    title="View Compliance History">
+                                                <i class="fas fa-history"></i> History
                                             </button>
+                                            <!-- Overflow "..." — edit, remove -->
+                                            <div class="insp-overflow" x-show="isOwner"
+                                                 @click.outside="overflowOpen = false">
+                                                <button class="pf-v5-c-button pf-m-plain"
+                                                        @click.stop="overflowOpen = !overflowOpen"
+                                                        title="More actions" aria-label="More actions">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <div class="logbook-overflow-menu" x-show="overflowOpen">
+                                                    <button class="logbook-overflow-item"
+                                                            @click="editAd(ad); overflowOpen = false">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                    <button class="logbook-overflow-item logbook-overflow-danger"
+                                                            @click="removeAd(ad); overflowOpen = false">
+                                                        <i class="fas fa-times"></i> Remove
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -1129,7 +1139,7 @@
                         </thead>
                         <template x-for="ad in nonMandatoryAds" :key="ad.id">
                             <tbody class="ad-row-group" :class="{'pf-m-expanded': expandedAdIds[ad.id]}">
-                                <tr>
+                                <tr x-data="{ overflowOpen: false }">
                                     <td class="pf-v5-c-table__toggle">
                                         <button class="pf-v5-c-button pf-m-plain"
                                                 @click="toggleAdExpand(ad.id)"
@@ -1186,28 +1196,38 @@
                                         </template>
                                     </td>
                                     <td data-label="Actions">
-                                        <div style="display: flex; gap: 0.25rem;">
-                                            <button class="pf-v5-c-button pf-m-plain" x-show="isMaintenance"
-                                                    @click="openComplianceHistory(ad)"
-                                                    title="View Compliance History">
-                                                <i class="fas fa-history"></i>
-                                            </button>
-                                            <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
-                                                    @click="editAd(ad)"
-                                                    title="Edit"
-                                                    aria-label="Edit bulletin">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                        <div style="display: flex; gap: 0.25rem; align-items: center;">
+                                            <!-- Primary: Record Compliance -->
+                                            <button class="pf-v5-c-button pf-m-primary squawk-resolve-btn" x-show="isOwner"
                                                     @click="openComplianceModal(ad)"
                                                     title="Record Compliance">
-                                                <i class="fas fa-check"></i>
+                                                <i class="fas fa-check"></i> Record
                                             </button>
-                                            <button class="pf-v5-c-button pf-m-plain pf-m-danger" x-show="isOwner"
-                                                    @click="removeAd(ad)"
-                                                    title="Remove">
-                                                <i class="fas fa-times"></i>
+                                            <!-- Secondary: History -->
+                                            <button class="pf-v5-c-button pf-m-secondary" x-show="isMaintenance"
+                                                    @click="openComplianceHistory(ad)"
+                                                    title="View Compliance History">
+                                                <i class="fas fa-history"></i> History
                                             </button>
+                                            <!-- Overflow "..." — edit, remove -->
+                                            <div class="insp-overflow" x-show="isOwner"
+                                                 @click.outside="overflowOpen = false">
+                                                <button class="pf-v5-c-button pf-m-plain"
+                                                        @click.stop="overflowOpen = !overflowOpen"
+                                                        title="More actions" aria-label="More actions">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <div class="logbook-overflow-menu" x-show="overflowOpen">
+                                                    <button class="logbook-overflow-item"
+                                                            @click="editAd(ad); overflowOpen = false">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                    <button class="logbook-overflow-item logbook-overflow-danger"
+                                                            @click="removeAd(ad); overflowOpen = false">
+                                                        <i class="fas fa-times"></i> Remove
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -1294,34 +1314,38 @@
                         </thead>
                         <tbody>
                             <template x-for="insp in sortedInspectionTypes" :key="insp.id">
-                                <tr>
+                                <tr x-data="{ overflowOpen: false }">
                                     <td data-label="Name" x-text="insp.name"></td>
                                     <td data-label="Recurring">
                                         <template x-if="insp.recurring">
                                             <span>
-                                                Yes
+                                                Recurring
                                                 <template x-if="insp.recurring_hours > 0">
-                                                    <span x-text="'(' + insp.recurring_hours + ' hrs)'"></span>
+                                                    <span x-text="' · ' + insp.recurring_hours + ' hrs'"></span>
                                                 </template>
                                                 <template x-if="insp.recurring_months > 0">
-                                                    <span x-text="'(' + insp.recurring_months + ' mo)'"></span>
+                                                    <span x-text="' · ' + insp.recurring_months + ' mo'"></span>
                                                 </template>
                                                 <template x-if="insp.recurring_days > 0 && insp.recurring_months === 0">
-                                                    <span x-text="'(' + insp.recurring_days + ' days)'"></span>
+                                                    <span x-text="' · ' + insp.recurring_days + ' days'"></span>
                                                 </template>
                                             </span>
                                         </template>
                                         <template x-if="!insp.recurring">
-                                            <span>No</span>
+                                            <span>One-time</span>
                                         </template>
                                     </td>
                                     <td data-label="Status">
                                         <span class="pf-v5-c-label" :class="getInspectionStatusClass(insp)" x-text="getInspectionStatusText(insp)"></span>
                                     </td>
-                                    <td data-label="Last Completed" x-text="insp.latest_record ? formatDate(insp.latest_record.date) : '-'"></td>
+                                    <td data-label="Last Completed">
+                                        <span class="insp-mobile-label">Last</span>
+                                        <span x-text="insp.latest_record ? formatDate(insp.latest_record.date) : '—'"></span>
+                                    </td>
                                     <td data-label="Next Due">
+                                        <span class="insp-mobile-label">Due</span>
                                         <template x-if="!insp.recurring || !insp.latest_record">
-                                            <span>-</span>
+                                            <span>—</span>
                                         </template>
                                         <template x-if="insp.recurring && insp.latest_record && insp.next_due_date">
                                             <span x-text="formatDate(insp.next_due_date)"></span>
@@ -1331,28 +1355,38 @@
                                         </template>
                                     </td>
                                     <td data-label="Actions">
-                                        <div style="display: flex; gap: 0.25rem;">
-                                            <button class="pf-v5-c-button pf-m-plain" x-show="isMaintenance"
-                                                    @click="openInspectionHistory(insp)"
-                                                    title="View Inspection History">
-                                                <i class="fas fa-history"></i>
-                                            </button>
-                                            <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
-                                                    @click="editInspectionType(insp)"
-                                                    title="Edit Inspection Type"
-                                                    aria-label="Edit Inspection Type">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                        <div style="display: flex; gap: 0.25rem; align-items: center;">
+                                            <!-- Primary: Record Inspection -->
+                                            <button class="pf-v5-c-button pf-m-primary squawk-resolve-btn" x-show="isOwner"
                                                     @click="openInspectionModal(insp)"
                                                     title="Record Inspection">
-                                                <i class="fas fa-check"></i>
+                                                <i class="fas fa-check"></i> Record
                                             </button>
-                                            <button class="pf-v5-c-button pf-m-plain pf-m-danger" x-show="isOwner"
-                                                    @click="removeInspectionType(insp)"
-                                                    title="Remove Inspection Type">
-                                                <i class="fas fa-times"></i>
+                                            <!-- Secondary: History -->
+                                            <button class="pf-v5-c-button pf-m-secondary" x-show="isMaintenance"
+                                                    @click="openInspectionHistory(insp)"
+                                                    title="View Inspection History">
+                                                <i class="fas fa-history"></i> History
                                             </button>
+                                            <!-- Overflow "..." — edit, remove -->
+                                            <div class="insp-overflow" x-show="isOwner"
+                                                 @click.outside="overflowOpen = false">
+                                                <button class="pf-v5-c-button pf-m-plain"
+                                                        @click.stop="overflowOpen = !overflowOpen"
+                                                        title="More actions" aria-label="More actions">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <div class="logbook-overflow-menu" x-show="overflowOpen">
+                                                    <button class="logbook-overflow-item"
+                                                            @click="editInspectionType(insp); overflowOpen = false">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                    <button class="logbook-overflow-item logbook-overflow-danger"
+                                                            @click="removeInspectionType(insp); overflowOpen = false">
+                                                        <i class="fas fa-times"></i> Remove
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -1448,13 +1482,15 @@
                                         <td data-label="Title">
                                             <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                                                 <span x-text="record.title"></span>
-                                                <span class="pf-v5-c-label pf-m-compact pf-m-gold" x-show="record.has_ica" title="Includes Instructions for Continued Airworthiness">
-                                                    <span class="pf-v5-c-label__content"><i class="fas fa-book-open" style="margin-right: 0.25rem; font-size: 0.7rem;"></i>ICA</span>
+                                                <span class="pf-v5-c-label pf-m-compact pf-m-gold" x-show="record.has_ica" title="Instructions for Continued Airworthiness">
+                                                    <span class="pf-v5-c-label__content"><i class="fas fa-book-open" style="margin-right: 0.25rem; font-size: 0.7rem;"></i>Has ICA</span>
                                                 </span>
                                             </div>
                                         </td>
                                         <td data-label="Date" x-text="formatDate(record.date_performed)"></td>
-                                        <td data-label="Component" :class="{ 'optional-empty': !record.component_name }" x-text="record.component_name"></td>
+                                        <td data-label="Component" :class="{ 'optional-empty': !record.component_name }">
+                                            <span class="major-record-mobile-label" x-show="record.component_name">Component:</span><span x-text="record.component_name"></span>
+                                        </td>
                                         <td data-label="Actions">
                                             <div style="display: flex; gap: 0.25rem; align-items: center;">
                                                 <div class="related-popup-trigger" x-show="record.logbook_entry || canViewDocument(record.form_337_document)" @click.outside="if (openRelatedPopup === record.id) openRelatedPopup = null">
@@ -1493,14 +1529,18 @@
                                         <td></td>
                                         <td colspan="4" style="padding: 0.75rem 1rem;">
                                             <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 2.5rem; margin-bottom: 0.75rem;">
-                                                <div>
-                                                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Performed By</div>
-                                                    <div x-text="record.performed_by || '—'"></div>
-                                                </div>
-                                                <div>
-                                                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Aircraft Hours</div>
-                                                    <div x-text="record.aircraft_hours ? formatHours(record.aircraft_hours) : '—'"></div>
-                                                </div>
+                                                <template x-if="record.performed_by">
+                                                    <div>
+                                                        <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Performed By</div>
+                                                        <div x-text="record.performed_by"></div>
+                                                    </div>
+                                                </template>
+                                                <template x-if="record.aircraft_hours">
+                                                    <div>
+                                                        <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Aircraft Hours</div>
+                                                        <div x-text="formatHours(record.aircraft_hours)"></div>
+                                                    </div>
+                                                </template>
                                                 <template x-if="record.has_ica">
                                                     <div>
                                                         <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">ICAs</div>
@@ -1566,13 +1606,15 @@
                                         <td data-label="Title">
                                             <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                                                 <span x-text="record.title"></span>
-                                                <span class="pf-v5-c-label pf-m-compact pf-m-gold" x-show="record.has_ica" title="Includes Instructions for Continued Airworthiness">
-                                                    <span class="pf-v5-c-label__content"><i class="fas fa-book-open" style="margin-right: 0.25rem; font-size: 0.7rem;"></i>ICA</span>
+                                                <span class="pf-v5-c-label pf-m-compact pf-m-gold" x-show="record.has_ica" title="Instructions for Continued Airworthiness">
+                                                    <span class="pf-v5-c-label__content"><i class="fas fa-book-open" style="margin-right: 0.25rem; font-size: 0.7rem;"></i>Has ICA</span>
                                                 </span>
                                             </div>
                                         </td>
                                         <td data-label="Date" x-text="formatDate(record.date_performed)"></td>
-                                        <td data-label="Component" :class="{ 'optional-empty': !record.component_name }" x-text="record.component_name"></td>
+                                        <td data-label="Component" :class="{ 'optional-empty': !record.component_name }">
+                                            <span class="major-record-mobile-label" x-show="record.component_name">Component:</span><span x-text="record.component_name"></span>
+                                        </td>
                                         <td data-label="STC #" :class="{ 'optional-empty': !record.stc_number }" x-text="record.stc_number"></td>
                                         <td data-label="STC Holder" :class="{ 'optional-empty': !record.stc_holder }" x-text="record.stc_holder"></td>
                                         <td data-label="Actions">
@@ -1618,14 +1660,18 @@
                                         <td></td>
                                         <td colspan="6" style="padding: 0.75rem 1rem;">
                                             <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 2.5rem; margin-bottom: 0.75rem;">
-                                                <div>
-                                                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Performed By</div>
-                                                    <div x-text="record.performed_by || '—'"></div>
-                                                </div>
-                                                <div>
-                                                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Aircraft Hours</div>
-                                                    <div x-text="record.aircraft_hours ? formatHours(record.aircraft_hours) : '—'"></div>
-                                                </div>
+                                                <template x-if="record.performed_by">
+                                                    <div>
+                                                        <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Performed By</div>
+                                                        <div x-text="record.performed_by"></div>
+                                                    </div>
+                                                </template>
+                                                <template x-if="record.aircraft_hours">
+                                                    <div>
+                                                        <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">Aircraft Hours</div>
+                                                        <div x-text="formatHours(record.aircraft_hours)"></div>
+                                                    </div>
+                                                </template>
                                                 <template x-if="record.has_ica">
                                                     <div>
                                                         <div style="font-size: 0.75rem; font-weight: 600; color: var(--pf-v5-global--Color--200); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">ICAs</div>
