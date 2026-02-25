@@ -17,7 +17,34 @@
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                 <div style="display: flex; align-items: center; gap: 1rem;">
                     <div>
-                        <h1 x-text="aircraft?.tail_number || 'Loading...'"></h1>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <h1 x-text="aircraft?.tail_number || 'Loading...'"></h1>
+                            <!-- Aircraft Switcher -->
+                            <div x-show="!isPublicView && (switcherAircraft.length > 0 || !switcherLoaded)" x-cloak
+                                 class="aircraft-switcher" @click.outside="switcherOpen = false">
+                                <button class="aircraft-switcher__toggle" @click="toggleSwitcher()"
+                                        title="Switch aircraft">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </button>
+                                <div class="aircraft-switcher__menu" x-show="switcherOpen" x-cloak>
+                                    <template x-if="!switcherLoaded">
+                                        <div class="aircraft-switcher__empty">Loading...</div>
+                                    </template>
+                                    <template x-if="switcherLoaded && switcherAircraft.length === 0">
+                                        <div class="aircraft-switcher__empty">No other aircraft</div>
+                                    </template>
+                                    <template x-for="ac in switcherAircraft" :key="ac.id">
+                                        <button class="aircraft-switcher__item" @click="navigateToAircraft(ac.id)">
+                                            <span class="aircraft-switcher__status-dot"
+                                                  :style="'background:' + (ac.airworthiness?.status === 'GREEN' ? 'var(--pf-v5-global--success-color--100)' : ac.airworthiness?.status === 'ORANGE' ? 'var(--pf-v5-global--warning-color--100)' : ac.airworthiness?.status === 'RED' ? 'var(--pf-v5-global--danger-color--100)' : 'var(--pf-v5-global--Color--200)')">
+                                            </span>
+                                            <span x-text="ac.tail_number" style="font-weight: 600;"></span>
+                                            <span x-text="ac.make + ' ' + ac.model" style="color: var(--pf-v5-global--Color--200); font-size: 0.8rem;"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
                         <p x-show="aircraft">
                             <span x-text="aircraft?.make"></span>
                             <span x-text="aircraft?.model"></span>
@@ -87,67 +114,49 @@
                 <i class="fas fa-angle-left" aria-hidden="true"></i>
             </button>
             <ul class="pf-v5-c-tabs__list" x-ref="tabList">
-                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'overview' }">
-                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'overview'">
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activePrimaryTab === 'overview' }">
+                    <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('overview')">
                         <span class="pf-v5-c-tabs__item-text">Overview</span>
                     </button>
                 </li>
-                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'components' }">
-                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'components'">
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activePrimaryTab === 'components' }">
+                    <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('components')">
                         <span class="pf-v5-c-tabs__item-text">Components</span>
                     </button>
                 </li>
-                <li class="pf-v5-c-tabs__item" x-show="isMaintenance" :class="{ 'pf-m-current': activeTab === 'logbook' }">
-                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'logbook'">
-                        <span class="pf-v5-c-tabs__item-text">Logbook</span>
-                    </button>
-                </li>
-                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'squawks' }">
-                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'squawks'">
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activePrimaryTab === 'squawks' }">
+                    <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('squawks')">
                         <span class="pf-v5-c-tabs__item-text">Squawks</span>
                         <template x-if="activeSquawks.length > 0">
                             <span class="pf-v5-c-badge pf-m-unread" style="margin-left: 0.5rem;" x-text="activeSquawks.length"></span>
                         </template>
                     </button>
                 </li>
-                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'ads' }">
-                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'ads'">
-                        <span class="pf-v5-c-tabs__item-text">ADs & Bulletins</span>
-                        <template x-if="adIssueCount > 0">
-                            <span class="pf-v5-c-badge pf-m-unread" style="margin-left: 0.5rem;" x-text="adIssueCount"></span>
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activePrimaryTab === 'compliance' }">
+                    <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('compliance')">
+                        <span class="pf-v5-c-tabs__item-text">Compliance</span>
+                        <template x-if="complianceIssueCount > 0">
+                            <span class="pf-v5-c-badge pf-m-unread" style="margin-left: 0.5rem;" x-text="complianceIssueCount"></span>
                         </template>
                     </button>
                 </li>
-                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'inspections' }">
-                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'inspections'">
-                        <span class="pf-v5-c-tabs__item-text">Inspections</span>
-                        <template x-if="inspectionIssueCount > 0">
-                            <span class="pf-v5-c-badge pf-m-unread" style="margin-left: 0.5rem;" x-text="inspectionIssueCount"></span>
-                        </template>
+                <li class="pf-v5-c-tabs__item" x-show="isMaintenance" :class="{ 'pf-m-current': activePrimaryTab === 'records' }">
+                    <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('records')">
+                        <span class="pf-v5-c-tabs__item-text">Records</span>
                     </button>
                 </li>
-                <li class="pf-v5-c-tabs__item" x-show="isMaintenance" :class="{ 'pf-m-current': activeTab === 'major-records' }">
-                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'major-records'">
-                        <span class="pf-v5-c-tabs__item-text">Repairs &amp; Alterations</span>
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activePrimaryTab === 'consumables' }">
+                    <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('consumables')">
+                        <span class="pf-v5-c-tabs__item-text">Consumables</span>
                     </button>
                 </li>
-                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'oil' }">
-                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'oil'">
-                        <span class="pf-v5-c-tabs__item-text">Oil</span>
-                    </button>
-                </li>
-                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'fuel' }">
-                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'fuel'">
-                        <span class="pf-v5-c-tabs__item-text">Fuel</span>
-                    </button>
-                </li>
-                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'documents' }">
-                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'documents'">
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activePrimaryTab === 'documents' }">
+                    <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('documents')">
                         <span class="pf-v5-c-tabs__item-text">Documents</span>
                     </button>
                 </li>
-                <li class="pf-v5-c-tabs__item" x-show="isOwner" :class="{ 'pf-m-current': activeTab === 'roles' }">
-                    <button class="pf-v5-c-tabs__link" @click="activeTab = 'roles'">
+                <li class="pf-v5-c-tabs__item" x-show="isOwner" :class="{ 'pf-m-current': activePrimaryTab === 'roles' }">
+                    <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('roles')">
                         <span class="pf-v5-c-tabs__item-text">Sharing &amp; Access</span>
                     </button>
                 </li>
@@ -681,10 +690,23 @@
             </table>
         </div>
 
-        <!-- Logbook Tab -->
+        <!-- Logbook Tab (Records group) -->
         <div x-show="activeTab === 'logbook'" class="pf-v5-c-page__main-section">
+            <div class="tab-subtab-bar">
+                <div class="pf-v5-c-toggle-group">
+                    <div class="pf-v5-c-toggle-group__item">
+                        <button class="pf-v5-c-toggle-group__button pf-m-selected">Logbook</button>
+                    </div>
+                    <div class="pf-v5-c-toggle-group__item">
+                        <button class="pf-v5-c-toggle-group__button" @click="activeTab = 'major-records'">Repairs &amp; Alterations</button>
+                    </div>
+                </div>
+                <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openLogbookModal()">
+                    <i class="fas fa-plus"></i> New Entry
+                </button>
+            </div>
             <div class="tab-section-header">
-                <!-- Sub-tab toggle group -->
+                <!-- Logbook type filter toggle group -->
                 <div class="pf-v5-c-toggle-group">
                     <template x-for="tab in ['ALL', 'AC', 'ENG', 'PROP', 'OTHER']" :key="tab">
                         <div class="pf-v5-c-toggle-group__item">
@@ -696,9 +718,6 @@
                         </div>
                     </template>
                 </div>
-                <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openLogbookModal()">
-                    <i class="fas fa-plus"></i> New Entry
-                </button>
             </div>
 
             <!-- Loading -->
@@ -962,14 +981,33 @@
             </template>
         </div>
 
-        <!-- ADs & Bulletins Tab -->
-        <div x-show="activeTab === 'ads'" class="pf-v5-c-page__main-section">
-            <div class="tab-section-header">
-                <h2>ADs & Bulletins</h2>
-                <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openAdModal()">
+        <!-- Compliance Tab Group (ADs & Inspections) -->
+        <div x-show="activePrimaryTab === 'compliance'" class="pf-v5-c-page__main-section">
+            <div class="tab-subtab-bar">
+                <div class="pf-v5-c-toggle-group">
+                    <div class="pf-v5-c-toggle-group__item">
+                        <button class="pf-v5-c-toggle-group__button"
+                                :class="{ 'pf-m-selected': activeTab === 'ads' }"
+                                @click="activeTab = 'ads'">
+                            ADs &amp; Bulletins
+                        </button>
+                    </div>
+                    <div class="pf-v5-c-toggle-group__item">
+                        <button class="pf-v5-c-toggle-group__button"
+                                :class="{ 'pf-m-selected': activeTab === 'inspections' }"
+                                @click="activeTab = 'inspections'">
+                            Inspections
+                        </button>
+                    </div>
+                </div>
+                <button class="pf-v5-c-button pf-m-primary" x-show="isOwner && activeTab === 'ads'" @click="openAdModal()">
                     <i class="fas fa-plus"></i> Add Bulletin
                 </button>
+                <button class="pf-v5-c-button pf-m-primary" x-show="isOwner && activeTab === 'inspections'" @click="openInspectionTypeModal()">
+                    <i class="fas fa-plus"></i> Add Inspection Type
+                </button>
             </div>
+            <div x-show="activeTab === 'ads'">
 
             <!-- Loading -->
             <div x-show="!adsLoaded" class="pf-v5-c-empty-state">
@@ -1292,16 +1330,8 @@
                     </table>
                 </div>
             </div>
-        </div>
-
-        <!-- Inspections Tab -->
-        <div x-show="activeTab === 'inspections'" class="pf-v5-c-page__main-section">
-            <div class="tab-section-header">
-                <h2>Inspections</h2>
-                <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openInspectionTypeModal()">
-                    <i class="fas fa-plus"></i> Add Inspection Type
-                </button>
             </div>
+            <div x-show="activeTab === 'inspections'">
 
             <!-- Loading -->
             <div x-show="!inspectionsLoaded" class="pf-v5-c-empty-state">
@@ -1421,12 +1451,20 @@
                     </table>
                 </template>
             </div>
+            </div>
         </div>
 
-        <!-- Repairs & Alterations Tab -->
+        <!-- Repairs & Alterations Tab (Records group) -->
         <div x-show="activeTab === 'major-records'" class="pf-v5-c-page__main-section">
-            <div class="tab-section-header">
-                <h2>Repairs &amp; Alterations</h2>
+            <div class="tab-subtab-bar">
+                <div class="pf-v5-c-toggle-group">
+                    <div class="pf-v5-c-toggle-group__item">
+                        <button class="pf-v5-c-toggle-group__button" @click="activeTab = 'logbook'">Logbook</button>
+                    </div>
+                    <div class="pf-v5-c-toggle-group__item">
+                        <button class="pf-v5-c-toggle-group__button pf-m-selected">Repairs &amp; Alterations</button>
+                    </div>
+                </div>
                 <div x-show="isOwner" style="display: flex; gap: 0.5rem;">
                     <button class="pf-v5-c-button pf-m-primary" @click="openMajorRecordModal('repair')">
                         <i class="fas fa-plus"></i> Add Repair
@@ -1990,14 +2028,33 @@
             </div>
         </div>
 
-        <!-- Oil Tab -->
-        <div x-show="activeTab === 'oil'" class="pf-v5-c-page__main-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h2>Oil Consumption</h2>
-                <button class="pf-v5-c-button pf-m-primary" x-show="canCreateConsumable" @click="openOilModal()">
+        <!-- Consumables Tab Group (Oil & Fuel) -->
+        <div x-show="activePrimaryTab === 'consumables'" class="pf-v5-c-page__main-section">
+            <div class="tab-subtab-bar">
+                <div class="pf-v5-c-toggle-group">
+                    <div class="pf-v5-c-toggle-group__item">
+                        <button class="pf-v5-c-toggle-group__button"
+                                :class="{ 'pf-m-selected': activeTab === 'oil' }"
+                                @click="activeTab = 'oil'">
+                            Oil
+                        </button>
+                    </div>
+                    <div class="pf-v5-c-toggle-group__item">
+                        <button class="pf-v5-c-toggle-group__button"
+                                :class="{ 'pf-m-selected': activeTab === 'fuel' }"
+                                @click="activeTab = 'fuel'">
+                            Fuel
+                        </button>
+                    </div>
+                </div>
+                <button class="pf-v5-c-button pf-m-primary" x-show="canCreateConsumable && activeTab === 'oil'" @click="openOilModal()">
                     <i class="fas fa-plus"></i> Add Oil Record
                 </button>
+                <button class="pf-v5-c-button pf-m-primary" x-show="canCreateConsumable && activeTab === 'fuel'" @click="openFuelModal()">
+                    <i class="fas fa-plus"></i> Add Fuel Record
+                </button>
             </div>
+            <div x-show="activeTab === 'oil'">
 
             <!-- Loading -->
             <div x-show="!oilLoaded" class="pf-v5-c-empty-state">
@@ -2078,16 +2135,8 @@
                     </table>
                 </template>
             </div>
-        </div>
-
-        <!-- Fuel Tab -->
-        <div x-show="activeTab === 'fuel'" class="pf-v5-c-page__main-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h2>Fuel Consumption</h2>
-                <button class="pf-v5-c-button pf-m-primary" x-show="canCreateConsumable" @click="openFuelModal()">
-                    <i class="fas fa-plus"></i> Add Fuel Record
-                </button>
             </div>
+            <div x-show="activeTab === 'fuel'">
 
             <!-- Loading -->
             <div x-show="!fuelLoaded" class="pf-v5-c-empty-state">
@@ -2167,6 +2216,7 @@
                         </tbody>
                     </table>
                 </template>
+            </div>
             </div>
         </div>
 
@@ -5306,6 +5356,7 @@
 <script src="{% static 'js/aircraft-detail-documents.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-events.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-roles.js' %}"></script>
+<script src="{% static 'js/aircraft-switcher.js' %}"></script>
 <script src="{% static 'js/aircraft-detail.js' %}"></script>
 <script src="{% static 'js/aircraft-modal.js' %}"></script>
 {% endblock %}

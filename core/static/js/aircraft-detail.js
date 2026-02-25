@@ -1,6 +1,7 @@
 function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
     return mergeMixins(
         // Feature mixins (order doesn't matter — all end up on one object)
+        aircraftSwitcherMixin(),
         componentsMixin(),
         squawksMixin(),
         notesMixin(),
@@ -29,6 +30,43 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
             resolvedSquawks: [],
             loading: true,
             activeTab: 'overview',
+
+            // Tab consolidation: map activeTab values to primary tab groups
+            _primaryTabMap: {
+                'overview': 'overview',
+                'components': 'components',
+                'squawks': 'squawks',
+                'ads': 'compliance',
+                'inspections': 'compliance',
+                'logbook': 'records',
+                'major-records': 'records',
+                'oil': 'consumables',
+                'fuel': 'consumables',
+                'documents': 'documents',
+                'roles': 'roles',
+            },
+            _primaryTabDefaults: {
+                'overview': 'overview',
+                'components': 'components',
+                'squawks': 'squawks',
+                'compliance': 'ads',
+                'records': 'logbook',
+                'consumables': 'oil',
+                'documents': 'documents',
+                'roles': 'roles',
+            },
+            primaryTabFor(tab) {
+                return this._primaryTabMap[tab] || tab;
+            },
+            get activePrimaryTab() {
+                return this.primaryTabFor(this.activeTab);
+            },
+            switchPrimaryTab(primary) {
+                this.activeTab = this._primaryTabDefaults[primary] || primary;
+            },
+            get complianceIssueCount() {
+                return (this.adIssueCount || 0) + (this.inspectionIssueCount || 0);
+            },
 
             // Public view detection
             get isPublicView() { return !!this._publicShareToken; },
