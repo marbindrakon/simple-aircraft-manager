@@ -81,8 +81,12 @@
 
     <!-- Tabs -->
     <div class="pf-v5-c-page__main-section" x-show="!loading && aircraft" x-cloak>
-        <div class="pf-v5-c-tabs" role="region">
-            <ul class="pf-v5-c-tabs__list">
+        <div class="pf-v5-c-tabs pf-m-scrollable" role="region" x-data="tabScroller()">
+            <button class="pf-v5-c-tabs__scroll-button" aria-label="Scroll tabs left"
+                    :disabled="!canScrollLeft" @click="scrollTabsLeft()">
+                <i class="fas fa-angle-left" aria-hidden="true"></i>
+            </button>
+            <ul class="pf-v5-c-tabs__list" x-ref="tabList">
                 <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activeTab === 'overview' }">
                     <button class="pf-v5-c-tabs__link" @click="activeTab = 'overview'">
                         <span class="pf-v5-c-tabs__item-text">Overview</span>
@@ -148,6 +152,10 @@
                     </button>
                 </li>
             </ul>
+            <button class="pf-v5-c-tabs__scroll-button" aria-label="Scroll tabs right"
+                    :disabled="!canScrollRight" @click="scrollTabsRight()">
+                <i class="fas fa-angle-right" aria-hidden="true"></i>
+            </button>
         </div>
 
         <!-- Overview Tab -->
@@ -5257,6 +5265,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/tab-scroller.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-components.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-squawks.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-notes.js' %}"></script>

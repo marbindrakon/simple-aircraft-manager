@@ -754,6 +754,25 @@ html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--pa
     line-height: 1;
 }
 
+/* ---- Tab bar: horizontally scrollable, no visible scrollbar --------- */
+.pf-v5-c-tabs__list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    /* prevent active tab underline from clipping */
+    padding-bottom: 2px;
+}
+
+.pf-v5-c-tabs__list::-webkit-scrollbar {
+    display: none;
+}
+
+.pf-v5-c-tabs__item {
+    flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
     /* ---- Navbar: hamburger + collapsible nav ----------------------- */
     #nav-mobile-toggle {
@@ -798,25 +817,6 @@ html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--pa
         padding: 0.85rem 1.5rem;
         display: block;
         border-inline-start: none;
-    }
-
-    /* ---- Tab bar: horizontally scrollable, no wrap ---------------- */
-    .pf-v5-c-tabs__list {
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-        /* prevent active tab underline from clipping */
-        padding-bottom: 2px;
-    }
-
-    .pf-v5-c-tabs__list::-webkit-scrollbar {
-        display: none;
-    }
-
-    .pf-v5-c-tabs__item {
-        flex-shrink: 0;
     }
 
     /* ---- Tab section headers: wrap when space is tight ------------ */
