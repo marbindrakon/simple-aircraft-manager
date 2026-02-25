@@ -409,6 +409,45 @@ class ImportJob(models.Model):
         return f"ImportJob {self.id} ({self.status})"
 
 
+OIL_ANALYSIS_STATUS_CHOICES = [
+    ('normal', 'Normal'),
+    ('monitor', 'Monitor'),
+    ('action_required', 'Action Required'),
+]
+
+
+class OilAnalysisReport(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    aircraft = models.ForeignKey(core_models.Aircraft, related_name='oil_analysis_reports', on_delete=models.CASCADE)
+    component = models.ForeignKey(
+        Component, related_name='oil_analysis_reports', null=True, blank=True,
+        on_delete=models.SET_NULL,
+        help_text="Engine component this sample is from",
+    )
+    sample_date = models.DateField()
+    analysis_date = models.DateField(null=True, blank=True)
+    lab = models.CharField(max_length=200, blank=True)
+    lab_number = models.CharField(max_length=100, blank=True)
+    oil_type = models.CharField(max_length=200, blank=True)
+    oil_hours = models.DecimalField(max_digits=8, decimal_places=1, null=True, blank=True)
+    engine_hours = models.DecimalField(max_digits=8, decimal_places=1, null=True, blank=True)
+    oil_added_quarts = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    elements_ppm = models.JSONField(default=dict, blank=True)
+    oil_properties = models.JSONField(null=True, blank=True)
+    lab_comments = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=OIL_ANALYSIS_STATUS_CHOICES, null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-sample_date', '-created_at']
+
+    def __str__(self):
+        tail = self.aircraft.tail_number if self.aircraft else '?'
+        return f"{tail} - Oil Analysis - {self.sample_date}"
+
+
 class ConsumableRecord(models.Model):
     RECORD_TYPE_OIL = 'oil'
     RECORD_TYPE_FUEL = 'fuel'

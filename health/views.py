@@ -17,7 +17,7 @@ from core.permissions import IsAdAircraftOwnerOrAdmin
 from health.models import (
     ComponentType, Component, DocumentCollection, Document, DocumentImage,
     LogbookEntry, Squawk, InspectionType, AD, MajorRepairAlteration,
-    InspectionRecord, ADCompliance, ConsumableRecord,
+    InspectionRecord, ADCompliance, ConsumableRecord, OilAnalysisReport,
 )
 from health.serializers import (
     ComponentTypeSerializer, ComponentSerializer, ComponentCreateUpdateSerializer,
@@ -27,6 +27,7 @@ from health.serializers import (
     InspectionRecordSerializer, InspectionRecordNestedSerializer,
     ADComplianceSerializer, ADComplianceNestedSerializer,
     ConsumableRecordNestedSerializer, ConsumableRecordCreateSerializer,
+    OilAnalysisReportSerializer, OilAnalysisReportCreateUpdateSerializer,
 )
 
 class ComponentTypeViewSet(viewsets.ModelViewSet):
@@ -250,3 +251,21 @@ class ConsumableRecordViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.M
         label = 'Oil' if instance.record_type == ConsumableRecord.RECORD_TYPE_OIL else 'Fuel'
         log_event(aircraft, instance.record_type, f"{label} record deleted", user=user)
         instance.delete()
+
+
+class OilAnalysisReportViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelViewSet):
+    queryset = OilAnalysisReport.objects.all()
+    serializer_class = OilAnalysisReportSerializer
+    aircraft_fk_path = 'aircraft'
+    event_category = 'oil'
+    event_name_created = 'Oil analysis report added'
+    event_name_updated = 'Oil analysis report updated'
+    event_name_deleted = 'Oil analysis report deleted'
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['aircraft', 'component']
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return OilAnalysisReportCreateUpdateSerializer
+        return OilAnalysisReportSerializer
+

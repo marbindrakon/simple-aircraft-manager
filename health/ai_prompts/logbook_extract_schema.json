@@ -1,0 +1,72 @@
+{
+    "type": "object",
+    "properties": {
+        "entries": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": ["string", "null"],
+                        "description": "ISO 8601 date (YYYY-MM-DD), or null if unreadable"
+                    },
+                    "log_type": {
+                        "type": "string",
+                        "enum": ["AC", "ENG", "PROP", "OTHER"]
+                    },
+                    "entry_type": {
+                        "type": "string",
+                        "enum": ["MAINTENANCE", "INSPECTION", "FLIGHT", "HOURS_UPDATE", "OTHER"]
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "Verbatim or close paraphrase of entry text"
+                    },
+                    "signoff_person": {
+                        "type": ["string", "null"],
+                        "description": "Name and/or cert number, or null"
+                    },
+                    "signoff_location": {
+                        "type": ["string", "null"],
+                        "description": "City/State or airport identifier, or null"
+                    },
+                    "page_start": {
+                        "type": "integer",
+                        "description": "0-based index of first image containing this entry"
+                    },
+                    "page_end": {
+                        "type": "integer",
+                        "description": "0-based index of last image containing this entry"
+                    },
+                    "confidence": {
+                        "type": "string",
+                        "enum": ["high", "medium", "low"]
+                    },
+                    "notes": {
+                        "type": ["string", "null"],
+                        "description": "Parsing notes, uncertainty, or context"
+                    }
+                },
+                "required": [
+                    "date", "log_type", "entry_type", "text",
+                    "signoff_person", "signoff_location",
+                    "page_start", "page_end",
+                    "confidence", "notes"
+                ],
+                "additionalProperties": false
+            }
+        },
+        "non_logbook_pages": {
+            "type": "array",
+            "items": {"type": "integer"},
+            "description": "0-based indices of non-logbook pages"
+        },
+        "unparseable_pages": {
+            "type": "array",
+            "items": {"type": "integer"},
+            "description": "0-based indices of illegible pages"
+        }
+    },
+    "required": ["entries", "non_logbook_pages", "unparseable_pages"],
+    "additionalProperties": false
+}

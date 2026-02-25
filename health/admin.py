@@ -20,3 +20,11 @@ class MajorRepairAlterationAdmin(admin.ModelAdmin):
 admin.site.register(InspectionRecord)
 admin.site.register(ADCompliance)
 admin.site.register(ConsumableRecord)
+
+from .models import OilAnalysisReport
+
+@admin.register(OilAnalysisReport)
+class OilAnalysisReportAdmin(admin.ModelAdmin):
+    list_display = ('aircraft', 'sample_date', 'lab', 'status', 'component')
+    list_filter = ('status', 'aircraft')
+    search_fields = ('lab', 'lab_number', 'lab_comments')

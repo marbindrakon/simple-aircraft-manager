@@ -301,6 +301,27 @@ def _note_dict(note):
     }
 
 
+def _oil_analysis_report_dict(report):
+    return {
+        'id': _str(report.id),
+        'aircraft_id': _str(report.aircraft_id),
+        'component_id': _str(report.component_id),
+        'sample_date': _date(report.sample_date),
+        'analysis_date': _date(report.analysis_date),
+        'lab': report.lab,
+        'lab_number': report.lab_number,
+        'oil_type': report.oil_type,
+        'oil_hours': _decimal(report.oil_hours),
+        'engine_hours': _decimal(report.engine_hours),
+        'oil_added_quarts': _decimal(report.oil_added_quarts),
+        'elements_ppm': report.elements_ppm,
+        'oil_properties': report.oil_properties,
+        'lab_comments': report.lab_comments,
+        'status': report.status,
+        'notes': report.notes,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Manifest builder
 # ---------------------------------------------------------------------------
@@ -314,7 +335,7 @@ def build_manifest(aircraft):
     from health.models import (
         Component, ComponentType, DocumentCollection, Document, DocumentImage,
         LogbookEntry, Squawk, InspectionType, InspectionRecord, AD, ADCompliance,
-        ConsumableRecord, MajorRepairAlteration,
+        ConsumableRecord, MajorRepairAlteration, OilAnalysisReport,
     )
     from core.models import AircraftNote
 
@@ -376,6 +397,7 @@ def build_manifest(aircraft):
     notes = list(
         aircraft.notes.all().select_related('added_by')
     )
+    oil_analysis_reports = list(OilAnalysisReport.objects.filter(aircraft=aircraft))
 
     # --- Build manifest -----------------------------------------------------
     request_host = getattr(settings, 'ALLOWED_HOSTS', [''])[0] or ''
@@ -399,6 +421,7 @@ def build_manifest(aircraft):
         'consumable_records': [_consumable_record_dict(r) for r in consumable_records],
         'major_records': [_major_record_dict(r) for r in major_records],
         'notes': [_note_dict(n) for n in notes],
+        'oil_analysis_reports': [_oil_analysis_report_dict(r) for r in oil_analysis_reports],
     }
     return manifest
 

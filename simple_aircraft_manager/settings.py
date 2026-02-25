@@ -183,6 +183,10 @@ LOGBOOK_IMPORT_MODELS = [
 
 LOGBOOK_IMPORT_DEFAULT_MODEL = 'claude-sonnet-4-6'
 
+# Oil analysis PDF import reuses LOGBOOK_IMPORT_MODELS for the model list.
+# No separate OIL_ANALYSIS_IMPORT_MODELS setting is needed — the same registry
+# is shown in the aircraft detail page AI extraction modal.
+
 # Ollama connection (only needed if any model uses provider=ollama)
 OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
 OLLAMA_TIMEOUT = int(os.environ.get('OLLAMA_TIMEOUT', '1200'))

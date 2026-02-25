@@ -40,126 +40,17 @@ SUPPORTED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff
 VALID_LOG_TYPES = {'AC', 'ENG', 'PROP', 'OTHER'}
 VALID_ENTRY_TYPES = {'FLIGHT', 'MAINTENANCE', 'INSPECTION', 'HOURS_UPDATE', 'OTHER'}
 
-EXTRACT_SYSTEM_PROMPT = """\
-You are an expert aviation maintenance logbook analyst with deep knowledge of FAA regulations,
-aircraft maintenance records, and standard logbook formats.
+_AI_PROMPTS_DIR = Path(__file__).parent / 'ai_prompts'
 
-I will provide numbered images of aircraft logbook pages. Extract every logbook entry visible.
 
-IMPORTANT RULES:
-- A single entry may span two consecutive pages (look for "continued" or entries that cut off mid-sentence)
-- Multiple separate entries may appear on one page (separated by dates, rules, or spacing)
-- Some pages are NOT logbook entries: FAA Form 337 (major repair/alteration), yellow tags (8130-3),
-  weight and balance records, equipment lists, AD lists, or other administrative forms
-- Dates: convert MM/DD/YYYY, MM/DD/YY, or written dates to YYYY-MM-DD; if year is ambiguous
-  use context from surrounding entries
-- Signoffs: include mechanic name, certificate number (e.g. "A&P #123456"), IA certificate
-  number, or repair station number
+def _load_prompt(filename: str) -> str:
+    """Read a prompt or schema file from the ai_prompts directory."""
+    return (_AI_PROMPTS_DIR / filename).read_text(encoding='utf-8')
 
-ENTRY TYPE CLASSIFICATION:
-- MAINTENANCE: repairs, part replacements, AD compliance, alterations, STCs, 337s referenced
-- INSPECTION: annual, 100-hour, phase checks, pre-buy, progressive, conditional inspections
-- FLIGHT: test flights, ferry flights, return-to-service flights
-- HOURS_UPDATE: hours log entry with no specific work described
-- OTHER: administrative, continued entries, certifications
 
-Field guidelines:
-- date: ISO 8601 (YYYY-MM-DD), or null if truly unreadable
-- log_type: one of AC (airframe), ENG (engine), PROP (propeller), OTHER
-- entry_type: one of MAINTENANCE, INSPECTION, FLIGHT, HOURS_UPDATE, OTHER
-- text: verbatim or close paraphrase of entry text; use [?] for illegible words
-- signoff_person / signoff_location: string or null (not empty string)
-- page_start / page_end: 0-based indices of images in THIS request (not absolute)
-- confidence: "high" (clearly legible), "medium" (some guesswork), "low" (mostly illegible)
-- non_logbook_pages: 0-based indices of pages that are forms, tags, or non-entry pages
-- unparseable_pages: 0-based indices of pages too illegible to extract anything useful
-
-OVERLAP PAGE HANDLING:
-The first page in this batch may overlap with the last page of the previous batch.
-When "Previously extracted entries" context is provided in the user message, use it
-to avoid duplicates:
-- SKIP any entry marked Status: COMPLETE that matches by date, signoff, and substantially
-  the same text — do not extract it again.
-- COMPLETE any entry marked Status: CONTINUES. Extract the full combined entry:
-  incorporate the text from the context block for the portion before these pages,
-  then append what you read from the current pages. Set page_start to 0 (the overlap
-  page in this request).
-- EXTRACT normally any entry not represented in the context block at all.
-"""
-
-# JSON schema for structured output — guarantees valid, parseable responses.
-EXTRACT_OUTPUT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "entries": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "date": {
-                        "type": ["string", "null"],
-                        "description": "ISO 8601 date (YYYY-MM-DD), or null if unreadable",
-                    },
-                    "log_type": {
-                        "type": "string",
-                        "enum": ["AC", "ENG", "PROP", "OTHER"],
-                    },
-                    "entry_type": {
-                        "type": "string",
-                        "enum": ["MAINTENANCE", "INSPECTION", "FLIGHT", "HOURS_UPDATE", "OTHER"],
-                    },
-                    "text": {
-                        "type": "string",
-                        "description": "Verbatim or close paraphrase of entry text",
-                    },
-                    "signoff_person": {
-                        "type": ["string", "null"],
-                        "description": "Name and/or cert number, or null",
-                    },
-                    "signoff_location": {
-                        "type": ["string", "null"],
-                        "description": "City/State or airport identifier, or null",
-                    },
-                    "page_start": {
-                        "type": "integer",
-                        "description": "0-based index of first image containing this entry",
-                    },
-                    "page_end": {
-                        "type": "integer",
-                        "description": "0-based index of last image containing this entry",
-                    },
-                    "confidence": {
-                        "type": "string",
-                        "enum": ["high", "medium", "low"],
-                    },
-                    "notes": {
-                        "type": ["string", "null"],
-                        "description": "Parsing notes, uncertainty, or context",
-                    },
-                },
-                "required": [
-                    "date", "log_type", "entry_type", "text",
-                    "signoff_person", "signoff_location",
-                    "page_start", "page_end",
-                    "confidence", "notes",
-                ],
-                "additionalProperties": False,
-            },
-        },
-        "non_logbook_pages": {
-            "type": "array",
-            "items": {"type": "integer"},
-            "description": "0-based indices of non-logbook pages",
-        },
-        "unparseable_pages": {
-            "type": "array",
-            "items": {"type": "integer"},
-            "description": "0-based indices of illegible pages",
-        },
-    },
-    "required": ["entries", "non_logbook_pages", "unparseable_pages"],
-    "additionalProperties": False,
-}
+# Load from external files so they can be edited without touching Python code.
+EXTRACT_SYSTEM_PROMPT = _load_prompt('logbook_extract_system_prompt.txt')
+EXTRACT_OUTPUT_SCHEMA = json.loads(_load_prompt('logbook_extract_schema.json'))
 
 
 # ---------------------------------------------------------------------------

@@ -51,7 +51,7 @@ from core.serializers import (
 from health.models import (
     Component, LogbookEntry, Squawk, Document, DocumentCollection,
     ConsumableRecord, AD, ADCompliance, InspectionType, InspectionRecord,
-    MajorRepairAlteration,
+    MajorRepairAlteration, OilAnalysisReport,
 )
 from health.serializers import (
     ComponentSerializer, ComponentCreateUpdateSerializer,
@@ -64,6 +64,7 @@ from health.serializers import (
     InspectionTypeSerializer, InspectionTypeNestedSerializer,
     InspectionRecordNestedSerializer,
     MajorRepairAlterationNestedSerializer,
+    OilAnalysisReportSerializer, OilAnalysisReportCreateUpdateSerializer,
 )
 from health.services import (
     end_of_month_after, ad_compliance_status, inspection_compliance_status,
@@ -90,6 +91,11 @@ class AircraftViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), IsAircraftOwnerOrAdmin()]
         # ADs, inspections, and major records: GET is readable by pilots, POST/DELETE requires owner
         if self.action in ('ads', 'inspections', 'major_records'):
+            if self.request.method == 'GET':
+                return [IsAuthenticated(), IsAircraftPilotOrAbove()]
+            return [IsAuthenticated(), IsAircraftOwnerOrAdmin()]
+        # Oil analysis: GET readable by pilots, POST/AI-extract requires owner
+        if self.action in ('oil_analysis', 'oil_analysis_ai_extract'):
             if self.request.method == 'GET':
                 return [IsAuthenticated(), IsAircraftPilotOrAbove()]
             return [IsAuthenticated(), IsAircraftOwnerOrAdmin()]
@@ -672,6 +678,94 @@ class AircraftViewSet(viewsets.ModelViewSet):
             'total': total,
         })
 
+    @action(detail=True, methods=['get', 'post'], url_path='oil_analysis')
+    def oil_analysis(self, request, pk=None):
+        """
+        Get or create oil analysis reports for an aircraft.
+        GET  /api/aircraft/{id}/oil_analysis/
+        POST /api/aircraft/{id}/oil_analysis/
+        """
+        aircraft = self.get_object()
+
+        if request.method == 'GET':
+            reports = OilAnalysisReport.objects.filter(aircraft=aircraft).select_related('component__component_type')
+            component_filter = request.query_params.get('component')
+            if component_filter:
+                reports = reports.filter(component_id=component_filter)
+
+            # Return engine components for the filter dropdown
+            engine_components = Component.objects.filter(
+                aircraft=aircraft,
+                status='IN-USE',
+                tbo_critical=True,
+            ).select_related('component_type')
+
+            return Response({
+                'oil_analysis_reports': OilAnalysisReportSerializer(reports, many=True).data,
+                'components': ComponentSerializer(engine_components, many=True, context={'request': request}).data,
+            })
+
+        data = request.data.copy()
+        data['aircraft'] = str(aircraft.id)
+        serializer = OilAnalysisReportCreateUpdateSerializer(data=data)
+        if serializer.is_valid():
+            report = serializer.save()
+            log_event(aircraft, 'oil', 'Oil analysis report added', user=request.user)
+            return Response(
+                OilAnalysisReportSerializer(report).data,
+                status=status.HTTP_201_CREATED,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], url_path='oil_analysis_ai_extract')
+    def oil_analysis_ai_extract(self, request, pk=None):
+        """
+        Extract oil analysis data from a PDF using AI. Does NOT save to DB.
+        POST /api/aircraft/{id}/oil_analysis_ai_extract/
+        Multipart fields: file (PDF), model, provider
+        """
+        aircraft = self.get_object()  # noqa: F841 — checks permission/ownership
+
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
+            return Response({'error': 'file is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate file type (reuse existing validation)
+        from health.serializers import validate_uploaded_file
+        try:
+            validate_uploaded_file(uploaded_file)
+        except Exception as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        model = request.data.get('model', 'claude-sonnet-4-6')
+        provider = request.data.get('provider', 'anthropic')
+
+        # Write to a temp file so oil_analysis_import can read it as a Path
+        import tempfile
+        from pathlib import Path as _Path
+        suffix = Path(uploaded_file.name).suffix.lower() if uploaded_file.name else '.pdf'
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            for chunk in uploaded_file.chunks():
+                tmp.write(chunk)
+            tmp_path = _Path(tmp.name)
+
+        try:
+            from health.oil_analysis_import import run_extraction
+            result = run_extraction(tmp_path, model=model, provider=provider)
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("Oil analysis AI extraction failed")
+            return Response({'error': 'Extraction failed. See server logs for details.'},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        finally:
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+        return Response(result)
+
     @action(detail=True, methods=['post'], url_path='remove_inspection_type')
     def remove_inspection_type(self, request, pk=None):
         """
@@ -916,6 +1010,16 @@ class AircraftDetailView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         context['aircraft_id'] = self.kwargs['pk']
         context['base_template'] = 'base.html'
+        import_models = list(settings.LOGBOOK_IMPORT_MODELS)
+        extra = getattr(settings, 'LOGBOOK_IMPORT_EXTRA_MODELS', None)
+        if extra:
+            import json as _json
+            try:
+                import_models = import_models + _json.loads(extra)
+            except (ValueError, TypeError):
+                pass
+        context['import_models'] = import_models
+        context['import_default_model'] = getattr(settings, 'LOGBOOK_IMPORT_DEFAULT_MODEL', 'claude-sonnet-4-6')
         return context
 
 

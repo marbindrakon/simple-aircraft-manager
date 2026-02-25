@@ -1,0 +1,147 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AircraftOilAnalysisReport",
+  "description": "Extracted data from an aircraft engine oil analysis report PDF. A single PDF may contain multiple samples (current + historical).",
+  "type": "object",
+  "required": ["samples"],
+  "properties": {
+    "tail_number": {
+      "type": "string",
+      "description": "Aircraft tail/registration number (e.g. N5516G)."
+    },
+    "oil_type": {
+      "type": ["string", "null"],
+      "description": "Oil brand and grade used (e.g. Phillips XC 20W/50)."
+    },
+    "lab": {
+      "type": ["string", "null"],
+      "description": "Name of the analysis laboratory (e.g. Blackstone Laboratories, Aviation Laboratories / AvLab)."
+    },
+    "report_date": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "Date the report was issued (ISO 8601: YYYY-MM-DD)."
+    },
+    "lab_number": {
+      "type": ["string", "null"],
+      "description": "Lab-assigned report or sample tracking number."
+    },
+    "samples": {
+      "type": "array",
+      "description": "Array of oil sample data points extracted from the report, ordered from most recent to oldest.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/sample"
+      }
+    }
+  },
+  "$defs": {
+    "sample": {
+      "type": "object",
+      "required": ["sample_date", "elements_ppm"],
+      "properties": {
+        "sample_date": {
+          "type": "string",
+          "format": "date",
+          "description": "Date the oil sample was taken (ISO 8601: YYYY-MM-DD)."
+        },
+        "analysis_date": {
+          "type": ["string", "null"],
+          "format": "date",
+          "description": "Date the lab performed the analysis (ISO 8601: YYYY-MM-DD)."
+        },
+        "sample_number": {
+          "type": ["string", "null"],
+          "description": "Lab-assigned sample identifier."
+        },
+        "oil_hours": {
+          "type": ["number", "null"],
+          "description": "Hours on the oil since last change at time of sampling."
+        },
+        "engine_hours": {
+          "type": ["number", "null"],
+          "description": "Total engine hours (TSN or TSMOH) at time of sampling."
+        },
+        "oil_added_quarts": {
+          "type": ["number", "null"],
+          "description": "Makeup oil added (in quarts) during the sample interval."
+        },
+        "elements_ppm": {
+          "type": "object",
+          "description": "Elemental analysis results in parts per million. Use null for values not reported or non-numeric. Use 0 for values explicitly reported as zero.",
+          "properties": {
+            "iron": { "type": ["number", "null"] },
+            "copper": { "type": ["number", "null"] },
+            "nickel": { "type": ["number", "null"] },
+            "chromium": { "type": ["number", "null"] },
+            "silver": { "type": ["number", "null"] },
+            "aluminum": { "type": ["number", "null"] },
+            "lead": { "type": ["number", "null"] },
+            "silicon": { "type": ["number", "null"] },
+            "titanium": { "type": ["number", "null"] },
+            "tin": { "type": ["number", "null"] },
+            "molybdenum": { "type": ["number", "null"] },
+            "magnesium": { "type": ["number", "null"] },
+            "manganese": { "type": ["number", "null"] },
+            "potassium": { "type": ["number", "null"] },
+            "boron": { "type": ["number", "null"] },
+            "sodium": { "type": ["number", "null"] },
+            "calcium": { "type": ["number", "null"] },
+            "phosphorus": { "type": ["number", "null"] },
+            "zinc": { "type": ["number", "null"] },
+            "barium": { "type": ["number", "null"] }
+          },
+          "additionalProperties": false
+        },
+        "oil_properties": {
+          "type": ["object", "null"],
+          "description": "Physical and chemical oil properties, if reported.",
+          "properties": {
+            "flashpoint_f": {
+              "type": ["number", "null"],
+              "description": "Flash point in degrees Fahrenheit."
+            },
+            "water_percent": {
+              "type": ["number", "null"],
+              "description": "Water content as a percentage. If the report gives H2O in ppm, divide by 10000 to convert to percent."
+            },
+            "fuel_percent": {
+              "type": ["number", "null"],
+              "description": "Fuel dilution as a percentage."
+            },
+            "viscosity_sus_210f": {
+              "type": ["number", "null"],
+              "description": "SUS viscosity at 210°F."
+            },
+            "viscosity_cst_100c": {
+              "type": ["number", "null"],
+              "description": "Kinematic viscosity in cSt at 100°C."
+            },
+            "insolubles_percent": {
+              "type": ["number", "null"],
+              "description": "Insolubles percentage."
+            },
+            "total_acid_number": {
+              "type": ["number", "null"],
+              "description": "Total Acid Number (TAN)."
+            },
+            "total_base_number": {
+              "type": ["number", "null"],
+              "description": "Total Base Number (TBN)."
+            }
+          },
+          "additionalProperties": false
+        },
+        "lab_comments": {
+          "type": ["string", "null"],
+          "description": "Lab technician comments or recommendations for this sample."
+        },
+        "status": {
+          "type": ["string", "null"],
+          "enum": ["normal", "monitor", "action_required", null],
+          "description": "Overall lab assessment: normal = no concerns, monitor = watch closely, action_required = immediate attention needed."
+        }
+      }
+    }
+  }
+}

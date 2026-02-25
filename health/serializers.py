@@ -2,7 +2,7 @@ import os
 
 from rest_framework import serializers
 
-from .models import ComponentType, Component, DocumentCollection, Document, DocumentImage, LogbookEntry, Squawk, InspectionType, AD, MajorRepairAlteration, InspectionRecord, ADCompliance, ConsumableRecord
+from .models import ComponentType, Component, DocumentCollection, Document, DocumentImage, LogbookEntry, Squawk, InspectionType, AD, MajorRepairAlteration, InspectionRecord, ADCompliance, ConsumableRecord, OilAnalysisReport
 
 ALLOWED_UPLOAD_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.pdf', '.txt'}
 ALLOWED_UPLOAD_CONTENT_TYPES = {
@@ -450,3 +450,59 @@ class ConsumableRecordCreateSerializer(serializers.ModelSerializer):
         model = ConsumableRecord
         fields = ['id', 'record_type', 'aircraft', 'date', 'quantity_added', 'level_after', 'consumable_type', 'flight_hours', 'notes']
         read_only_fields = ['id']
+
+
+# Known element names for oil analysis validation
+_OIL_ANALYSIS_KNOWN_ELEMENTS = {
+    'iron', 'copper', 'nickel', 'chromium', 'silver', 'aluminum', 'lead',
+    'silicon', 'titanium', 'tin', 'molybdenum', 'magnesium', 'manganese',
+    'potassium', 'boron', 'sodium', 'calcium', 'phosphorus', 'zinc', 'barium',
+}
+
+
+class OilAnalysisReportSerializer(serializers.ModelSerializer):
+    component_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OilAnalysisReport
+        fields = [
+            'id', 'aircraft', 'component', 'component_display',
+            'sample_date', 'analysis_date', 'lab', 'lab_number',
+            'oil_type', 'oil_hours', 'engine_hours', 'oil_added_quarts',
+            'elements_ppm', 'oil_properties', 'lab_comments',
+            'status', 'notes', 'created_at',
+        ]
+
+    def get_component_display(self, obj):
+        if not obj.component:
+            return None
+        c = obj.component
+        parts = [c.component_type.name]
+        if c.install_location:
+            parts.append(c.install_location)
+        if c.serial_number:
+            parts.append(f"S/N {c.serial_number}")
+        return ' — '.join(parts)
+
+
+class OilAnalysisReportCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OilAnalysisReport
+        fields = [
+            'aircraft', 'component',
+            'sample_date', 'analysis_date', 'lab', 'lab_number',
+            'oil_type', 'oil_hours', 'engine_hours', 'oil_added_quarts',
+            'elements_ppm', 'oil_properties', 'lab_comments',
+            'status', 'notes',
+        ]
+
+    def validate_elements_ppm(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("elements_ppm must be an object.")
+        unknown = set(value.keys()) - _OIL_ANALYSIS_KNOWN_ELEMENTS
+        if unknown:
+            raise serializers.ValidationError(
+                f"Unknown element(s): {', '.join(sorted(unknown))}. "
+                f"Allowed: {', '.join(sorted(_OIL_ANALYSIS_KNOWN_ELEMENTS))}"
+            )
+        return value

@@ -7,6 +7,7 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
         notesMixin(),
         oilMixin(),
         fuelMixin(),
+        oilAnalysisMixin(),
         logbookMixin(),
         logbookPickerMixin(),
         logbookLinkMixin(),
@@ -42,6 +43,7 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
                 'major-records': 'records',
                 'oil': 'consumables',
                 'fuel': 'consumables',
+                'oil-analysis': 'consumables',
                 'documents': 'documents',
                 'roles': 'roles',
             },
@@ -120,6 +122,9 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
                     }
                     if (tab === 'fuel' && !this.fuelLoaded) {
                         this.loadFuelRecords();
+                    }
+                    if (tab === 'oil-analysis' && !this.oilAnalysisLoaded) {
+                        this.loadOilAnalysis();
                     }
                     if (tab === 'inspections' && !this.inspectionsLoaded) {
                         this.loadInspections();

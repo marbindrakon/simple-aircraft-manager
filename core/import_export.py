@@ -38,7 +38,7 @@ KNOWN_MANIFEST_KEYS = {
     'component_types', 'components', 'document_collections', 'documents',
     'document_images', 'logbook_entries', 'squawks', 'inspection_types',
     'inspection_records', 'ads', 'ad_compliances', 'consumable_records',
-    'major_records', 'notes',
+    'major_records', 'notes', 'oil_analysis_reports',
 }
 
 # Per-entity record count limits (configurable in settings)
@@ -56,6 +56,7 @@ _DEFAULT_LIMITS = {
     'consumable_records': 5_000,
     'major_records': 5_000,
     'notes': 5_000,
+    'oil_analysis_reports': 5_000,
 }
 
 # File-type magic bytes for content validation
@@ -332,7 +333,7 @@ def run_aircraft_import_job(job_id, zip_path, owner_user, tail_number_override=N
     from health.models import (
         ImportJob, Component, ComponentType, DocumentCollection, Document,
         DocumentImage, LogbookEntry, Squawk, InspectionType, InspectionRecord,
-        AD, ADCompliance, ConsumableRecord, MajorRepairAlteration,
+        AD, ADCompliance, ConsumableRecord, MajorRepairAlteration, OilAnalysisReport,
     )
     from core.models import Aircraft, AircraftNote, AircraftRole
     from core.events import log_event
@@ -374,7 +375,7 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
     from health.models import (
         ImportJob, Component, ComponentType, DocumentCollection, Document,
         DocumentImage, LogbookEntry, Squawk, InspectionType, InspectionRecord,
-        AD, ADCompliance, ConsumableRecord, MajorRepairAlteration,
+        AD, ADCompliance, ConsumableRecord, MajorRepairAlteration, OilAnalysisReport,
     )
     from core.models import Aircraft, AircraftNote, AircraftRole
     from core.events import log_event
@@ -1055,6 +1056,29 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
                         added_by=None,  # User FKs are not migrated across instances
                     )
                 counts['notes'] = len(manifest.get('notes', []))
+
+                # --- Oil Analysis Reports -----------------------------------
+                ev('info', f"Creating {len(manifest.get('oil_analysis_reports', []))} oil analysis reports…")
+                for oar_data in manifest.get('oil_analysis_reports', []):
+                    component_id = oar_data.get('component_id')
+                    OilAnalysisReport.objects.create(
+                        aircraft=new_aircraft,
+                        component=id_map['component'].get(component_id) if component_id else None,
+                        sample_date=_parse_date(oar_data.get('sample_date')),
+                        analysis_date=_parse_date(oar_data.get('analysis_date')),
+                        lab=oar_data.get('lab', ''),
+                        lab_number=oar_data.get('lab_number', ''),
+                        oil_type=oar_data.get('oil_type', ''),
+                        oil_hours=_parse_decimal(oar_data.get('oil_hours')),
+                        engine_hours=_parse_decimal(oar_data.get('engine_hours')),
+                        oil_added_quarts=_parse_decimal(oar_data.get('oil_added_quarts')),
+                        elements_ppm=oar_data.get('elements_ppm') or {},
+                        oil_properties=oar_data.get('oil_properties'),
+                        lab_comments=oar_data.get('lab_comments', ''),
+                        status=oar_data.get('status'),
+                        notes=oar_data.get('notes', ''),
+                    )
+                counts['oil_analysis_reports'] = len(manifest.get('oil_analysis_reports', []))
 
                 # --- Log import event ---------------------------------------
                 count_summary = ', '.join(f"{v} {k}" for k, v in counts.items() if v)

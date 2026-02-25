@@ -2046,6 +2046,13 @@
                             Fuel
                         </button>
                     </div>
+                    <div class="pf-v5-c-toggle-group__item">
+                        <button class="pf-v5-c-toggle-group__button"
+                                :class="{ 'pf-m-selected': activeTab === 'oil-analysis' }"
+                                @click="activeTab = 'oil-analysis'">
+                            Oil Analysis
+                        </button>
+                    </div>
                 </div>
                 <button class="pf-v5-c-button pf-m-primary" x-show="canCreateConsumable && activeTab === 'oil'" @click="openOilModal()">
                     <i class="fas fa-plus"></i> Add Oil Record
@@ -2053,6 +2060,16 @@
                 <button class="pf-v5-c-button pf-m-primary" x-show="canCreateConsumable && activeTab === 'fuel'" @click="openFuelModal()">
                     <i class="fas fa-plus"></i> Add Fuel Record
                 </button>
+                <template x-if="activeTab === 'oil-analysis' && canWrite">
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="pf-v5-c-button pf-m-secondary" @click="openOilAnalysisAiModal()">
+                            <i class="fas fa-file-pdf"></i> Import from PDF
+                        </button>
+                        <button class="pf-v5-c-button pf-m-primary" @click="openOilAnalysisModal()">
+                            <i class="fas fa-plus"></i> Add Report
+                        </button>
+                    </div>
+                </template>
             </div>
             <div x-show="activeTab === 'oil'">
 
@@ -2209,6 +2226,149 @@
                                         </button>
                                         <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="cardDeleteFuelRecord(record)" title="Delete" style="color: var(--pf-v5-global--danger-color--100);">
                                             <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </template>
+            </div>
+            </div>
+
+            <!-- Oil Analysis Tab -->
+            <div x-show="activeTab === 'oil-analysis'">
+
+            <!-- Loading -->
+            <div x-show="!oilAnalysisLoaded" class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
+                    <h2 class="pf-v5-c-title pf-m-lg">Loading oil analysis reports...</h2>
+                </div>
+            </div>
+
+            <div x-show="oilAnalysisLoaded" x-cloak>
+
+                <!-- Component filter -->
+                <template x-if="oilAnalysisEngineComponents.length > 1">
+                    <div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <label class="pf-v5-c-form__label" for="oilAnalysisComponentFilter" style="margin: 0;">Filter by component:</label>
+                        <select id="oilAnalysisComponentFilter" class="pf-v5-c-form-control" style="max-width: 300px;"
+                                x-model="oilAnalysisFilterComponent"
+                                @change="oilAnalysisLoaded = false; loadOilAnalysis()">
+                            <option value="">All components</option>
+                            <template x-for="comp in oilAnalysisEngineComponents" :key="comp.id">
+                                <option :value="comp.id" x-text="comp.component_type_name + (comp.install_location ? ' (' + comp.install_location + ')' : '')"></option>
+                            </template>
+                        </select>
+                    </div>
+                </template>
+
+                <!-- Empty State -->
+                <template x-if="oilAnalysisFilteredReports.length === 0">
+                    <div class="pf-v5-c-empty-state">
+                        <div class="pf-v5-c-empty-state__content">
+                            <i class="fas fa-flask" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                            <h2 class="pf-v5-c-title pf-m-lg">No oil analysis reports</h2>
+                            <div class="pf-v5-c-empty-state__body">
+                                Track engine health by adding oil analysis lab reports.
+                            </div>
+                            <div class="pf-v5-c-empty-state__primary" x-show="canWrite" style="margin-top: 1rem;">
+                                <button class="pf-v5-c-button pf-m-secondary" @click="openOilAnalysisAiModal()" style="margin-right: 0.5rem;">
+                                    <i class="fas fa-file-pdf"></i> Import from PDF
+                                </button>
+                                <button class="pf-v5-c-button pf-m-primary" @click="openOilAnalysisModal()">
+                                    <i class="fas fa-plus"></i> Add Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Chart and element toggles -->
+                <template x-if="oilAnalysisFilteredReports.length >= 2">
+                    <div>
+                        <!-- Element toggle chips -->
+                        <div style="margin-bottom: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+                            <span style="font-size: 0.875rem; color: var(--pf-v5-global--Color--200); margin-right: 0.25rem;">Show elements:</span>
+                            <template x-for="el in ['iron','copper','chromium','aluminum','lead','silicon','nickel','tin','molybdenum','magnesium','potassium','boron','sodium','calcium','phosphorus','zinc','barium','silver','titanium','manganese']" :key="el">
+                                <button class="pf-v5-c-button"
+                                        :class="isOilAnalysisElementSelected(el) ? 'pf-m-primary' : 'pf-m-secondary'"
+                                        style="padding: 0.2rem 0.6rem; font-size: 0.8rem; text-transform: capitalize;"
+                                        @click="toggleOilAnalysisElement(el)"
+                                        x-text="el"></button>
+                            </template>
+                        </div>
+
+                        <div class="pf-v5-c-card" style="margin-bottom: 1rem;">
+                            <div class="pf-v5-c-card__title"><h3>Element Trend (PPM over Time)</h3></div>
+                            <div class="pf-v5-c-card__body">
+                                <canvas id="oilAnalysisChart" style="max-height: 350px;"></canvas>
+                                <p class="pf-v5-u-color-200 pf-v5-u-font-size-sm pf-v5-u-mt-sm">
+                                    Outlier values (IQR method) shown as larger <span style="color: #f0ab00;">&#9650;</span> orange points. Dashed lines show per-element averages.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Reports Table -->
+                <template x-if="oilAnalysisFilteredReports.length > 0">
+                    <table class="pf-v5-c-table consumable-table">
+                        <thead>
+                            <tr>
+                                <th>Sample Date</th>
+                                <th>Engine Hours</th>
+                                <th>Oil Hours</th>
+                                <th>Status</th>
+                                <th>Lab</th>
+                                <th>Key Elements (ppm)</th>
+                                <th>Component</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="report in oilAnalysisFilteredReports" :key="report.id">
+                                <tr>
+                                    <td data-label="Sample Date" x-text="formatDate(report.sample_date)"></td>
+                                    <td data-label="Engine Hours" :class="{ 'consumable-empty-field': !report.engine_hours }">
+                                        <span x-text="report.engine_hours != null ? formatHours(report.engine_hours) : '-'"></span>
+                                    </td>
+                                    <td data-label="Oil Hours" :class="{ 'consumable-empty-field': !report.oil_hours }">
+                                        <span x-text="report.oil_hours != null ? report.oil_hours + ' hrs' : '-'"></span>
+                                    </td>
+                                    <td data-label="Status">
+                                        <template x-if="report.status">
+                                            <span class="pf-v5-c-label" :class="oilAnalysisStatusClass(report.status)">
+                                                <span class="pf-v5-c-label__content" x-text="oilAnalysisStatusLabel(report.status)"></span>
+                                            </span>
+                                        </template>
+                                        <template x-if="!report.status">
+                                            <span class="consumable-empty-field">—</span>
+                                        </template>
+                                    </td>
+                                    <td data-label="Lab" :class="{ 'consumable-empty-field': !report.lab }" x-text="report.lab || '-'"></td>
+                                    <td data-label="Key Elements (ppm)" style="font-size: 0.82rem; white-space: nowrap;">
+                                        <template x-if="report.elements_ppm && Object.keys(report.elements_ppm).length > 0">
+                                            <span>
+                                                <template x-for="el in ['iron','copper','chromium','aluminum','lead','silicon']" :key="el">
+                                                    <span x-show="report.elements_ppm[el] != null" style="margin-right: 0.5rem;">
+                                                        <span style="text-transform: capitalize; font-weight: 500;" x-text="el.slice(0,2).toUpperCase() + ':'"></span>
+                                                        <span x-text="report.elements_ppm[el]"></span>
+                                                    </span>
+                                                </template>
+                                            </span>
+                                        </template>
+                                        <template x-if="!report.elements_ppm || Object.keys(report.elements_ppm).length === 0">
+                                            <span class="consumable-empty-field">—</span>
+                                        </template>
+                                    </td>
+                                    <td data-label="Component" :class="{ 'consumable-empty-field': !report.component_display }">
+                                        <span x-text="report.component_display || '-'"></span>
+                                    </td>
+                                    <td data-label="Actions">
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editOilAnalysisReport(report)" title="Edit">
+                                            <i class="fas fa-edit"></i>
                                         </button>
                                     </td>
                                 </tr>
@@ -4986,6 +5146,321 @@
         </div>
     </div>
 
+    <!-- Oil Analysis Report Modal -->
+    <div class="pf-v5-c-backdrop" x-show="oilAnalysisModalOpen" x-cloak @click.self="closeOilAnalysisModal()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-lg" @click.stop>
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeOilAnalysisModal()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title" x-text="editingOilAnalysisReport ? 'Edit Oil Analysis Report' : 'Add Oil Analysis Report'"></h1>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <form @submit.prevent="submitOilAnalysisReport" class="pf-v5-c-form pf-m-horizontal">
+                        <!-- Component -->
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-label">
+                                <label class="pf-v5-c-form__label" for="oa-component">
+                                    <span class="pf-v5-c-form__label-text">Engine Component</span>
+                                </label>
+                            </div>
+                            <div class="pf-v5-c-form__group-control">
+                                <select id="oa-component" class="pf-v5-c-form-control" x-model="oilAnalysisForm.component">
+                                    <option value="">— none —</option>
+                                    <template x-for="comp in oilAnalysisEngineComponents" :key="comp.id">
+                                        <option :value="comp.id" x-text="comp.component_type_name + (comp.install_location ? ' (' + comp.install_location + ')' : '')"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- Sample Date / Analysis Date -->
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-label">
+                                <label class="pf-v5-c-form__label" for="oa-sample-date">
+                                    <span class="pf-v5-c-form__label-text">Sample Date</span>
+                                    <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                                </label>
+                            </div>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="date" id="oa-sample-date" class="pf-v5-c-form-control" x-model="oilAnalysisForm.sample_date" required>
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-label">
+                                <label class="pf-v5-c-form__label" for="oa-analysis-date">
+                                    <span class="pf-v5-c-form__label-text">Analysis Date</span>
+                                </label>
+                            </div>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="date" id="oa-analysis-date" class="pf-v5-c-form-control" x-model="oilAnalysisForm.analysis_date">
+                            </div>
+                        </div>
+                        <!-- Lab / Lab Number -->
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-label">
+                                <label class="pf-v5-c-form__label" for="oa-lab">
+                                    <span class="pf-v5-c-form__label-text">Lab</span>
+                                </label>
+                            </div>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="text" id="oa-lab" class="pf-v5-c-form-control" x-model="oilAnalysisForm.lab" placeholder="e.g. Blackstone Laboratories">
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-label">
+                                <label class="pf-v5-c-form__label" for="oa-lab-number">
+                                    <span class="pf-v5-c-form__label-text">Lab Number</span>
+                                </label>
+                            </div>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="text" id="oa-lab-number" class="pf-v5-c-form-control" x-model="oilAnalysisForm.lab_number">
+                            </div>
+                        </div>
+                        <!-- Engine / Oil Hours -->
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-label">
+                                <label class="pf-v5-c-form__label" for="oa-engine-hours">
+                                    <span class="pf-v5-c-form__label-text">Engine Hours at Sample</span>
+                                </label>
+                            </div>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="number" step="0.1" min="0" id="oa-engine-hours" class="pf-v5-c-form-control" x-model="oilAnalysisForm.engine_hours">
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-label">
+                                <label class="pf-v5-c-form__label" for="oa-oil-hours">
+                                    <span class="pf-v5-c-form__label-text">Oil Hours at Sample</span>
+                                </label>
+                            </div>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="number" step="0.1" min="0" id="oa-oil-hours" class="pf-v5-c-form-control" x-model="oilAnalysisForm.oil_hours">
+                            </div>
+                        </div>
+                        <!-- Oil Type / Added -->
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-label">
+                                <label class="pf-v5-c-form__label" for="oa-oil-type">
+                                    <span class="pf-v5-c-form__label-text">Oil Type</span>
+                                </label>
+                            </div>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="text" id="oa-oil-type" class="pf-v5-c-form-control" x-model="oilAnalysisForm.oil_type" placeholder="e.g. Phillips XC 20W/50">
+                            </div>
+                        </div>
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-label">
+                                <label class="pf-v5-c-form__label" for="oa-oil-added">
+                                    <span class="pf-v5-c-form__label-text">Oil Added (qt)</span>
+                                </label>
+                            </div>
+                            <div class="pf-v5-c-form__group-control">
+                                <input type="number" step="0.01" min="0" id="oa-oil-added" class="pf-v5-c-form-control" x-model="oilAnalysisForm.oil_added_quarts">
+                            </div>
+                        </div>
+                        <!-- Status -->
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-label">
+                                <label class="pf-v5-c-form__label" for="oa-status">
+                                    <span class="pf-v5-c-form__label-text">Lab Status</span>
+                                </label>
+                            </div>
+                            <div class="pf-v5-c-form__group-control">
+                                <select id="oa-status" class="pf-v5-c-form-control" x-model="oilAnalysisForm.status">
+                                    <option value="">— not set —</option>
+                                    <option value="normal">Normal</option>
+                                    <option value="monitor">Monitor</option>
+                                    <option value="action_required">Action Required</option>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- Elements PPM (JSON) -->
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-label">
+                                <label class="pf-v5-c-form__label" for="oa-elements">
+                                    <span class="pf-v5-c-form__label-text">Elements (PPM, JSON)</span>
+                                </label>
+                            </div>
+                            <div class="pf-v5-c-form__group-control">
+                                <textarea id="oa-elements" class="pf-v5-c-form-control" rows="4" x-model="oilAnalysisForm.elements_ppm" style="font-family: monospace; font-size: 0.85rem;" placeholder='{"iron": 15, "copper": 8, "chromium": 2}'></textarea>
+                                <p class="pf-v5-u-font-size-sm pf-v5-u-color-200" style="margin-top: 0.25rem;">Enter element concentrations in PPM as a JSON object.</p>
+                            </div>
+                        </div>
+                        <!-- Lab Comments -->
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-label">
+                                <label class="pf-v5-c-form__label" for="oa-lab-comments">
+                                    <span class="pf-v5-c-form__label-text">Lab Comments</span>
+                                </label>
+                            </div>
+                            <div class="pf-v5-c-form__group-control">
+                                <textarea id="oa-lab-comments" class="pf-v5-c-form-control" rows="3" x-model="oilAnalysisForm.lab_comments"></textarea>
+                            </div>
+                        </div>
+                        <!-- Notes -->
+                        <div class="pf-v5-c-form__group">
+                            <div class="pf-v5-c-form__group-label">
+                                <label class="pf-v5-c-form__label" for="oa-notes">
+                                    <span class="pf-v5-c-form__label-text">Notes</span>
+                                </label>
+                            </div>
+                            <div class="pf-v5-c-form__group-control">
+                                <textarea id="oa-notes" class="pf-v5-c-form-control" rows="2" x-model="oilAnalysisForm.notes"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" @click="submitOilAnalysisReport" :disabled="oilAnalysisSubmitting">
+                        <span x-show="!oilAnalysisSubmitting" x-text="editingOilAnalysisReport ? 'Save Changes' : 'Add Report'"></span>
+                        <span x-show="oilAnalysisSubmitting">Saving...</span>
+                    </button>
+                    <template x-if="editingOilAnalysisReport">
+                        <button class="pf-v5-c-button pf-m-danger" @click="deleteOilAnalysisReport" :disabled="oilAnalysisSubmitting">Delete</button>
+                    </template>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeOilAnalysisModal()">Cancel</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Oil Analysis AI Extract Modal -->
+    <div class="pf-v5-c-backdrop" x-show="oilAnalysisAiModalOpen" x-cloak @click.self="closeOilAnalysisAiModal()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-lg" @click.stop>
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeOilAnalysisAiModal()" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 class="pf-v5-c-modal-box__title">Import Oil Analysis from PDF</h1>
+                </header>
+
+                <div class="pf-v5-c-modal-box__body">
+                    <!-- Step 1: File upload -->
+                    <template x-if="!oilAnalysisAiResults">
+                        <div class="pf-v5-c-form">
+                            <p style="margin-bottom: 1rem; color: var(--pf-v5-global--Color--200);">
+                                Upload a PDF oil analysis report from Blackstone, AvLab, or similar labs. AI will extract all sample data.
+                            </p>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="oilAnalysisAiFileInput">
+                                    <span class="pf-v5-c-form__label-text">PDF File</span>
+                                    <span class="pf-v5-c-form__label-required" aria-hidden="true">*</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <input type="file" id="oilAnalysisAiFileInput" class="pf-v5-c-form-control" accept=".pdf">
+                                </div>
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="oa-ai-model">
+                                    <span class="pf-v5-c-form__label-text">Model</span>
+                                </label>
+                                <div class="pf-v5-c-form__group-control">
+                                    <select id="oa-ai-model" class="pf-v5-c-form-control"
+                                            x-model="oilAnalysisAiModel"
+                                            x-init="if (!oilAnalysisAiModel) oilAnalysisAiModel = '{{ import_default_model }}'">
+                                        {% for model in import_models %}
+                                        <option value="{{ model.id }}" data-provider="{{ model.provider }}">{{ model.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Step 2: Review extracted samples -->
+                    <template x-if="oilAnalysisAiResults">
+                        <div>
+                            <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--pf-v5-global--BackgroundColor--200); border-radius: 4px;">
+                                <strong x-text="(oilAnalysisAiResults.samples || []).length + ' sample(s) extracted'"></strong>
+                                <span x-show="oilAnalysisAiResults.lab" style="margin-left: 0.5rem; color: var(--pf-v5-global--Color--200);" x-text="'from ' + oilAnalysisAiResults.lab"></span>
+                                <span x-show="oilAnalysisAiResults.tail_number" style="margin-left: 0.5rem; color: var(--pf-v5-global--Color--200);" x-text="'— ' + oilAnalysisAiResults.tail_number"></span>
+                            </div>
+
+                            <div style="max-height: 60vh; overflow-y: auto;">
+                                <template x-for="(sample, idx) in (oilAnalysisAiResults.samples || [])" :key="idx">
+                                    <div class="pf-v5-c-card" style="margin-bottom: 1rem;">
+                                        <div class="pf-v5-c-card__header" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem;">
+                                            <input type="checkbox" :id="'oa-include-' + idx" x-model="oilAnalysisAiSampleIncludes[idx]" style="cursor: pointer;">
+                                            <label :for="'oa-include-' + idx" style="font-weight: 600; cursor: pointer;" x-text="'Sample: ' + (sample.sample_date || 'unknown date')"></label>
+                                            <template x-if="sample.status">
+                                                <span class="pf-v5-c-label" :class="oilAnalysisStatusClass(sample.status)">
+                                                    <span class="pf-v5-c-label__content" x-text="oilAnalysisStatusLabel(sample.status)"></span>
+                                                </span>
+                                            </template>
+                                        </div>
+                                        <div class="pf-v5-c-card__body">
+                                            <!-- Component assignment -->
+                                            <div style="margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                                                <label style="font-size: 0.875rem; min-width: 120px;">Engine component:</label>
+                                                <select class="pf-v5-c-form-control" style="max-width: 280px;" x-model="oilAnalysisAiSampleComponents[idx]">
+                                                    <option value="">— none —</option>
+                                                    <template x-for="comp in oilAnalysisEngineComponents" :key="comp.id">
+                                                        <option :value="comp.id" x-text="comp.component_type_name + (comp.install_location ? ' (' + comp.install_location + ')' : '')"></option>
+                                                    </template>
+                                                </select>
+                                            </div>
+                                            <!-- Hours info -->
+                                            <div style="font-size: 0.875rem; color: var(--pf-v5-global--Color--200); margin-bottom: 0.5rem;">
+                                                <span x-show="sample.engine_hours != null">Engine: <strong x-text="sample.engine_hours + ' hrs'"></strong> &nbsp;</span>
+                                                <span x-show="sample.oil_hours != null">Oil: <strong x-text="sample.oil_hours + ' hrs'"></strong> &nbsp;</span>
+                                                <span x-show="sample.oil_added_quarts != null">Added: <strong x-text="sample.oil_added_quarts + ' qt'"></strong></span>
+                                            </div>
+                                            <!-- Elements grid -->
+                                            <template x-if="sample.elements_ppm && Object.keys(sample.elements_ppm).length > 0">
+                                                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.35rem; margin-bottom: 0.75rem;">
+                                                    <template x-for="[el, val] in Object.entries(sample.elements_ppm).filter(([k,v]) => v !== null)" :key="el">
+                                                        <div style="background: var(--pf-v5-global--BackgroundColor--200); border-radius: 3px; padding: 0.2rem 0.4rem; font-size: 0.8rem;">
+                                                            <span style="text-transform: capitalize; font-weight: 500;" x-text="el"></span>: <span x-text="val"></span>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                            <!-- Lab comments -->
+                                            <template x-if="sample.lab_comments">
+                                                <p style="font-size: 0.875rem; font-style: italic; color: var(--pf-v5-global--Color--200); margin: 0;" x-text="sample.lab_comments"></p>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Loading state -->
+                    <template x-if="oilAnalysisAiExtracting">
+                        <div class="pf-v5-c-empty-state" style="margin: 1rem 0;">
+                            <div class="pf-v5-c-empty-state__content">
+                                <div class="loading-spinner" style="width: 2rem; height: 2rem; margin: 0 auto 0.5rem;"></div>
+                                <p>Extracting data from PDF... this may take a moment.</p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <footer class="pf-v5-c-modal-box__footer">
+                    <template x-if="!oilAnalysisAiResults">
+                        <button class="pf-v5-c-button pf-m-primary" @click="submitOilAnalysisAiFile" :disabled="oilAnalysisAiExtracting">
+                            <span x-show="!oilAnalysisAiExtracting"><i class="fas fa-magic"></i> Extract Data</span>
+                            <span x-show="oilAnalysisAiExtracting">Extracting...</span>
+                        </button>
+                    </template>
+                    <template x-if="oilAnalysisAiResults">
+                        <button class="pf-v5-c-button pf-m-primary" @click="saveOilAnalysisAiResults" :disabled="oilAnalysisAiExtracting">
+                            <i class="fas fa-save"></i> Save Selected Samples
+                        </button>
+                    </template>
+                    <button class="pf-v5-c-button pf-m-link" @click="closeOilAnalysisAiModal()">Cancel</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
     <!-- Collection Modal -->
     <div class="pf-v5-c-backdrop" x-show="collectionModalOpen" x-cloak @click.self="closeCollectionModal()">
         <div class="pf-v5-l-bullseye">
@@ -5347,6 +5822,7 @@
 <script src="{% static 'js/aircraft-detail-consumables.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-oil.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-fuel.js' %}"></script>
+<script src="{% static 'js/aircraft-detail-oil-analysis.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-logbook.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-logbook-picker.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-logbook-link.js' %}"></script>
