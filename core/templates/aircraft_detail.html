@@ -2978,7 +2978,7 @@
                                     <th>Date Complied</th>
                                     <th>Aircraft Hours</th>
                                     <th>Notes</th>
-                                    <th>Permanent</th>
+                                    <th>Compliance</th>
                                     <th>Next Due (hrs)</th>
                                     <th>Logbook Entry</th>
                                     <th x-show="isOwner"></th>
@@ -2990,27 +2990,18 @@
                                         <td data-label="Date Complied" x-text="formatDate(record.date_complied)"></td>
                                         <td data-label="Aircraft Hours">
                                             <template x-if="record.aircraft_hours_at_compliance">
-                                                <span x-text="formatHours(record.aircraft_hours_at_compliance)"></span>
-                                            </template>
-                                            <template x-if="!record.aircraft_hours_at_compliance">
-                                                <span>—</span>
+                                                <span><span class="consumable-field-label">Hours: </span><span x-text="formatHours(record.aircraft_hours_at_compliance)"></span></span>
                                             </template>
                                         </td>
-                                        <td data-label="Notes" x-text="record.compliance_notes || '—'"></td>
-                                        <td data-label="Permanent">
+                                        <td data-label="Notes" x-text="record.compliance_notes"></td>
+                                        <td data-label="Compliance">
                                             <template x-if="record.permanent">
-                                                <span class="pf-v5-c-label pf-m-blue pf-m-compact">Yes</span>
-                                            </template>
-                                            <template x-if="!record.permanent">
-                                                <span>No</span>
+                                                <span class="pf-v5-c-label pf-m-blue pf-m-compact">Permanent (one-time)</span>
                                             </template>
                                         </td>
                                         <td data-label="Next Due (hrs)">
                                             <template x-if="record.next_due_at_time && record.next_due_at_time > 0">
-                                                <span x-text="formatHours(record.next_due_at_time) + ' hrs'"></span>
-                                            </template>
-                                            <template x-if="!record.next_due_at_time || record.next_due_at_time == 0">
-                                                <span>—</span>
+                                                <span><span class="consumable-field-label">Next due: </span><span x-text="formatHours(record.next_due_at_time) + ' hrs'"></span></span>
                                             </template>
                                         </td>
                                         <td data-label="Logbook Entry">
@@ -3019,9 +3010,6 @@
                                                         @click="viewLogEntryFromCompliance(record.logbook_entry)">
                                                     <i class="fas fa-book-open"></i> View
                                                 </button>
-                                            </template>
-                                            <template x-if="!record.logbook_entry">
-                                                <span style="color: var(--pf-v5-global--Color--200);">—</span>
                                             </template>
                                         </td>
                                         <td data-label="Actions" x-show="isOwner" style="white-space: nowrap;">
@@ -4364,10 +4352,7 @@
                                         <td data-label="Date" x-text="formatDate(record.date)"></td>
                                         <td data-label="Aircraft Hours">
                                             <template x-if="record.aircraft_hours != null">
-                                                <span x-text="formatHours(record.aircraft_hours)"></span>
-                                            </template>
-                                            <template x-if="record.aircraft_hours == null">
-                                                <span style="color: var(--pf-v5-global--Color--200);">—</span>
+                                                <span><span class="consumable-field-label">Hours: </span><span x-text="formatHours(record.aircraft_hours)"></span></span>
                                             </template>
                                         </td>
                                         <td data-label="Logbook Entry">
@@ -4376,9 +4361,6 @@
                                                         @click="viewLogEntryFromCompliance(record.logbook_entry)">
                                                     <i class="fas fa-book-open"></i> View
                                                 </button>
-                                            </template>
-                                            <template x-if="!record.logbook_entry">
-                                                <span style="color: var(--pf-v5-global--Color--200);">—</span>
                                             </template>
                                         </td>
                                         <td data-label="Actions" x-show="isOwner">
