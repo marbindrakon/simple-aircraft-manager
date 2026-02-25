@@ -925,7 +925,7 @@
                                     <td data-label="Priority">
                                         <span class="pf-v5-c-label" :class="getSquawkPriorityClass(squawk)" x-text="squawk.priority_display"></span>
                                     </td>
-                                    <td data-label="Component" x-text="squawk.component_name || '-'"></td>
+                                    <td data-label="Component" :class="{ 'optional-empty': !squawk.component_name }" x-text="squawk.component_name"></td>
                                     <td data-label="Issue">
                                         <span x-text="squawk.issue_reported"></span>
                                         <template x-if="squawk.notes">
@@ -1454,7 +1454,7 @@
                                             </div>
                                         </td>
                                         <td data-label="Date" x-text="formatDate(record.date_performed)"></td>
-                                        <td data-label="Component" x-text="record.component_name || '-'"></td>
+                                        <td data-label="Component" :class="{ 'optional-empty': !record.component_name }" x-text="record.component_name"></td>
                                         <td data-label="Actions">
                                             <div style="display: flex; gap: 0.25rem; align-items: center;">
                                                 <div class="related-popup-trigger" x-show="record.logbook_entry || canViewDocument(record.form_337_document)" @click.outside="if (openRelatedPopup === record.id) openRelatedPopup = null">
@@ -1572,9 +1572,9 @@
                                             </div>
                                         </td>
                                         <td data-label="Date" x-text="formatDate(record.date_performed)"></td>
-                                        <td data-label="Component" x-text="record.component_name || '-'"></td>
-                                        <td data-label="STC #" x-text="record.stc_number || '-'"></td>
-                                        <td data-label="STC Holder" x-text="record.stc_holder || '-'"></td>
+                                        <td data-label="Component" :class="{ 'optional-empty': !record.component_name }" x-text="record.component_name"></td>
+                                        <td data-label="STC #" :class="{ 'optional-empty': !record.stc_number }" x-text="record.stc_number"></td>
+                                        <td data-label="STC Holder" :class="{ 'optional-empty': !record.stc_holder }" x-text="record.stc_holder"></td>
                                         <td data-label="Actions">
                                             <div style="display: flex; gap: 0.25rem; align-items: center;">
                                                 <div class="related-popup-trigger" x-show="record.logbook_entry || canViewDocument(record.form_337_document) || canViewDocument(record.stc_document)" @click.outside="if (openRelatedPopup === record.id) openRelatedPopup = null">
@@ -2999,7 +2999,7 @@
                                         <td data-label="Notes" x-text="record.compliance_notes || '—'"></td>
                                         <td data-label="Permanent">
                                             <template x-if="record.permanent">
-                                                <span class="pf-v5-c-label pf-m-green pf-m-compact">Yes</span>
+                                                <span class="pf-v5-c-label pf-m-blue pf-m-compact">Yes</span>
                                             </template>
                                             <template x-if="!record.permanent">
                                                 <span>No</span>

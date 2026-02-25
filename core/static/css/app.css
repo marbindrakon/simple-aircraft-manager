@@ -692,6 +692,18 @@ html.pf-v5-theme-dark .loading-spinner {
     border-left-color: var(--pf-v5-global--primary-color--100);
 }
 
+/* Dark mode: PF5 collapses all label backgrounds to one dark shade, relying on
+   the inner __content span for text color. Since this app uses x-text directly
+   on the label element (no __content span), we restore color via the element's
+   own color property. */
+html.pf-v5-theme-dark .pf-v5-c-label.pf-m-green  { color: var(--pf-v5-global--success-color--100); }
+html.pf-v5-theme-dark .pf-v5-c-label.pf-m-red    { color: var(--pf-v5-global--danger-color--100); }
+html.pf-v5-theme-dark .pf-v5-c-label.pf-m-orange { color: var(--pf-v5-global--warning-color--100); }
+html.pf-v5-theme-dark .pf-v5-c-label.pf-m-blue   { color: var(--pf-v5-global--primary-color--100); }
+html.pf-v5-theme-dark .pf-v5-c-label.pf-m-purple { color: var(--pf-v5-global--palette--purple-300); }
+html.pf-v5-theme-dark .pf-v5-c-label.pf-m-cyan   { color: var(--pf-v5-global--custom-color--200); }
+html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--palette--gold-300); }
+
 /* Logbook picker dropdown results */
 .logbook-picker-result:hover {
     background: var(--pf-v5-global--BackgroundColor--200);
@@ -1232,6 +1244,11 @@ html.pf-v5-theme-dark .loading-spinner {
         color: var(--pf-v5-global--Color--200);
         font-size: 0.8em;
         font-weight: 400;
+    }
+
+    /* Hide empty optional table cells on mobile; desktop shows blank for column alignment */
+    td.optional-empty {
+        display: none;
     }
 
     /* Hide empty optional fields on mobile (desktop keeps '-' for column alignment) */
