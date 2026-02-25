@@ -2,16 +2,15 @@ Aircraft Detail Page
 ====================
 
 The aircraft detail page is the central hub for managing a single aircraft. It
-is organized into a tabbed interface with the following sections:
+is organized into a tabbed interface with eight primary tabs. Related topics
+are grouped under shared tabs using a sub-tab toggle bar:
 
 - :doc:`Overview <aircraft-detail>` (this page)
 - :doc:`components`
-- :doc:`logbook`
 - :doc:`squawks`
-- :doc:`ads`
-- :doc:`inspections`
-- :doc:`major-records`
-- :doc:`oil-and-fuel`
+- **Compliance** -- sub-tabs: :doc:`ads` and :doc:`inspections`
+- **Records** -- sub-tabs: :doc:`logbook` and :doc:`major-records` (maintenance access only)
+- **Consumables** -- sub-tabs: Oil and Fuel (see :doc:`oil-and-fuel`)
 - :doc:`documents`
 - :doc:`sharing-and-access` (owners only)
 
@@ -22,7 +21,10 @@ Page Header
 
 The header displays:
 
-- **Tail number** and make/model.
+- **Tail number** and make/model, with an **aircraft switcher** icon (⇄)
+  next to the tail number. Click it to open a dropdown listing your other
+  aircraft with their airworthiness status dots; click any aircraft to
+  navigate directly to its detail page.
 - **Airworthiness status badge** -- same color-coded indicator as the Aircraft page.
 - **Current flight hours**.
 - **Update Hours** button (visible to owners and pilots) -- opens a modal to
