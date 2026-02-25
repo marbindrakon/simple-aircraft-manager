@@ -443,6 +443,14 @@ function componentsMixin() {
             return 1 + this.getComponentDepth(parent);
         },
 
+        getParentBreadcrumb(component) {
+            if (!component.parent_component_id) return '';
+            const parent = this.components.find(c => c.id === component.parent_component_id);
+            if (!parent) return '';
+            const name = this.getComponentTypeName(parent);
+            return parent.install_location ? `${name} (${parent.install_location})` : name;
+        },
+
         get sortedComponents() {
             const byName = (a, b) => (a.name || '').localeCompare(b.name || '');
             const roots = this.components.filter(c => !c.parent_component_id).sort(byName);

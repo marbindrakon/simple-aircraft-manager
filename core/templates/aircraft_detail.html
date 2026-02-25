@@ -442,7 +442,9 @@
                     </template>
                 </tbody>
                 <template x-for="component in sortedComponents" :key="component.id">
-                    <tbody class="component-row-group">
+                    <tbody class="component-row-group"
+                           :class="{'component-child': getComponentDepth(component) > 0}"
+                           :style="'--component-depth: ' + getComponentDepth(component)">
                         <tr>
                             <td class="pf-v5-c-table__toggle">
                                 <button class="pf-v5-c-button pf-m-plain"
@@ -454,7 +456,7 @@
                             </td>
                             <td data-label="Type">
                                 <div style="display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap;">
-                                    <span :style="'padding-left: ' + (getComponentDepth(component) * 1.5) + 'rem'">
+                                    <span :style="'padding-left: ' + (getComponentDepth(component) * 1.5) + 'rem'" class="component-type-indent">
                                         <template x-if="getComponentDepth(component) > 0">
                                             <i class="fas fa-level-up-alt fa-rotate-90" style="color: var(--pf-v5-global--Color--200); margin-right: 0.25rem; font-size: 0.75rem;"></i>
                                         </template>
@@ -470,6 +472,9 @@
                                         </span>
                                     </template>
                                 </div>
+                                <div class="component-parent-breadcrumb"
+                                     x-show="component.parent_component_id"
+                                     x-text="getParentBreadcrumb(component)"></div>
                             </td>
                             <td data-label="Manufacturer/Model" x-text="`${component.manufacturer} ${component.model}`"></td>
                             <td data-label="In Service">

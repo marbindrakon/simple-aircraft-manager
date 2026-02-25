@@ -861,6 +861,9 @@ html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--pa
     }
 }
 
+/* Desktop: hide mobile-only hierarchy breadcrumb */
+.component-parent-breadcrumb { display: none; }
+
 /* ---- Components tab: card layout on mobile ------------------------ */
 /*
  * At ≤768px each <tbody class="component-row-group"> becomes a card.
@@ -881,6 +884,26 @@ html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--pa
         border-radius: var(--pf-v5-global--BorderRadius--sm);
         margin-bottom: 0.75rem;
         overflow: hidden;
+        /* Indent child cards to visually represent hierarchy */
+        margin-left: calc(var(--component-depth, 0) * 1.25rem);
+    }
+
+    /* Left border accent on child components */
+    .component-row-group.component-child {
+        border-left: 3px solid var(--pf-v5-global--Color--200);
+    }
+
+    /* Parent breadcrumb — visible only on mobile */
+    .component-parent-breadcrumb {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--pf-v5-global--Color--200);
+        margin-top: 0.2rem;
+    }
+
+    /* Suppress the inline text-indent on mobile — the card itself is indented */
+    .component-type-indent {
+        padding-left: 0 !important;
     }
 
     /* Main row: compact card grid */
@@ -968,6 +991,7 @@ html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--pa
 
 /* Desktop: show classic "remaining" cell, hide mobile fraction */
 .component-remaining-mobile { display: none; }
+
 
 @media (max-width: 768px) {
     /* Mobile: hide classic remaining, show fraction + progress bar */
