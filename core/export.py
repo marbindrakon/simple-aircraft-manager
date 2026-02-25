@@ -116,6 +116,7 @@ def _component_dict(component):
         'replacement_hours': component.replacement_hours,
         'replacement_days': component.replacement_days,
         'tbo_critical': component.tbo_critical,
+        'on_condition': component.on_condition,
         'inspection_critical': component.inspection_critical,
         'replacement_critical': component.replacement_critical,
     }

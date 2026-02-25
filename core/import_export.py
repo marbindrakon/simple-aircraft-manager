@@ -670,6 +670,7 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
                         replacement_hours=c_data.get('replacement_hours'),
                         replacement_days=c_data.get('replacement_days'),
                         tbo_critical=c_data.get('tbo_critical', True),
+                        on_condition=c_data.get('on_condition', False),
                         inspection_critical=c_data.get('inspection_critical', True),
                         replacement_critical=c_data.get('replacement_critical', False),
                     )

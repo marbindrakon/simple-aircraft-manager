@@ -596,7 +596,7 @@
                                         <template x-if="getCalendarDaysRemaining(component) !== null">
                                             <div>
                                                 <div style="font-size: 1.1em; font-weight: 600;"
-                                                     :class="getCalendarDaysRemaining(component) <= 0 ? 'hours-overdue' : ''"
+                                                     :class="getCalendarRemainingClass(component)"
                                                      x-text="formatDuration(getCalendarDaysRemaining(component))"></div>
                                                 <div x-show="getDueDate(component)"
                                                      x-text="'Due ' + formatDate(getDueDate(component))"
@@ -615,10 +615,17 @@
                                     <div class="component-detail-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
                                         <!-- TBO -->
                                         <div>
-                                            <span class="pf-v5-c-label pf-m-compact"
-                                                  :class="component.tbo_critical ? 'pf-m-blue' : 'pf-m-grey'">
-                                                TBO
-                                            </span>
+                                            <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+                                                <span class="pf-v5-c-label pf-m-compact"
+                                                      :class="component.tbo_critical ? 'pf-m-blue' : 'pf-m-grey'">
+                                                    TBO
+                                                </span>
+                                                <template x-if="component.tbo_critical && component.on_condition">
+                                                    <span class="pf-v5-c-label pf-m-compact pf-m-cyan" title="Reliability-Centered / On-Condition maintenance — over-TBO operation is intentional">
+                                                        On-Condition
+                                                    </span>
+                                                </template>
+                                            </div>
                                             <template x-if="component.tbo_critical">
                                                 <div style="margin-top: 0.3rem; font-size: 0.9em;">
                                                     <div x-show="component.tbo_hours" x-text="component.tbo_hours + ' hr'"></div>
@@ -3535,24 +3542,37 @@
                             </div>
                         </div>
 
-                        <!-- TBO Intervals (shown when tbo_critical) -->
+                        <!-- TBO Intervals + On-Condition (shown when tbo_critical) -->
                         <template x-if="componentForm.tbo_critical">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                                <div class="pf-v5-c-form__group">
-                                    <label class="pf-v5-c-form__label" for="comp-tbo-hours">
-                                        <span class="pf-v5-c-form__label-text">TBO Hours</span>
-                                    </label>
-                                    <div class="pf-v5-c-form__group-control">
-                                        <input id="comp-tbo-hours" class="pf-v5-c-form-control" type="number" min="0" x-model="componentForm.tbo_hours">
+                            <div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div class="pf-v5-c-form__group">
+                                        <label class="pf-v5-c-form__label" for="comp-tbo-hours">
+                                            <span class="pf-v5-c-form__label-text">TBO Hours</span>
+                                        </label>
+                                        <div class="pf-v5-c-form__group-control">
+                                            <input id="comp-tbo-hours" class="pf-v5-c-form-control" type="number" min="0" x-model="componentForm.tbo_hours">
+                                        </div>
+                                    </div>
+                                    <div class="pf-v5-c-form__group">
+                                        <label class="pf-v5-c-form__label" for="comp-tbo-days">
+                                            <span class="pf-v5-c-form__label-text">TBO Days</span>
+                                        </label>
+                                        <div class="pf-v5-c-form__group-control">
+                                            <input id="comp-tbo-days" class="pf-v5-c-form-control" type="number" min="0" x-model="componentForm.tbo_days">
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="pf-v5-c-form__group">
-                                    <label class="pf-v5-c-form__label" for="comp-tbo-days">
-                                        <span class="pf-v5-c-form__label-text">TBO Days</span>
+                                <div style="margin-top: 0.75rem;">
+                                    <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;">
+                                        <input type="checkbox" x-model="componentForm.on_condition" style="margin-top: 0.2rem; flex-shrink: 0;">
+                                        <span>
+                                            <span style="font-weight: 500;">Maintained On-Condition</span>
+                                            <span style="display: block; font-size: 0.85em; color: var(--pf-v5-global--Color--200);">
+                                                Enables RCM/on-condition maintenance mode. Over-TBO hours are shown in blue/green rather than red/orange.
+                                            </span>
+                                        </span>
                                     </label>
-                                    <div class="pf-v5-c-form__group-control">
-                                        <input id="comp-tbo-days" class="pf-v5-c-form-control" type="number" min="0" x-model="componentForm.tbo_days">
-                                    </div>
                                 </div>
                             </div>
                         </template>

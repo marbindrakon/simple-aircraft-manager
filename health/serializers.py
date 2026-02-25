@@ -65,6 +65,7 @@ class ComponentSerializer(serializers.HyperlinkedModelSerializer):
                 'replacement_hours',
                 'replacement_days',
                 'tbo_critical',
+                'on_condition',
                 'inspection_critical',
                 'replacement_critical',
                 'components',
@@ -431,6 +432,7 @@ class ComponentCreateUpdateSerializer(serializers.ModelSerializer):
             'replacement_hours',
             'replacement_days',
             'tbo_critical',
+            'on_condition',
             'inspection_critical',
             'replacement_critical',
         ]

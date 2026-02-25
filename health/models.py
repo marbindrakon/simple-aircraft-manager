@@ -80,6 +80,7 @@ class Component(models.Model):
     replacement_hours = models.IntegerField(blank=True, null=True)
     replacement_days = models.IntegerField(blank=True, null=True)
     tbo_critical = models.BooleanField(default=True)
+    on_condition = models.BooleanField(default=False)
     inspection_critical = models.BooleanField(default=True)
     replacement_critical = models.BooleanField(default=False)
 

@@ -653,6 +653,22 @@
     font-weight: 500;
 }
 
+/* On-condition TBO: inverted/positive coloring (blue approaching TBO, teal at TBO, green past 150%) */
+.hours-on-condition {
+    color: var(--pf-v5-global--info-color--100);
+    font-weight: 500;
+}
+
+.hours-on-condition-over {
+    color: #009596;
+    font-weight: 600;
+}
+
+.hours-on-condition-extended {
+    color: var(--pf-v5-global--success-color--100);
+    font-weight: 600;
+}
+
 /* ========================================
    Theme Toggle
    ======================================== */
@@ -1026,6 +1042,18 @@ html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--pa
     .component-progress-fill.hours-critical,
     .component-progress-fill.hours-overdue {
         background-color: var(--pf-v5-global--danger-color--100, #c9190b);
+    }
+
+    .component-progress-fill.hours-on-condition {
+        background-color: var(--pf-v5-global--info-color--100, #06c);
+    }
+
+    .component-progress-fill.hours-on-condition-over {
+        background-color: #009596;
+    }
+
+    .component-progress-fill.hours-on-condition-extended {
+        background-color: var(--pf-v5-global--success-color--100, #3e8635);
     }
 
     .component-fraction-sublabel {

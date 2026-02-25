@@ -66,12 +66,54 @@ Adding a Component
      this counter reaches the interval.
    - **TBO Critical** -- For parts with a Time Between Overhaul limit (engines,
      propellers). Set the **TBO Hours** and current **Hours Since Overhaul**.
+     When TBO Tracking is enabled, an optional **Maintained On-Condition**
+     checkbox appears (see below).
    - **Inspection Critical** -- For parts requiring periodic inspections. Tracked
      via the :doc:`inspections` system.
 
 5. Click **Save**.
 
 .. TODO: Screenshot of the Add Component modal with tracking options visible
+
+On-Condition (RCM) Maintenance
+-------------------------------
+
+For complex components such as engines and propellers, many operators follow
+**Reliability-Centered Maintenance (RCM)** or **on-condition** philosophy:
+the risk of a maintenance-induced failure around an overhaul event can exceed
+the risk of simply continuing the component in service past its nominal TBO,
+provided the component is monitored and shows no signs of deterioration.
+
+When **TBO Tracking** is enabled on a component, you can check
+**Maintained On-Condition** to reflect this operating decision.
+
+**Effect on the UI:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Condition
+     - Color shown
+   * - Under 90 % of TBO
+     - Normal (no highlight)
+   * - 90–100 % of TBO
+     - Blue — approaching TBO reference point
+   * - 100–150 % of TBO
+     - Teal — operating past TBO on condition
+   * - Over 150 % of TBO
+     - Green — running well past TBO on condition
+
+The component badge (IN-USE) changes from the normal red/orange warning to
+**blue** once the component passes TBO, and the **On-Condition** label appears
+in the component detail panel.
+
+.. note::
+
+   On-Condition mode only suppresses TBO-based color warnings. If the
+   component also has a **Service Interval** (Replacement Critical) configured,
+   those service-interval warnings continue to use the standard red/orange
+   alert colors regardless of this setting.
 
 Resetting Service
 -----------------

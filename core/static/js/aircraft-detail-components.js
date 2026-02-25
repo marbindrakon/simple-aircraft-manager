@@ -41,6 +41,7 @@ function componentsMixin() {
             replacement_hours: '',
             replacement_days: '',
             tbo_critical: true,
+            on_condition: false,
             inspection_critical: true,
             replacement_critical: false,
         },
@@ -99,6 +100,31 @@ function componentsMixin() {
         },
 
         getHoursRemainingClass(component) {
+            // On-condition: positive color scheme (blue approaching TBO, green past TBO).
+            // Only applies when TBO is the primary tracked interval (not service replacement).
+            const useOnCondition = component.on_condition && component.tbo_critical &&
+                !(component.replacement_critical &&
+                    (component.replacement_hours || component.replacement_days));
+            if (useOnCondition) {
+                if (component.tbo_hours) {
+                    const ratio = (component.hours_since_overhaul || 0) / component.tbo_hours;
+                    if (ratio >= 1.5) return 'hours-on-condition-extended'; // > 150% TBO: green
+                    if (ratio >= 1.0) return 'hours-on-condition-over';     // 100–150% TBO: teal
+                    if (ratio >= 0.9) return 'hours-on-condition';          // 90–100% TBO: blue
+                    return '';
+                }
+                if (component.tbo_days) {
+                    const calDays = this.getCalendarDaysRemaining(component);
+                    if (calDays !== null) {
+                        const ratio = (component.tbo_days - calDays) / component.tbo_days;
+                        if (ratio >= 1.5) return 'hours-on-condition-extended';
+                        if (ratio >= 1.0) return 'hours-on-condition-over';
+                        if (ratio >= 0.9) return 'hours-on-condition';
+                    }
+                }
+                return '';
+            }
+            // Standard alert coloring
             const remaining = this.calculateHoursRemaining(component);
             if (remaining !== 'N/A') {
                 const hours = parseFloat(remaining);
@@ -171,6 +197,24 @@ function componentsMixin() {
             const now = new Date();
             now.setHours(0, 0, 0, 0);
             return Math.round((due - now) / (1000 * 60 * 60 * 24));
+        },
+
+        // CSS class for the "Calendar Remaining" value in the expanded detail panel.
+        // On-condition mode uses a flat informational blue when past TBO (no gradient —
+        // calendar time is a secondary indicator and we don't want to reward over-TBO
+        // operation the way the hours gradient does).
+        getCalendarRemainingClass(component) {
+            const calDays = this.getCalendarDaysRemaining(component);
+            if (calDays === null) return '';
+            const useOnCondition = component.on_condition && component.tbo_critical &&
+                !(component.replacement_critical && component.replacement_days);
+            if (useOnCondition && component.tbo_days && calDays <= 0) {
+                return 'hours-on-condition';
+            }
+            if (calDays <= 0) return 'hours-overdue';
+            if (calDays < 30) return 'hours-critical';
+            if (calDays < 90) return 'hours-warning';
+            return '';
         },
 
         // Formats a signed number of days as a human-readable duration string.
@@ -284,6 +328,7 @@ function componentsMixin() {
                 replacement_hours: '',
                 replacement_days: '',
                 tbo_critical: true,
+                on_condition: false,
                 inspection_critical: true,
                 replacement_critical: false,
             };
@@ -313,6 +358,7 @@ function componentsMixin() {
                 replacement_hours: component.replacement_hours || '',
                 replacement_days: component.replacement_days || '',
                 tbo_critical: component.tbo_critical ?? true,
+                on_condition: component.on_condition ?? false,
                 inspection_critical: component.inspection_critical ?? true,
                 replacement_critical: component.replacement_critical ?? false,
             };
@@ -342,6 +388,7 @@ function componentsMixin() {
                     hours_in_service: parseFloat(this.componentForm.hours_in_service) || 0,
                     hours_since_overhaul: parseFloat(this.componentForm.hours_since_overhaul) || 0,
                     tbo_critical: this.componentForm.tbo_critical,
+                    on_condition: this.componentForm.on_condition,
                     inspection_critical: this.componentForm.inspection_critical,
                     replacement_critical: this.componentForm.replacement_critical,
                 };
@@ -540,6 +587,11 @@ function componentsMixin() {
 
         getStatusClass(component) {
             if (component.status === 'IN-USE') {
+                // On-condition: suppress red/orange warnings; blue when at/past TBO
+                if (component.on_condition && component.tbo_critical && component.tbo_hours) {
+                    const ratio = (component.hours_since_overhaul || 0) / component.tbo_hours;
+                    return ratio >= 1.0 ? 'pf-m-blue' : 'pf-m-green';
+                }
                 const hoursToTBO = this.calculateHoursToTBO(component);
                 if (hoursToTBO !== 'N/A') {
                     const hours = parseFloat(hoursToTBO);
