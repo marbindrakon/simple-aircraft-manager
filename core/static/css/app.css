@@ -369,6 +369,14 @@
     border-left: 4px solid var(--pf-v5-global--warning-color--100) !important;
 }
 
+.card-border-blue {
+    border-left: 4px solid var(--pf-v5-global--primary-color--100) !important;
+}
+
+.card-border-grey {
+    border-left: 4px solid var(--pf-v5-global--BorderColor--100) !important;
+}
+
 /* Airworthiness Badge */
 .airworthiness-badge {
     display: inline-flex;
@@ -511,6 +519,11 @@
 
 .squawk-card .pf-v5-c-card__actions .pf-m-success:hover {
     color: var(--pf-v5-global--success-color--100);
+}
+
+.squawk-resolve-btn {
+    background-color: var(--pf-v5-global--success-color--100) !important;
+    border-color: var(--pf-v5-global--success-color--100) !important;
 }
 
 /* Breadcrumb styling */
