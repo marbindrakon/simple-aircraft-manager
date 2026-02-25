@@ -1847,9 +1847,4 @@ html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--pa
         flex-wrap: wrap;
         gap: 0.5rem;
     }
-
-    .aircraft-switcher__menu {
-        right: 0;
-        left: auto;
-    }
 }
