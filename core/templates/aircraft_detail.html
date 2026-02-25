@@ -477,10 +477,33 @@
                                      style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
                             </td>
                             <td data-label="Remaining" :class="getHoursRemainingClass(component)">
-                                <div x-text="getHoursRemainingDisplay(component)"></div>
-                                <div x-show="getRemainingLabel(component)"
-                                     x-text="getRemainingLabel(component)"
-                                     style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
+                                <!-- Desktop: hours remaining + label -->
+                                <div class="component-remaining-desktop">
+                                    <div x-text="getHoursRemainingDisplay(component)"></div>
+                                    <div x-show="getRemainingLabel(component)"
+                                         x-text="getRemainingLabel(component)"
+                                         style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
+                                </div>
+                                <!-- Mobile: fraction + progress bar (hidden on desktop via CSS) -->
+                                <div class="component-remaining-mobile">
+                                    <template x-if="getIntervalFraction(component)">
+                                        <div>
+                                            <div class="component-fraction"
+                                                 x-text="getFractionText(component)"></div>
+                                            <div class="component-progress-track">
+                                                <div class="component-progress-fill"
+                                                     :class="getHoursRemainingClass(component)"
+                                                     :style="'width: ' + getProgressPercent(component) + '%;'"></div>
+                                            </div>
+                                            <div x-show="getRemainingLabel(component)"
+                                                 x-text="getRemainingLabel(component)"
+                                                 class="component-fraction-sublabel"></div>
+                                        </div>
+                                    </template>
+                                    <template x-if="!getIntervalFraction(component)">
+                                        <div x-text="getHoursRemainingDisplay(component)"></div>
+                                    </template>
+                                </div>
                             </td>
                             <td data-label="Status">
                                 <span class="pf-v5-c-label"

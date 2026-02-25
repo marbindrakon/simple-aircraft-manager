@@ -923,6 +923,52 @@ html.pf-v5-theme-dark .loading-spinner {
     }
 }
 
+/* ---- Component card: desktop/mobile remaining display toggle ------ */
+
+/* Desktop: show classic "remaining" cell, hide mobile fraction */
+.component-remaining-mobile { display: none; }
+
+@media (max-width: 768px) {
+    /* Mobile: hide classic remaining, show fraction + progress bar */
+    .component-remaining-desktop { display: none; }
+    .component-remaining-mobile  { display: block; }
+
+    .component-fraction {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.35rem;
+        /* color inherits from .hours-* on the parent <td> */
+    }
+
+    .component-progress-track {
+        height: 6px;
+        background: var(--pf-v5-global--palette--black-400, #6a6e73);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 0.3rem;
+    }
+
+    .component-progress-fill {
+        height: 100%;
+        border-radius: 3px;
+        background-color: var(--pf-v5-global--success-color--100, #3e8635);
+    }
+
+    .component-progress-fill.hours-warning {
+        background-color: var(--pf-v5-global--warning-color--100, #f0ab00);
+    }
+
+    .component-progress-fill.hours-critical,
+    .component-progress-fill.hours-overdue {
+        background-color: var(--pf-v5-global--danger-color--100, #c9190b);
+    }
+
+    .component-fraction-sublabel {
+        font-size: 0.78rem;
+        opacity: 0.75;
+    }
+}
+
 /* ---- ADs & Bulletins tab: card layout on mobile ------------------- */
 @media (max-width: 768px) {
     .ads-table thead {
