@@ -1005,7 +1005,10 @@
                                     <td data-label="Type">
                                         <span class="pf-v5-c-label" :class="getBulletinTypeClass(ad.bulletin_type)" x-text="getBulletinTypeLabel(ad.bulletin_type)"></span>
                                     </td>
-                                    <td data-label="Name" x-text="ad.name"></td>
+                                    <td data-label="Name">
+                                        <span x-text="ad.name"></span>
+                                        <div class="ad-name-subtitle" x-show="ad.short_description" x-text="ad.short_description"></div>
+                                    </td>
                                     <td data-label="Description">
                                         <span x-text="ad.short_description"></span>
                                         <template x-if="ad.compliance_type === 'conditional' && ad.trigger_condition">
@@ -1036,13 +1039,13 @@
                                     <td data-label="Last Complied" x-text="ad.latest_compliance ? formatDate(ad.latest_compliance.date_complied) : '-'"></td>
                                     <td data-label="Next Due">
                                         <template x-if="ad.latest_compliance && ad.latest_compliance.permanent">
-                                            <span>Permanent</span>
+                                            <span class="ad-next-due-na">N/A</span>
                                         </template>
                                         <template x-if="ad.latest_compliance && !ad.latest_compliance.permanent && ad.next_due_date_display">
-                                            <span x-text="'End of ' + ad.next_due_date_display"></span>
+                                            <span><span class="consumable-field-label">Next due: </span><span x-text="'End of ' + ad.next_due_date_display"></span></span>
                                         </template>
                                         <template x-if="ad.latest_compliance && !ad.latest_compliance.permanent && !ad.next_due_date_display && ad.latest_compliance.next_due_at_time > 0">
-                                            <span x-text="formatHours(ad.latest_compliance.next_due_at_time) + ' hrs'"></span>
+                                            <span><span class="consumable-field-label">Next due: </span><span x-text="formatHours(ad.latest_compliance.next_due_at_time) + ' hrs'"></span></span>
                                         </template>
                                         <template x-if="!ad.latest_compliance || (!ad.latest_compliance.permanent && !ad.next_due_date_display && (!ad.latest_compliance.next_due_at_time || ad.latest_compliance.next_due_at_time == 0))">
                                             <span>-</span>
@@ -1051,13 +1054,13 @@
                                     <td data-label="Actions">
                                         <div style="display: flex; gap: 0.25rem; align-items: center;">
                                             <!-- Primary: Record Compliance -->
-                                            <button class="pf-v5-c-button pf-m-primary squawk-resolve-btn" x-show="isOwner"
+                                            <button class="pf-v5-c-button pf-m-primary pf-m-small squawk-resolve-btn" x-show="isOwner"
                                                     @click="openComplianceModal(ad)"
                                                     title="Record Compliance">
                                                 <i class="fas fa-check"></i> Record
                                             </button>
                                             <!-- Secondary: History -->
-                                            <button class="pf-v5-c-button pf-m-secondary" x-show="isMaintenance"
+                                            <button class="pf-v5-c-button pf-m-secondary pf-m-small" x-show="isMaintenance"
                                                     @click="openComplianceHistory(ad)"
                                                     title="View Compliance History">
                                                 <i class="fas fa-history"></i> History
@@ -1152,7 +1155,10 @@
                                     <td data-label="Type">
                                         <span class="pf-v5-c-label" :class="getBulletinTypeClass(ad.bulletin_type)" x-text="getBulletinTypeLabel(ad.bulletin_type)"></span>
                                     </td>
-                                    <td data-label="Name" x-text="ad.name"></td>
+                                    <td data-label="Name">
+                                        <span x-text="ad.name"></span>
+                                        <div class="ad-name-subtitle" x-show="ad.short_description" x-text="ad.short_description"></div>
+                                    </td>
                                     <td data-label="Description">
                                         <span x-text="ad.short_description"></span>
                                         <template x-if="ad.compliance_type === 'conditional' && ad.trigger_condition">
@@ -1183,13 +1189,13 @@
                                     <td data-label="Last Complied" x-text="ad.latest_compliance ? formatDate(ad.latest_compliance.date_complied) : '-'"></td>
                                     <td data-label="Next Due">
                                         <template x-if="ad.latest_compliance && ad.latest_compliance.permanent">
-                                            <span>Permanent</span>
+                                            <span class="ad-next-due-na">N/A</span>
                                         </template>
                                         <template x-if="ad.latest_compliance && !ad.latest_compliance.permanent && ad.next_due_date_display">
-                                            <span x-text="'End of ' + ad.next_due_date_display"></span>
+                                            <span><span class="consumable-field-label">Next due: </span><span x-text="'End of ' + ad.next_due_date_display"></span></span>
                                         </template>
                                         <template x-if="ad.latest_compliance && !ad.latest_compliance.permanent && !ad.next_due_date_display && ad.latest_compliance.next_due_at_time > 0">
-                                            <span x-text="formatHours(ad.latest_compliance.next_due_at_time) + ' hrs'"></span>
+                                            <span><span class="consumable-field-label">Next due: </span><span x-text="formatHours(ad.latest_compliance.next_due_at_time) + ' hrs'"></span></span>
                                         </template>
                                         <template x-if="!ad.latest_compliance || (!ad.latest_compliance.permanent && !ad.next_due_date_display && (!ad.latest_compliance.next_due_at_time || ad.latest_compliance.next_due_at_time == 0))">
                                             <span>-</span>
@@ -1198,13 +1204,13 @@
                                     <td data-label="Actions">
                                         <div style="display: flex; gap: 0.25rem; align-items: center;">
                                             <!-- Primary: Record Compliance -->
-                                            <button class="pf-v5-c-button pf-m-primary squawk-resolve-btn" x-show="isOwner"
+                                            <button class="pf-v5-c-button pf-m-primary pf-m-small squawk-resolve-btn" x-show="isOwner"
                                                     @click="openComplianceModal(ad)"
                                                     title="Record Compliance">
                                                 <i class="fas fa-check"></i> Record
                                             </button>
                                             <!-- Secondary: History -->
-                                            <button class="pf-v5-c-button pf-m-secondary" x-show="isMaintenance"
+                                            <button class="pf-v5-c-button pf-m-secondary pf-m-small" x-show="isMaintenance"
                                                     @click="openComplianceHistory(ad)"
                                                     title="View Compliance History">
                                                 <i class="fas fa-history"></i> History
@@ -1357,13 +1363,13 @@
                                     <td data-label="Actions">
                                         <div style="display: flex; gap: 0.25rem; align-items: center;">
                                             <!-- Primary: Record Inspection -->
-                                            <button class="pf-v5-c-button pf-m-primary squawk-resolve-btn" x-show="isOwner"
+                                            <button class="pf-v5-c-button pf-m-primary pf-m-small squawk-resolve-btn" x-show="isOwner"
                                                     @click="openInspectionModal(insp)"
                                                     title="Record Inspection">
                                                 <i class="fas fa-check"></i> Record
                                             </button>
                                             <!-- Secondary: History -->
-                                            <button class="pf-v5-c-button pf-m-secondary" x-show="isMaintenance"
+                                            <button class="pf-v5-c-button pf-m-secondary pf-m-small" x-show="isMaintenance"
                                                     @click="openInspectionHistory(insp)"
                                                     title="View Inspection History">
                                                 <i class="fas fa-history"></i> History

@@ -704,6 +704,12 @@ html.pf-v5-theme-dark .pf-v5-c-label.pf-m-purple { color: var(--pf-v5-global--pa
 html.pf-v5-theme-dark .pf-v5-c-label.pf-m-cyan   { color: var(--pf-v5-global--custom-color--200); }
 html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--palette--gold-300); }
 
+/* Plain danger buttons (icon-only delete/remove actions) — PF5's combined
+   pf-m-plain + pf-m-danger selector is unreliable across versions; set explicitly. */
+.pf-v5-c-button.pf-m-plain.pf-m-danger {
+    color: var(--pf-v5-global--danger-color--100);
+}
+
 /* Logbook picker dropdown results */
 .logbook-picker-result:hover {
     background: var(--pf-v5-global--BackgroundColor--200);
@@ -712,6 +718,16 @@ html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--pa
 /* Bulletin search result rows */
 .bulletin-search-result:hover {
     background: var(--pf-v5-global--BackgroundColor--200);
+}
+
+/* AD name subtitle (short_description) — hidden on desktop where Description column exists */
+.ad-name-subtitle {
+    display: none;
+}
+
+/* AD Next Due N/A — shown on desktop (column needs a value), hidden on mobile (status badge suffices) */
+.ad-next-due-na {
+    color: var(--pf-v5-global--Color--200);
 }
 
 /* ========================================
@@ -1028,6 +1044,24 @@ html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--pa
     .ad-row-group td[data-label="Name"] {
         grid-column: 1; grid-row: 1;
         display: block; padding: 0; font-weight: 600;
+    }
+
+    /* N/A for permanent compliance — hidden on mobile, status badge already communicates this */
+    .ad-row-group .ad-next-due-na {
+        display: none;
+    }
+
+    /* Subtitle: short_description shown below the AD number on mobile */
+    .ad-row-group .ad-name-subtitle {
+        display: block;
+        font-weight: 400;
+        font-size: 0.8125rem;
+        color: var(--pf-v5-global--Color--200);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 220px;
+        margin-top: 0.125rem;
     }
 
     /* Type badge: AD / SB / SIL etc. */
