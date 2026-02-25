@@ -369,6 +369,14 @@
     border-left: 4px solid var(--pf-v5-global--warning-color--100) !important;
 }
 
+.card-border-blue {
+    border-left: 4px solid var(--pf-v5-global--primary-color--100) !important;
+}
+
+.card-border-grey {
+    border-left: 4px solid var(--pf-v5-global--BorderColor--100) !important;
+}
+
 /* Airworthiness Badge */
 .airworthiness-badge {
     display: inline-flex;
@@ -511,6 +519,11 @@
 
 .squawk-card .pf-v5-c-card__actions .pf-m-success:hover {
     color: var(--pf-v5-global--success-color--100);
+}
+
+.squawk-resolve-btn {
+    background-color: var(--pf-v5-global--success-color--100) !important;
+    border-color: var(--pf-v5-global--success-color--100) !important;
 }
 
 /* Breadcrumb styling */
@@ -679,6 +692,24 @@ html.pf-v5-theme-dark .loading-spinner {
     border-left-color: var(--pf-v5-global--primary-color--100);
 }
 
+/* Dark mode: PF5 collapses all label backgrounds to one dark shade, relying on
+   the inner __content span for text color. Since this app uses x-text directly
+   on the label element (no __content span), we restore color via the element's
+   own color property. */
+html.pf-v5-theme-dark .pf-v5-c-label.pf-m-green  { color: var(--pf-v5-global--success-color--100); }
+html.pf-v5-theme-dark .pf-v5-c-label.pf-m-red    { color: var(--pf-v5-global--danger-color--100); }
+html.pf-v5-theme-dark .pf-v5-c-label.pf-m-orange { color: var(--pf-v5-global--warning-color--100); }
+html.pf-v5-theme-dark .pf-v5-c-label.pf-m-blue   { color: var(--pf-v5-global--primary-color--100); }
+html.pf-v5-theme-dark .pf-v5-c-label.pf-m-purple { color: var(--pf-v5-global--palette--purple-300); }
+html.pf-v5-theme-dark .pf-v5-c-label.pf-m-cyan   { color: var(--pf-v5-global--custom-color--200); }
+html.pf-v5-theme-dark .pf-v5-c-label.pf-m-gold   { color: var(--pf-v5-global--palette--gold-300); }
+
+/* Plain danger buttons (icon-only delete/remove actions) — PF5's combined
+   pf-m-plain + pf-m-danger selector is unreliable across versions; set explicitly. */
+.pf-v5-c-button.pf-m-plain.pf-m-danger {
+    color: var(--pf-v5-global--danger-color--100);
+}
+
 /* Logbook picker dropdown results */
 .logbook-picker-result:hover {
     background: var(--pf-v5-global--BackgroundColor--200);
@@ -687,6 +718,846 @@ html.pf-v5-theme-dark .loading-spinner {
 /* Bulletin search result rows */
 .bulletin-search-result:hover {
     background: var(--pf-v5-global--BackgroundColor--200);
+}
+
+/* AD name subtitle (short_description) — hidden on desktop where Description column exists */
+.ad-name-subtitle {
+    display: none;
+}
+
+/* AD Next Due N/A — shown on desktop (column needs a value), hidden on mobile (status badge suffices) */
+.ad-next-due-na {
+    color: var(--pf-v5-global--Color--200);
+}
+
+/* ========================================
+   Mobile Responsive
+   ======================================== */
+
+/* Tab section header helper — use on flex rows containing a heading + action button */
+.tab-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+/* Hamburger button: hidden on desktop, shown on mobile */
+#nav-mobile-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.25rem;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+/* ---- Tab bar: horizontally scrollable, no visible scrollbar --------- */
+.pf-v5-c-tabs__list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    /* prevent active tab underline from clipping */
+    padding-bottom: 2px;
+}
+
+.pf-v5-c-tabs__list::-webkit-scrollbar {
+    display: none;
+}
+
+.pf-v5-c-tabs__item {
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    /* ---- Navbar: hamburger + collapsible nav ----------------------- */
+    #nav-mobile-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .pf-v5-c-page__header {
+        flex-wrap: wrap;
+    }
+
+    .pf-v5-c-page__header-brand {
+        flex: 1;
+    }
+
+    /* Truncate long brand name on very narrow screens */
+    .pf-v5-c-page__header-brand-link span {
+        font-size: 1rem !important;
+    }
+
+    /* Nav hidden by default; revealed by JS toggle */
+    .pf-v5-c-page__header-nav {
+        display: none;
+        width: 100%;
+        order: 10;
+        background: #151515;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .pf-v5-c-page__header-nav.nav-open {
+        display: block;
+    }
+
+    /* Stack nav links vertically when open */
+    .pf-v5-c-page__header-nav .pf-v5-c-nav__list {
+        flex-direction: column;
+        padding: 0.25rem 0;
+    }
+
+    .pf-v5-c-page__header-nav .pf-v5-c-nav__link {
+        padding: 0.85rem 1.5rem;
+        display: block;
+        border-inline-start: none;
+    }
+
+    /* ---- Tab section headers: wrap when space is tight ------------ */
+    .tab-section-header {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    /* ---- Dashboard header actions: wrap buttons ------------------- */
+    .dashboard-header-actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+
+    /* ---- Component expand detail grids: single column ------------- */
+    .component-detail-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+
+    /* ---- Touch targets: minimum 44px for icon buttons ------------- */
+    .pf-v5-c-button.pf-m-plain {
+        min-width: 2.75rem;
+        min-height: 2.75rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* ---- Alert container: full-width banner at top ---------------- */
+    .alert-container {
+        top: 0;
+        right: 0;
+        left: 0;
+        width: 100%;
+        padding: 0;
+    }
+
+    .alert-container .pf-v5-c-alert {
+        border-radius: 0;
+    }
+}
+
+/* ---- Components tab: card layout on mobile ------------------------ */
+/*
+ * At ≤768px each <tbody class="component-row-group"> becomes a card.
+ * The main <tr> is a 2-column grid: content (left) | toggle (right).
+ * Secondary columns (Mfr/Model, In Service, Since OH/SVC) are hidden —
+ * they're already visible in the expandable detail row.
+ * pf-m-grid-md is removed from the table; we own the mobile layout.
+ */
+@media (max-width: 768px) {
+    .components-table thead {
+        display: none;
+    }
+
+    /* Each component's <tbody> becomes a bordered card */
+    .component-row-group {
+        display: block;
+        border: 1px solid var(--pf-v5-global--BorderColor--100);
+        border-radius: var(--pf-v5-global--BorderRadius--sm);
+        margin-bottom: 0.75rem;
+        overflow: hidden;
+    }
+
+    /* Main row: compact card grid */
+    .component-row-group tr:not(.pf-v5-c-table__expandable-row) {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        padding: 0.75rem;
+        gap: 0.3rem 0.5rem;
+    }
+
+    /* Toggle chevron: right column, vertically centered */
+    .component-row-group td.pf-v5-c-table__toggle {
+        grid-column: 2;
+        grid-row: 1 / 4;
+        display: flex;
+        align-items: center;
+        padding: 0;
+    }
+
+    /* Type: component name + install location + service badges */
+    .component-row-group td[data-label="Type"] {
+        grid-column: 1;
+        grid-row: 1;
+        display: block;
+        padding: 0;
+        font-weight: 600;
+    }
+
+    /* Status badge */
+    .component-row-group td[data-label="Status"] {
+        grid-column: 1;
+        grid-row: 2;
+        display: block;
+        padding: 0;
+    }
+
+    /* Hours/days remaining — most actionable info */
+    .component-row-group td[data-label="Remaining"] {
+        grid-column: 1;
+        grid-row: 3;
+        display: block;
+        padding: 0;
+        font-size: 0.875rem;
+    }
+
+    /* Secondary columns hidden on mobile — detail in the expand row */
+    .component-row-group td[data-label="Manufacturer/Model"],
+    .component-row-group td[data-label="In Service"],
+    .component-row-group td[data-label="Since OH/SVC"] {
+        display: none;
+    }
+
+    /* Actions: footer strip below the main content */
+    .component-row-group td[data-label="Actions"] {
+        grid-column: 1 / span 2;
+        grid-row: 4;
+        display: block;
+        padding: 0.4rem 0 0 0;
+        margin-top: 0.25rem;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+    }
+
+    /* Expandable detail row — display managed by Alpine x-show,
+       so we set display: block here WITHOUT !important so that
+       Alpine's inline display: none can still override it */
+    .component-row-group tr.pf-v5-c-table__expandable-row {
+        display: block;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+        background: var(--pf-v5-global--BackgroundColor--200);
+    }
+
+    /* First td in expand row is the empty toggle placeholder — hide it */
+    .component-row-group tr.pf-v5-c-table__expandable-row > td:first-child {
+        display: none;
+    }
+
+    /* Second td holds the actual expand content */
+    .component-row-group tr.pf-v5-c-table__expandable-row > td:last-child {
+        display: block;
+        padding: 0.75rem !important;
+    }
+}
+
+/* ---- Component card: desktop/mobile remaining display toggle ------ */
+
+/* Desktop: show classic "remaining" cell, hide mobile fraction */
+.component-remaining-mobile { display: none; }
+
+@media (max-width: 768px) {
+    /* Mobile: hide classic remaining, show fraction + progress bar */
+    .component-remaining-desktop { display: none; }
+    .component-remaining-mobile  { display: block; }
+
+    .component-fraction {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.35rem;
+        /* color inherits from .hours-* on the parent <td> */
+    }
+
+    .component-progress-track {
+        height: 6px;
+        background: var(--pf-v5-global--palette--black-400, #6a6e73);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 0.3rem;
+    }
+
+    .component-progress-fill {
+        height: 100%;
+        border-radius: 3px;
+        background-color: var(--pf-v5-global--success-color--100, #3e8635);
+    }
+
+    .component-progress-fill.hours-warning {
+        background-color: var(--pf-v5-global--warning-color--100, #f0ab00);
+    }
+
+    .component-progress-fill.hours-critical,
+    .component-progress-fill.hours-overdue {
+        background-color: var(--pf-v5-global--danger-color--100, #c9190b);
+    }
+
+    .component-fraction-sublabel {
+        font-size: 0.78rem;
+        opacity: 0.75;
+    }
+}
+
+/* ---- ADs & Bulletins tab: card layout on mobile ------------------- */
+@media (max-width: 768px) {
+    .ads-table thead {
+        display: none;
+    }
+
+    /* Each <tbody class="ad-row-group"> = one AD entry card */
+    .ad-row-group {
+        display: block;
+        border: 1px solid var(--pf-v5-global--BorderColor--100);
+        border-radius: var(--pf-v5-global--BorderRadius--sm);
+        margin-bottom: 0.75rem;
+        /* overflow:hidden omitted — would clip absolutely-positioned action overflow menus */
+    }
+
+    .ad-row-group tr:not(.pf-v5-c-table__expandable-row) {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        padding: 0.75rem;
+        gap: 0.3rem 0.5rem;
+    }
+
+    .ad-row-group td.pf-v5-c-table__toggle {
+        grid-column: 2;
+        grid-row: 1 / span 4;
+        display: flex;
+        align-items: flex-start;
+        padding: 0;
+    }
+
+    /* Name: AD number / bulletin ID — primary identifier */
+    .ad-row-group td[data-label="Name"] {
+        grid-column: 1; grid-row: 1;
+        display: block; padding: 0; font-weight: 600;
+    }
+
+    /* N/A for permanent compliance — hidden on mobile, status badge already communicates this */
+    .ad-row-group .ad-next-due-na {
+        display: none;
+    }
+
+    /* Subtitle: short_description shown below the AD number on mobile */
+    .ad-row-group .ad-name-subtitle {
+        display: block;
+        font-weight: 400;
+        font-size: 0.8125rem;
+        color: var(--pf-v5-global--Color--200);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 220px;
+        margin-top: 0.125rem;
+    }
+
+    /* Type badge: AD / SB / SIL etc. */
+    .ad-row-group td[data-label="Type"] {
+        grid-column: 1; grid-row: 2;
+        display: block; padding: 0;
+    }
+
+    .ad-row-group td[data-label="Status"] {
+        grid-column: 1; grid-row: 3;
+        display: block; padding: 0;
+    }
+
+    .ad-row-group td[data-label="Next Due"] {
+        grid-column: 1; grid-row: 4;
+        display: block; padding: 0; font-size: 0.875rem;
+    }
+
+    /* Secondary — in expand detail */
+    .ad-row-group td[data-label="Description"],
+    .ad-row-group td[data-label="Recurring"],
+    .ad-row-group td[data-label="Last Complied"] {
+        display: none;
+    }
+
+    .ad-row-group td[data-label="Actions"] {
+        grid-column: 1 / span 2; grid-row: 5;
+        display: block; padding: 0.4rem 0 0 0;
+        margin-top: 0.25rem;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+    }
+
+    .ad-row-group tr.pf-v5-c-table__expandable-row {
+        display: block;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+        background: var(--pf-v5-global--BackgroundColor--200);
+        border-radius: 0 0 var(--pf-v5-global--BorderRadius--sm) var(--pf-v5-global--BorderRadius--sm);
+    }
+
+    .ad-row-group tr.pf-v5-c-table__expandable-row > td:first-child {
+        display: none;
+    }
+
+    .ad-row-group tr.pf-v5-c-table__expandable-row > td:last-child {
+        display: block;
+        padding: 0.75rem !important;
+    }
+}
+
+/* ---- Major Records tab: card layout on mobile --------------------- */
+@media (max-width: 768px) {
+    .major-records-table thead {
+        display: none;
+    }
+
+    /* Shared by both repairs and alterations tbody loops */
+    .major-record-row-group {
+        display: block;
+        border: 1px solid var(--pf-v5-global--BorderColor--100);
+        border-radius: var(--pf-v5-global--BorderRadius--sm);
+        margin-bottom: 0.75rem;
+        /* overflow:hidden omitted — would clip absolutely-positioned action overflow menus */
+    }
+
+    .major-record-row-group tr:not(.pf-v5-c-table__expandable-row) {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        padding: 0.75rem;
+        gap: 0.3rem 0.5rem;
+    }
+
+    .major-record-row-group td.pf-v5-c-table__toggle {
+        grid-column: 2;
+        grid-row: 1 / span 5;
+        display: flex;
+        align-items: flex-start;
+        padding: 0;
+    }
+
+    .major-record-row-group td[data-label="Title"] {
+        grid-column: 1; grid-row: 1;
+        display: block; padding: 0; font-weight: 600;
+    }
+
+    .major-record-row-group td[data-label="Date"] {
+        grid-column: 1; grid-row: 2;
+        display: block; padding: 0;
+        font-size: 0.875rem; color: var(--pf-v5-global--Color--200);
+    }
+
+    .major-record-row-group td[data-label="Component"] {
+        grid-column: 1; grid-row: 3;
+        display: block; padding: 0; font-size: 0.875rem;
+    }
+
+    /* Alterations only — silently ignored on repairs (no matching td) */
+    .major-record-row-group td[data-label="STC #"] {
+        grid-column: 1; grid-row: 4;
+        display: block; padding: 0; font-size: 0.875rem;
+    }
+
+    .major-record-row-group td[data-label="STC Holder"] {
+        grid-column: 1; grid-row: 5;
+        display: block; padding: 0;
+        font-size: 0.875rem; color: var(--pf-v5-global--Color--200);
+    }
+
+    .major-record-row-group td[data-label="Actions"] {
+        grid-column: 1 / span 2; grid-row: 6;
+        display: block; padding: 0.4rem 0 0 0;
+        margin-top: 0.25rem;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+    }
+
+    .major-record-row-group tr.pf-v5-c-table__expandable-row {
+        display: block;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+        background: var(--pf-v5-global--BackgroundColor--200);
+        border-radius: 0 0 var(--pf-v5-global--BorderRadius--sm) var(--pf-v5-global--BorderRadius--sm);
+    }
+
+    .major-record-row-group tr.pf-v5-c-table__expandable-row > td:first-child {
+        display: none;
+    }
+
+    .major-record-row-group tr.pf-v5-c-table__expandable-row > td:last-child {
+        display: block;
+        padding: 0.75rem !important;
+    }
+}
+
+/* ---- Oil & Fuel: inline field labels (hidden on desktop, visible on mobile) ---- */
+/*
+ * consumable-field-label spans sit before the value in each cell.
+ * On desktop the column headers provide context, so labels are hidden.
+ * On mobile the headers are hidden, so labels are revealed.
+ */
+.consumable-field-label {
+    display: none;
+}
+
+/* ---- Oil & Fuel tabs: card layout on mobile ----------------------- */
+/*
+ * Flat tables (no expandable rows) — each <tr> becomes its own card.
+ * 3-column grid: [main info left] [qty right] [action buttons far right]
+ * with Hours/Level After/Type/Notes stacking below.
+ */
+@media (max-width: 768px) {
+    .consumable-table thead {
+        display: none;
+    }
+
+    .consumable-table tbody {
+        display: block;
+    }
+
+    .consumable-table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        padding: 0.75rem;
+        gap: 0.35rem 0.75rem;
+        border: 1px solid var(--pf-v5-global--BorderColor--100);
+        border-radius: var(--pf-v5-global--BorderRadius--sm);
+        margin-bottom: 0.75rem;
+    }
+
+    /* Date: full-width top row, bold */
+    .consumable-table td[data-label="Date"] {
+        grid-column: 1 / span 2; grid-row: 1;
+        display: block; padding: 0; font-weight: 600;
+    }
+
+    /* Action buttons: right column, spanning top 3 rows, side by side */
+    .consumable-table td[data-label="Actions"] {
+        grid-column: 3; grid-row: 1 / span 3;
+        display: flex; flex-direction: row;
+        align-items: flex-start; justify-content: flex-start;
+        gap: 0.1rem; padding: 0;
+    }
+
+    /* Hours | Qty side by side */
+    .consumable-table td[data-label="Hours"] {
+        grid-column: 1; grid-row: 2;
+        display: block; padding: 0; font-size: 0.875rem;
+    }
+
+    /* Matches "Qty (qt)" and "Qty (gal)" */
+    .consumable-table td[data-label^="Qty"] {
+        grid-column: 2; grid-row: 2;
+        display: block; padding: 0; font-size: 0.875rem; font-weight: 600;
+    }
+
+    /* Level After | Type side by side */
+    .consumable-table td[data-label="Level After"] {
+        grid-column: 1; grid-row: 3;
+        display: block; padding: 0; font-size: 0.875rem;
+        color: var(--pf-v5-global--Color--200);
+    }
+
+    .consumable-table td[data-label="Type"] {
+        grid-column: 2; grid-row: 3;
+        display: block; padding: 0; font-size: 0.875rem;
+        color: var(--pf-v5-global--Color--200);
+    }
+
+    /* Notes: full width, only shown when non-empty */
+    .consumable-table td[data-label="Notes"] {
+        grid-column: 1 / span 2; grid-row: 4;
+        display: block; padding: 0; font-size: 0.875rem;
+        color: var(--pf-v5-global--Color--200);
+    }
+
+    /* Show inline field labels on mobile (desktop uses column headers) */
+    .consumable-field-label {
+        display: inline;
+        color: var(--pf-v5-global--Color--200);
+        font-size: 0.8em;
+        font-weight: 400;
+    }
+
+    /* Hide empty optional table cells on mobile; desktop shows blank for column alignment */
+    td.optional-empty {
+        display: none;
+    }
+
+    /* Hide empty optional fields on mobile (desktop keeps '-' for column alignment) */
+    .consumable-table td.consumable-empty-field {
+        display: none;
+    }
+}
+
+/* ---- Resolved Squawks (public view): card layout on mobile -------- */
+@media (max-width: 768px) {
+    .resolved-squawks-table thead {
+        display: none;
+    }
+
+    .resolved-squawks-table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        padding: 0.75rem;
+        gap: 0.3rem 0.5rem;
+        border: 1px solid var(--pf-v5-global--BorderColor--100);
+        border-radius: var(--pf-v5-global--BorderRadius--sm);
+        margin-bottom: 0.75rem;
+    }
+
+    /* Issue — full width, primary identifier */
+    .resolved-squawks-table td[data-label="Issue"] {
+        grid-column: 1; grid-row: 1;
+        display: block; padding: 0; font-weight: 600;
+    }
+
+    /* Priority badge — right column, aligns with Issue row */
+    .resolved-squawks-table td[data-label="Priority"] {
+        grid-column: 2; grid-row: 1;
+        display: block; padding: 0;
+    }
+
+    /* Component — full width, secondary */
+    .resolved-squawks-table td[data-label="Component"] {
+        grid-column: 1 / span 2; grid-row: 2;
+        display: block; padding: 0; font-size: 0.875rem;
+        color: var(--pf-v5-global--Color--200);
+    }
+
+    /* Date Reported — full width, small */
+    .resolved-squawks-table td[data-label="Date Reported"] {
+        grid-column: 1 / span 2; grid-row: 3;
+        display: block; padding: 0; font-size: 0.8rem;
+        color: var(--pf-v5-global--Color--200);
+    }
+}
+
+/* ---- AD Compliance History modal: card layout on mobile ----------- */
+@media (max-width: 768px) {
+    .compliance-history-table thead {
+        display: none;
+    }
+
+    .compliance-history-table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 0.75rem;
+        gap: 0.3rem 0.5rem;
+        border: 1px solid var(--pf-v5-global--BorderColor--100);
+        border-radius: var(--pf-v5-global--BorderRadius--sm);
+        margin-bottom: 0.75rem;
+    }
+
+    /* Date Complied — full width, bold */
+    .compliance-history-table td[data-label="Date Complied"] {
+        grid-column: 1 / span 2; grid-row: 1;
+        display: block; padding: 0; font-weight: 600;
+    }
+
+    /* Aircraft Hours — left */
+    .compliance-history-table td[data-label="Aircraft Hours"] {
+        grid-column: 1; grid-row: 2;
+        display: block; padding: 0; font-size: 0.875rem;
+    }
+
+    /* Compliance badge — right */
+    .compliance-history-table td[data-label="Compliance"] {
+        grid-column: 2; grid-row: 2;
+        display: block; padding: 0; font-size: 0.875rem;
+        text-align: right;
+    }
+
+    /* Next Due (hrs) — left */
+    .compliance-history-table td[data-label="Next Due (hrs)"] {
+        grid-column: 1; grid-row: 3;
+        display: block; padding: 0; font-size: 0.875rem;
+    }
+
+    /* Logbook Entry — right */
+    .compliance-history-table td[data-label="Logbook Entry"] {
+        grid-column: 2; grid-row: 3;
+        display: block; padding: 0; font-size: 0.875rem;
+        text-align: right;
+    }
+
+    /* Notes — full width */
+    .compliance-history-table td[data-label="Notes"] {
+        grid-column: 1 / span 2; grid-row: 4;
+        display: block; padding: 0; font-size: 0.875rem;
+        color: var(--pf-v5-global--Color--200);
+    }
+
+    /* Actions footer */
+    .compliance-history-table td[data-label="Actions"] {
+        grid-column: 1 / span 2; grid-row: 5;
+        display: block; padding: 0.4rem 0 0 0;
+        margin-top: 0.25rem;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+    }
+}
+
+/* ---- Inspections tab: card layout on mobile ----------------------- */
+@media (max-width: 768px) {
+    .inspections-table thead {
+        display: none;
+    }
+
+    .inspections-table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 0.75rem;
+        gap: 0.3rem 0.5rem;
+        border: 1px solid var(--pf-v5-global--BorderColor--100);
+        border-radius: var(--pf-v5-global--BorderRadius--sm);
+        margin-bottom: 0.75rem;
+    }
+
+    /* Name — primary identifier, full width */
+    .inspections-table td[data-label="Name"] {
+        grid-column: 1 / span 2; grid-row: 1;
+        display: block; padding: 0; font-weight: 600;
+    }
+
+    /* Status badge — left of row 2 */
+    .inspections-table td[data-label="Status"] {
+        grid-column: 1; grid-row: 2;
+        display: block; padding: 0;
+    }
+
+    /* Recurring — right of row 2 */
+    .inspections-table td[data-label="Recurring"] {
+        grid-column: 2; grid-row: 2;
+        display: block; padding: 0; font-size: 0.875rem;
+        color: var(--pf-v5-global--Color--200); text-align: right;
+    }
+
+    /* Last Completed — left of row 3 */
+    .inspections-table td[data-label="Last Completed"] {
+        grid-column: 1; grid-row: 3;
+        display: block; padding: 0; font-size: 0.875rem;
+    }
+
+    /* Next Due — right of row 3 */
+    .inspections-table td[data-label="Next Due"] {
+        grid-column: 2; grid-row: 3;
+        display: block; padding: 0; font-size: 0.875rem;
+        text-align: right;
+    }
+
+    /* Actions footer */
+    .inspections-table td[data-label="Actions"] {
+        grid-column: 1 / span 2; grid-row: 4;
+        display: block; padding: 0.4rem 0 0 0;
+        margin-top: 0.25rem;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+    }
+}
+
+/* ---- Inspection History modal: card layout on mobile -------------- */
+@media (max-width: 768px) {
+    .inspection-history-table thead {
+        display: none;
+    }
+
+    .inspection-history-table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 0.75rem;
+        gap: 0.3rem 0.5rem;
+        border: 1px solid var(--pf-v5-global--BorderColor--100);
+        border-radius: var(--pf-v5-global--BorderRadius--sm);
+        margin-bottom: 0.75rem;
+    }
+
+    /* Date — full width, bold */
+    .inspection-history-table td[data-label="Date"] {
+        grid-column: 1 / span 2; grid-row: 1;
+        display: block; padding: 0; font-weight: 600;
+    }
+
+    /* Aircraft Hours — left */
+    .inspection-history-table td[data-label="Aircraft Hours"] {
+        grid-column: 1; grid-row: 2;
+        display: block; padding: 0; font-size: 0.875rem;
+    }
+
+    /* Logbook Entry — right */
+    .inspection-history-table td[data-label="Logbook Entry"] {
+        grid-column: 2; grid-row: 2;
+        display: block; padding: 0; font-size: 0.875rem;
+        text-align: right;
+    }
+
+    /* Actions footer */
+    .inspection-history-table td[data-label="Actions"] {
+        grid-column: 1 / span 2; grid-row: 3;
+        display: block; padding: 0.4rem 0 0 0;
+        margin-top: 0.25rem;
+        border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+    }
+}
+
+/* ---- Inspection cards: inline date labels (mobile only) ----------- */
+/*
+ * Small muted label rendered above the date value in the Last/Due cells.
+ * Hidden on desktop where column headers provide context.
+ */
+.insp-mobile-label {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .insp-mobile-label {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--pf-v5-global--Color--200);
+        margin-bottom: 0.1rem;
+    }
+}
+
+/* ---- Inspection cards: overflow menu ------------------------------ */
+.insp-overflow {
+    position: relative;
+}
+
+/* ---- Major records: inline component label (mobile only) ---------- */
+.major-record-mobile-label {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .major-record-mobile-label {
+        display: inline;
+        color: var(--pf-v5-global--Color--200);
+        font-size: 0.8em;
+        font-weight: 400;
+        margin-right: 0.25rem;
+    }
+}
+
+/* ---- Modals: full-width on phones --------------------------------- */
+@media (max-width: 600px) {
+    .pf-v5-c-backdrop {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .pf-v5-c-modal-box {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        min-width: unset !important;
+        max-height: 88vh;
+        overflow-y: auto;
+        border-radius: 0.75rem 0.75rem 0 0;
+        margin: 0 !important;
+    }
 }
 
 /* Striped table rows (pf-m-striped not defined in loaded PF5 bundle) */
@@ -716,4 +1587,126 @@ html.pf-v5-theme-dark .loading-spinner {
     z-index: 300;
     gap: 0.4rem;
     min-width: 8rem;
+}
+
+/* ---- Logbook card: text truncation --------------------------------- */
+.logbook-text-clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* ---- Logbook card: attachment badge -------------------------------- */
+.logbook-attachment-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.8rem;
+    color: var(--pf-v5-global--Color--200);
+    margin-left: 0.5rem;
+}
+
+/* ---- Logbook card: overflow menu ----------------------------------- */
+.logbook-overflow {
+    position: relative;
+}
+
+.logbook-overflow-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--pf-v5-global--BackgroundColor--100);
+    border: 1px solid var(--pf-v5-global--BorderColor--100);
+    border-radius: var(--pf-v5-global--BorderRadius--sm);
+    box-shadow: var(--pf-v5-global--BoxShadow--md);
+    z-index: 200;
+    min-width: 13rem;
+    padding: 0.25rem 0;
+}
+
+.logbook-overflow-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.875rem;
+    color: var(--pf-v5-global--Color--100);
+    white-space: nowrap;
+}
+
+.logbook-overflow-item:hover {
+    background: var(--pf-v5-global--BackgroundColor--200);
+}
+
+.logbook-overflow-item.logbook-overflow-danger {
+    color: var(--pf-v5-global--danger-color--100);
+}
+
+/* ---- Document collection: overflow menu ---------------------------- */
+.doc-coll-overflow {
+    position: relative;
+}
+
+.doc-coll-overflow-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--pf-v5-global--BackgroundColor--100);
+    border: 1px solid var(--pf-v5-global--BorderColor--100);
+    border-radius: var(--pf-v5-global--BorderRadius--sm);
+    box-shadow: var(--pf-v5-global--BoxShadow--md);
+    z-index: 200;
+    min-width: 14rem;
+    padding: 0.25rem 0;
+}
+
+.doc-coll-overflow-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.875rem;
+    color: var(--pf-v5-global--Color--100);
+    white-space: nowrap;
+}
+
+.doc-coll-overflow-item:hover {
+    background: var(--pf-v5-global--BackgroundColor--200);
+}
+
+.doc-coll-overflow-item.doc-coll-overflow-danger {
+    color: var(--pf-v5-global--danger-color--100);
+}
+
+.doc-coll-overflow-check {
+    margin-left: auto;
+    color: var(--pf-v5-global--success-color--100);
+    font-size: 0.75rem;
+}
+
+.doc-coll-overflow-section {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--pf-v5-global--Color--200);
+    padding: 0.4rem 0.75rem 0.2rem;
+    border-top: 1px solid var(--pf-v5-global--BorderColor--100);
+    margin-top: 0.25rem;
+}
+
+.doc-coll-overflow-section:first-child {
+    border-top: none;
+    margin-top: 0;
 }

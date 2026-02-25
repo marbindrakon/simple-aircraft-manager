@@ -7,7 +7,7 @@
             </div>
         </a>
     </div>
-    <div class="pf-v5-c-page__header-nav">
+    <div class="pf-v5-c-page__header-nav" id="main-nav">
         <nav class="pf-v5-c-nav pf-m-horizontal" aria-label="Global">
             <ul class="pf-v5-c-nav__list">
                 <li class="pf-v5-c-nav__item">
@@ -30,6 +30,9 @@
         </nav>
     </div>
     <div class="pf-v5-c-page__header-tools">
+        <button id="nav-mobile-toggle" aria-label="Toggle navigation" aria-expanded="false">
+            <i class="fas fa-bars"></i>
+        </button>
         <div class="pf-v5-c-page__header-tools-group">
             {% if user.is_authenticated %}
             <div class="pf-v5-c-dropdown" id="user-dropdown">

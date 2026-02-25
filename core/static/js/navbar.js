@@ -49,3 +49,26 @@ document.addEventListener('DOMContentLoaded', function() {
         dropdown.classList.remove('pf-m-expanded');
     }
 });
+
+// Mobile nav hamburger toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const mobileToggle = document.getElementById('nav-mobile-toggle');
+    const mainNav = document.getElementById('main-nav');
+
+    if (!mobileToggle || !mainNav) return;
+
+    mobileToggle.addEventListener('click', function() {
+        const isOpen = mainNav.classList.toggle('nav-open');
+        mobileToggle.setAttribute('aria-expanded', isOpen.toString());
+        mobileToggle.querySelector('i').className = isOpen ? 'fas fa-times' : 'fas fa-bars';
+    });
+
+    // Close nav when a link is clicked
+    mainNav.addEventListener('click', function(e) {
+        if (e.target.closest('a')) {
+            mainNav.classList.remove('nav-open');
+            mobileToggle.setAttribute('aria-expanded', 'false');
+            mobileToggle.querySelector('i').className = 'fas fa-bars';
+        }
+    });
+});

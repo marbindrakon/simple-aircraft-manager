@@ -132,7 +132,8 @@ function squawksMixin() {
             switch (squawk.priority) {
                 case 0: return 'card-border-red';
                 case 1: return 'card-border-orange';
-                default: return '';
+                case 2: return 'card-border-blue';
+                default: return 'card-border-grey';
             }
         },
 

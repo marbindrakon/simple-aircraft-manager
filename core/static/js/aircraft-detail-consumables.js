@@ -193,6 +193,15 @@ function makeConsumableMixin(cfg) {
         },
 
         /**
+         * Delete a record directly from the card without opening the modal.
+         * Sets editingRecord and delegates to delete${Cap}Record.
+         */
+        [`cardDelete${Cap}Record`](record) {
+            this[editingRecord] = record;
+            this[`delete${Cap}Record`]();
+        },
+
+        /**
          * Returns true if the given record ID was flagged as an outlier
          * during the last chart render.
          */

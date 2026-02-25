@@ -174,7 +174,12 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
             // Shared utility delegators
             formatHours(hours) { return formatHours(hours); },
             formatDate(dateString) { return formatDate(dateString); },
-            formatDateTime(dateString) { return new Date(dateString).toLocaleString(); },
+            formatDateTime(dateString) {
+                return new Date(dateString).toLocaleString('default', {
+                    year: 'numeric', month: 'numeric', day: 'numeric',
+                    hour: 'numeric', minute: '2-digit'
+                });
+            },
 
             extractIdFromUrl(url) {
                 if (!url) return null;

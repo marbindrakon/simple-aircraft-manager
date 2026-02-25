@@ -602,6 +602,9 @@ function adsMixin() {
         },
 
         getAdStatusClass(ad) {
+            if (ad.compliance_status === 'compliant' && ad.latest_compliance?.permanent) {
+                return 'pf-m-blue';
+            }
             switch (ad.compliance_status) {
                 case 'compliant': return 'pf-m-green';
                 case 'due_soon': return 'pf-m-orange';
@@ -613,6 +616,9 @@ function adsMixin() {
         },
 
         getAdStatusText(ad) {
+            if (ad.compliance_status === 'compliant' && ad.latest_compliance?.permanent) {
+                return 'Permanent';
+            }
             switch (ad.compliance_status) {
                 case 'compliant': return 'Compliant';
                 case 'due_soon': return 'Due Soon';

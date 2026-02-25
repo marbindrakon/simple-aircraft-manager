@@ -477,6 +477,59 @@ function componentsMixin() {
             return this.components.filter(c => !descendants.has(c.id));
         },
 
+        // Returns {current, interval, unit} for the mobile fraction display, or null if no interval.
+        getIntervalFraction(component) {
+            if (component.replacement_critical && component.replacement_hours) {
+                return {
+                    current: component.hours_since_overhaul || 0,
+                    interval: component.replacement_hours,
+                    unit: 'hrs',
+                };
+            }
+            if (component.tbo_hours) {
+                return {
+                    current: component.hours_since_overhaul || 0,
+                    interval: component.tbo_hours,
+                    unit: 'hrs',
+                };
+            }
+            if (component.replacement_critical && component.replacement_days) {
+                const calDays = this.getCalendarDaysRemaining(component);
+                if (calDays !== null) {
+                    return {
+                        current: Math.max(0, component.replacement_days - calDays),
+                        interval: component.replacement_days,
+                        unit: 'days',
+                    };
+                }
+            }
+            if (component.tbo_days) {
+                const calDays = this.getCalendarDaysRemaining(component);
+                if (calDays !== null) {
+                    return {
+                        current: Math.max(0, component.tbo_days - calDays),
+                        interval: component.tbo_days,
+                        unit: 'days',
+                    };
+                }
+            }
+            return null;
+        },
+
+        // Returns 0–100 (clamped) for the progress bar width.
+        getProgressPercent(component) {
+            const frac = this.getIntervalFraction(component);
+            if (!frac || !frac.interval) return 0;
+            return Math.min(100, Math.round((frac.current / frac.interval) * 100));
+        },
+
+        // Returns the "N.N / M unit" string for the mobile fraction display.
+        getFractionText(component) {
+            const frac = this.getIntervalFraction(component);
+            if (!frac) return '';
+            return parseFloat(frac.current).toFixed(1) + ' / ' + frac.interval + '\u00a0' + frac.unit;
+        },
+
         getStatusClass(component) {
             if (component.status === 'IN-USE') {
                 const hoursToTBO = this.calculateHoursToTBO(component);
