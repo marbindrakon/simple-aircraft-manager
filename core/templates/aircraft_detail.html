@@ -744,25 +744,44 @@
                                                   x-show="logbookActiveTab === 'ALL'"
                                                   x-text="logbookTabLabel(log.log_type)">
                                             </span>
+                                            <span class="logbook-attachment-badge" x-show="logAttachmentCount(log) > 0">
+                                                <i class="fas fa-paperclip"></i>
+                                                <span x-text="logAttachmentCount(log)"></span>
+                                            </span>
                                         </div>
                                     </div>
                                     <div class="pf-v5-c-card__actions" x-show="isOwner">
-                                        <button class="pf-v5-c-button pf-m-plain" @click="openCreateRecordsModal(log)" title="Create compliance records from this entry">
-                                            <i class="fas fa-clipboard-check"></i>
-                                        </button>
-                                        <button class="pf-v5-c-button pf-m-plain" @click="openLinkPicker(log)" title="Link to existing record">
-                                            <i class="fas fa-link"></i>
-                                        </button>
-                                        <button class="pf-v5-c-button pf-m-plain" @click="editLogEntry(log)" title="Edit">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="pf-v5-c-button pf-m-plain pf-m-danger" @click="deleteLogEntry(log)" title="Delete">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                        <div class="logbook-overflow" @click.outside="logbookOpenOverflow = null">
+                                            <button class="pf-v5-c-button pf-m-plain"
+                                                    @click.stop="logbookOpenOverflow = (logbookOpenOverflow === log.id ? null : log.id)"
+                                                    title="More actions" aria-label="More actions">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <div class="logbook-overflow-menu" x-show="logbookOpenOverflow === log.id">
+                                                <button class="logbook-overflow-item" @click="openCreateRecordsModal(log); logbookOpenOverflow = null">
+                                                    <i class="fas fa-clipboard-check"></i> Create compliance records
+                                                </button>
+                                                <button class="logbook-overflow-item" @click="openLinkPicker(log); logbookOpenOverflow = null">
+                                                    <i class="fas fa-link"></i> Link to record
+                                                </button>
+                                                <button class="logbook-overflow-item" @click="editLogEntry(log); logbookOpenOverflow = null">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </button>
+                                                <button class="logbook-overflow-item logbook-overflow-danger" @click="deleteLogEntry(log); logbookOpenOverflow = null">
+                                                    <i class="fas fa-trash"></i> Delete
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="pf-v5-c-card__body">
-                                    <p x-text="log.text"></p>
+                                    <p :class="logbookExpandedEntries[log.id] ? '' : 'logbook-text-clamped'" x-text="log.text"></p>
+                                    <button x-show="!logbookExpandedEntries[log.id] && log.text && log.text.length > 200"
+                                            class="pf-v5-c-button pf-m-link pf-m-inline"
+                                            style="font-size: 0.85rem; margin-top: 0.25rem;"
+                                            @click="toggleLogExpand(log.id)">
+                                        Show more
+                                    </button>
                                     <template x-if="log.aircraft_hours_at_entry">
                                         <p style="margin-top: 0.5rem;">
                                             <strong>Aircraft Hours:</strong>

@@ -1457,3 +1457,62 @@ html.pf-v5-theme-dark .loading-spinner {
     gap: 0.4rem;
     min-width: 8rem;
 }
+
+/* ---- Logbook card: text truncation --------------------------------- */
+.logbook-text-clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* ---- Logbook card: attachment badge -------------------------------- */
+.logbook-attachment-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.8rem;
+    color: var(--pf-v5-global--Color--200);
+    margin-left: 0.5rem;
+}
+
+/* ---- Logbook card: overflow menu ----------------------------------- */
+.logbook-overflow {
+    position: relative;
+}
+
+.logbook-overflow-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--pf-v5-global--BackgroundColor--100);
+    border: 1px solid var(--pf-v5-global--BorderColor--100);
+    border-radius: var(--pf-v5-global--BorderRadius--sm);
+    box-shadow: var(--pf-v5-global--BoxShadow--md);
+    z-index: 200;
+    min-width: 13rem;
+    padding: 0.25rem 0;
+}
+
+.logbook-overflow-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.875rem;
+    color: var(--pf-v5-global--Color--100);
+    white-space: nowrap;
+}
+
+.logbook-overflow-item:hover {
+    background: var(--pf-v5-global--BackgroundColor--200);
+}
+
+.logbook-overflow-item.logbook-overflow-danger {
+    color: var(--pf-v5-global--danger-color--100);
+}

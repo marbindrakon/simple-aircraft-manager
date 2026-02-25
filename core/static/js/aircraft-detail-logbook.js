@@ -13,6 +13,8 @@ function logbookMixin() {
         editingLogEntry: null,
         logbookSubmitting: false,
         logbookImageFiles: [],
+        logbookExpandedEntries: {},      // { [id]: true } for expanded text
+        logbookOpenOverflow: null,       // id of entry whose overflow menu is open
         logbookForm: {
             date: '',
             entry_type: 'MAINTENANCE',
@@ -122,6 +124,16 @@ function logbookMixin() {
             } catch (error) {
                 console.error('Error loading aircraft documents:', error);
             }
+        },
+
+        logAttachmentCount(log) {
+            const mainDoc = (log.log_image && (!this.isPublicView || log.log_image_shared)) ? 1 : 0;
+            const relatedDocs = (log.related_documents_detail || []).length;
+            return mainDoc + relatedDocs;
+        },
+
+        toggleLogExpand(logId) {
+            this.logbookExpandedEntries = { ...this.logbookExpandedEntries, [logId]: true };
         },
 
         async loadLogbookEntries(append = false) {
