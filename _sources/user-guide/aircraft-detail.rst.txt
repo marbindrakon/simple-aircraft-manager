@@ -6,11 +6,11 @@ is organized into a tabbed interface with eight primary tabs. Related topics
 are grouped under shared tabs using a sub-tab toggle bar:
 
 - :doc:`Overview <aircraft-detail>` (this page)
-- :doc:`components`
 - :doc:`squawks`
+- **Health** -- sub-tabs: Oil Usage, Fuel Usage, and Oil Analysis (see :doc:`oil-and-fuel`)
+- :doc:`components`
 - **Compliance** -- sub-tabs: :doc:`ads` and :doc:`inspections`
-- **Records** -- sub-tabs: :doc:`logbook` and :doc:`major-records` (maintenance access only)
-- **Consumables** -- sub-tabs: Oil and Fuel (see :doc:`oil-and-fuel`)
+- **Maintenance** -- sub-tabs: :doc:`logbook` and :doc:`major-records` (maintenance access only)
 - :doc:`documents`
 - :doc:`sharing-and-access` (owners only)
 
