@@ -766,7 +766,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
 
         t = threading.Thread(
             target=run_oil_analysis_job,
-            args=(job.id, tmp_path, model, provider),
+            args=(job.id, tmp_path),
             daemon=True,
         )
         t.start()
