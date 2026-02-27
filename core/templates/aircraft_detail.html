@@ -2370,6 +2370,9 @@
                                         <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editOilAnalysisReport(report)" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="cardDeleteOilAnalysisReport(report)" title="Delete" style="color: var(--pf-v5-global--danger-color--100);">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     </td>
                                 </tr>
                             </template>

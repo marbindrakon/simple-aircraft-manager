@@ -467,6 +467,15 @@ function oilAnalysisMixin() {
             });
         },
 
+        /**
+         * Delete a report directly from the grid without opening the modal.
+         * Sets editingOilAnalysisReport and delegates to deleteOilAnalysisReport.
+         */
+        cardDeleteOilAnalysisReport(report) {
+            this.editingOilAnalysisReport = report;
+            this.deleteOilAnalysisReport();
+        },
+
         // ---- Status helpers ------------------------------------------------
         oilAnalysisStatusClass(status) {
             if (status === 'action_required') return 'pf-m-red';
