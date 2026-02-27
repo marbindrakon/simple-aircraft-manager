@@ -505,4 +505,26 @@ class OilAnalysisReportCreateUpdateSerializer(serializers.ModelSerializer):
                 f"Unknown element(s): {', '.join(sorted(unknown))}. "
                 f"Allowed: {', '.join(sorted(_OIL_ANALYSIS_KNOWN_ELEMENTS))}"
             )
+        for element, val in value.items():
+            if val is None:
+                continue
+            if not isinstance(val, (int, float)) or isinstance(val, bool):
+                raise serializers.ValidationError(
+                    f"Value for '{element}' must be a number, got {type(val).__name__}."
+                )
+            if not (0 <= val <= 100_000):
+                raise serializers.ValidationError(
+                    f"Value for '{element}' must be between 0 and 100,000 ppm."
+                )
         return value
+
+    def validate(self, data):
+        aircraft = data.get('aircraft') or (self.instance.aircraft if self.instance else None)
+        if not aircraft:
+            return data
+        if 'component' in data and data['component'] is not None:
+            if data['component'].aircraft_id != aircraft.id:
+                raise serializers.ValidationError(
+                    {'component': 'Component does not belong to this aircraft.'}
+                )
+        return data

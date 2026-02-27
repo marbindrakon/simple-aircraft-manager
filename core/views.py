@@ -731,8 +731,14 @@ class AircraftViewSet(viewsets.ModelViewSet):
         if not uploaded_file:
             return Response({'error': 'file is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate file type (reuse existing validation)
+        # Validate file type and enforce a tighter size limit for the synchronous PDF parser
         from health.serializers import validate_uploaded_file
+        OIL_ANALYSIS_MAX_PDF_SIZE = 50 * 1024 * 1024  # 50 MB
+        if uploaded_file.size > OIL_ANALYSIS_MAX_PDF_SIZE:
+            return Response(
+                {'error': 'PDF file size exceeds the 50 MB limit for oil analysis.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         try:
             validate_uploaded_file(uploaded_file)
         except Exception as exc:
