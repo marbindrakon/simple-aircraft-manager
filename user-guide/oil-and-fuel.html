@@ -256,9 +256,10 @@
         <article role="main" id="furo-main-content">
           <section id="oil-fuel-tracking">
 <h1>Oil &amp; Fuel Tracking<a class="headerlink" href="#oil-fuel-tracking" title="Link to this heading">¶</a></h1>
-<p>The <strong>Oil</strong> and <strong>Fuel</strong> sub-tabs (under the <strong>Consumables</strong> tab) track
-consumable usage over time and display trend charts to help identify consumption
-patterns.</p>
+<p>The <strong>Consumables</strong> tab contains three sub-tabs: <strong>Oil</strong>, <strong>Fuel</strong>, and
+<strong>Oil Analysis</strong>. Oil and Fuel track consumable usage over time and display
+trend charts. Oil Analysis records and trends lab reports from companies
+such as Blackstone Laboratories and Aviation Laboratories (AvLab).</p>
 <section id="oil-sub-tab">
 <h2>Oil Sub-Tab<a class="headerlink" href="#oil-sub-tab" title="Link to this heading">¶</a></h2>
 <p>The Oil sub-tab tracks oil additions and consumption.</p>
@@ -346,6 +347,87 @@ below. Common causes include a missed refueling entry (which inflates the
 hours between two records) or an unusually large top-off after a long flight.</p>
 </section>
 </section>
+<section id="oil-analysis-sub-tab">
+<h2>Oil Analysis Sub-Tab<a class="headerlink" href="#oil-analysis-sub-tab" title="Link to this heading">¶</a></h2>
+<p>The <strong>Oil Analysis</strong> sub-tab tracks oil analysis lab reports and trends
+elemental wear-metal data over time. Each report stores the PPM values for
+up to 20 elements (iron, copper, chromium, aluminum, lead, silicon, etc.)
+and optional oil properties (flashpoint, viscosity, water content).</p>
+<p>Reports can be added manually or imported from a PDF lab report.</p>
+<section id="adding-a-report-manually">
+<h3>Adding a Report Manually<a class="headerlink" href="#adding-a-report-manually" title="Link to this heading">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Click <strong>Add Report</strong> (owners only).</p></li>
+<li><p>Fill in:</p>
+<ul class="simple">
+<li><p><strong>Engine Component</strong> – The engine component the sample came from (optional but recommended for multi-engine aircraft).</p></li>
+<li><p><strong>Sample Date</strong> – Date the oil sample was taken (required).</p></li>
+<li><p><strong>Analysis Date</strong> – Date the lab performed the analysis (optional).</p></li>
+<li><p><strong>Lab</strong> – Laboratory name (e.g., Blackstone Laboratories).</p></li>
+<li><p><strong>Lab Number</strong> – Lab-assigned sample or report number.</p></li>
+<li><p><strong>Engine Hours at Sample</strong> – Total engine hours when the sample was taken.</p></li>
+<li><p><strong>Oil Hours at Sample</strong> – Hours on the current oil at time of sampling.</p></li>
+<li><p><strong>Oil Type</strong> – Oil brand and grade (e.g., Phillips XC 20W/50).</p></li>
+<li><p><strong>Oil Added (qt)</strong> – Makeup oil added during the sample interval.</p></li>
+<li><p><strong>Lab Status</strong> – Overall assessment: Normal, Monitor, or Action Required.</p></li>
+<li><p><strong>Elements (PPM, JSON)</strong> – Element concentrations as a JSON object, e.g., <code class="docutils literal notranslate"><span class="pre">{&quot;iron&quot;:</span> <span class="pre">15,</span> <span class="pre">&quot;copper&quot;:</span> <span class="pre">8}</span></code>.</p></li>
+<li><p><strong>Lab Comments</strong> – Verbatim lab technician comments.</p></li>
+<li><p><strong>Notes</strong> – Your own notes about this sample.</p></li>
+</ul>
+</li>
+<li><p>Click <strong>Add Report</strong>.</p></li>
+</ol>
+</section>
+<section id="importing-from-a-pdf">
+<h3>Importing from a PDF<a class="headerlink" href="#importing-from-a-pdf" title="Link to this heading">¶</a></h3>
+<p>PDF import reads lab reports and automatically populates all sample fields.
+A single PDF may contain multiple samples (current plus historical); all are
+extracted and presented for review.</p>
+<ol class="arabic simple">
+<li><p>Click <strong>Import from PDF</strong>.</p></li>
+<li><p>Select the PDF file from your computer.</p></li>
+<li><p>Click <strong>Extract Data</strong> and wait for the report to be processed.</p></li>
+<li><p>Review the extracted samples. For each sample:</p>
+<ul class="simple">
+<li><p>Check the checkbox to include it (all are checked by default).</p></li>
+<li><p>Assign an <strong>engine component</strong> from the dropdown.</p></li>
+<li><p>Verify element values and lab comments.</p></li>
+</ul>
+</li>
+<li><p>Click <strong>Save Selected Samples</strong>.</p></li>
+</ol>
+<p><strong>Supported labs</strong>: Blackstone Laboratories and Aviation Laboratories (AvLab).
+PDF import requires a text-based PDF (the standard output from both labs);
+scanned image PDFs are not supported.</p>
+</section>
+<section id="element-trend-chart">
+<h3>Element Trend Chart<a class="headerlink" href="#element-trend-chart" title="Link to this heading">¶</a></h3>
+<p>When two or more reports are present, a <strong>trend chart</strong> appears showing
+selected element PPM values over time (by sample date). Each element is
+plotted as a separate colored line.</p>
+<p><strong>Element toggles</strong>: Click the element chips above the chart to show or hide
+individual elements. The six default elements shown are Iron, Copper,
+Chromium, Aluminum, Lead, and Silicon — the most common wear indicators.
+Additional elements (nickel, tin, molybdenum, etc.) can be toggled on.</p>
+<p><strong>Outlier detection</strong>: The same IQR method used for oil/fuel records is
+applied per element. Outlier data points are rendered as <strong>larger orange
+triangles</strong>. Each element’s dashed average line excludes outliers.</p>
+<p><strong>Multiple engines</strong>: If the aircraft has more than one engine component, a
+component filter dropdown appears so you can focus on a single engine’s
+history.</p>
+</section>
+<section id="status-labels">
+<h3>Status Labels<a class="headerlink" href="#status-labels" title="Link to this heading">¶</a></h3>
+<p>Each report can carry a lab-assigned status:</p>
+<ul class="simple">
+<li><p><strong>Normal</strong> (green) — No concerns; oil analysis is within expected parameters.</p></li>
+<li><p><strong>Monitor</strong> (orange) — One or more elements are elevated; recheck at shorter interval.</p></li>
+<li><p><strong>Action Required</strong> (red) — Immediate attention needed; investigate before further flight.</p></li>
+</ul>
+<p>Status labels appear in the reports table and are derived from lab comments
+during PDF import or set manually.</p>
+</section>
+</section>
 </section>
 
         </article>
@@ -416,6 +498,13 @@ hours between two records) or an unusually large top-off after a long flight.</p
 <li><a class="reference internal" href="#fuel-sub-tab">Fuel Sub-Tab</a><ul>
 <li><a class="reference internal" href="#adding-a-fuel-record">Adding a Fuel Record</a></li>
 <li><a class="reference internal" href="#fuel-consumption-chart">Fuel Consumption Chart</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#oil-analysis-sub-tab">Oil Analysis Sub-Tab</a><ul>
+<li><a class="reference internal" href="#adding-a-report-manually">Adding a Report Manually</a></li>
+<li><a class="reference internal" href="#importing-from-a-pdf">Importing from a PDF</a></li>
+<li><a class="reference internal" href="#element-trend-chart">Element Trend Chart</a></li>
+<li><a class="reference internal" href="#status-labels">Status Labels</a></li>
 </ul>
 </li>
 </ul>

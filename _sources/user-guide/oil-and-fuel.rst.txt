@@ -1,9 +1,10 @@
 Oil & Fuel Tracking
 ===================
 
-The **Oil** and **Fuel** sub-tabs (under the **Consumables** tab) track
-consumable usage over time and display trend charts to help identify consumption
-patterns.
+The **Consumables** tab contains three sub-tabs: **Oil**, **Fuel**, and
+**Oil Analysis**. Oil and Fuel track consumable usage over time and display
+trend charts. Oil Analysis records and trends lab reports from companies
+such as Blackstone Laboratories and Aviation Laboratories (AvLab).
 
 Oil Sub-Tab
 -----------
@@ -99,3 +100,89 @@ outside the IQR bounds are rendered as **larger orange dots** on the chart,
 excluded from the average, and flagged with a **⚠ icon** in the records table
 below. Common causes include a missed refueling entry (which inflates the
 hours between two records) or an unusually large top-off after a long flight.
+
+Oil Analysis Sub-Tab
+--------------------
+
+The **Oil Analysis** sub-tab tracks oil analysis lab reports and trends
+elemental wear-metal data over time. Each report stores the PPM values for
+up to 20 elements (iron, copper, chromium, aluminum, lead, silicon, etc.)
+and optional oil properties (flashpoint, viscosity, water content).
+
+Reports can be added manually or imported from a PDF lab report.
+
+Adding a Report Manually
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+1. Click **Add Report** (owners only).
+2. Fill in:
+
+   - **Engine Component** -- The engine component the sample came from (optional but recommended for multi-engine aircraft).
+   - **Sample Date** -- Date the oil sample was taken (required).
+   - **Analysis Date** -- Date the lab performed the analysis (optional).
+   - **Lab** -- Laboratory name (e.g., Blackstone Laboratories).
+   - **Lab Number** -- Lab-assigned sample or report number.
+   - **Engine Hours at Sample** -- Total engine hours when the sample was taken.
+   - **Oil Hours at Sample** -- Hours on the current oil at time of sampling.
+   - **Oil Type** -- Oil brand and grade (e.g., Phillips XC 20W/50).
+   - **Oil Added (qt)** -- Makeup oil added during the sample interval.
+   - **Lab Status** -- Overall assessment: Normal, Monitor, or Action Required.
+   - **Elements (PPM, JSON)** -- Element concentrations as a JSON object, e.g., ``{"iron": 15, "copper": 8}``.
+   - **Lab Comments** -- Verbatim lab technician comments.
+   - **Notes** -- Your own notes about this sample.
+
+3. Click **Add Report**.
+
+Importing from a PDF
+^^^^^^^^^^^^^^^^^^^^
+
+PDF import reads lab reports and automatically populates all sample fields.
+A single PDF may contain multiple samples (current plus historical); all are
+extracted and presented for review.
+
+1. Click **Import from PDF**.
+2. Select the PDF file from your computer.
+3. Click **Extract Data** and wait for the report to be processed.
+4. Review the extracted samples. For each sample:
+
+   - Check the checkbox to include it (all are checked by default).
+   - Assign an **engine component** from the dropdown.
+   - Verify element values and lab comments.
+
+5. Click **Save Selected Samples**.
+
+**Supported labs**: Blackstone Laboratories and Aviation Laboratories (AvLab).
+PDF import requires a text-based PDF (the standard output from both labs);
+scanned image PDFs are not supported.
+
+Element Trend Chart
+^^^^^^^^^^^^^^^^^^^
+
+When two or more reports are present, a **trend chart** appears showing
+selected element PPM values over time (by sample date). Each element is
+plotted as a separate colored line.
+
+**Element toggles**: Click the element chips above the chart to show or hide
+individual elements. The six default elements shown are Iron, Copper,
+Chromium, Aluminum, Lead, and Silicon — the most common wear indicators.
+Additional elements (nickel, tin, molybdenum, etc.) can be toggled on.
+
+**Outlier detection**: The same IQR method used for oil/fuel records is
+applied per element. Outlier data points are rendered as **larger orange
+triangles**. Each element's dashed average line excludes outliers.
+
+**Multiple engines**: If the aircraft has more than one engine component, a
+component filter dropdown appears so you can focus on a single engine's
+history.
+
+Status Labels
+^^^^^^^^^^^^^
+
+Each report can carry a lab-assigned status:
+
+- **Normal** (green) — No concerns; oil analysis is within expected parameters.
+- **Monitor** (orange) — One or more elements are elevated; recheck at shorter interval.
+- **Action Required** (red) — Immediate attention needed; investigate before further flight.
+
+Status labels appear in the reports table and are derived from lab comments
+during PDF import or set manually.
