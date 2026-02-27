@@ -1,9 +1,9 @@
 Repairs & Alterations
 =====================
 
-The **Repairs & Alterations** sub-tab (under the **Records** tab) tracks major
+The **Repairs & Alterations** sub-tab (under the **Maintenance** tab) tracks major
 repairs and major alterations performed on the aircraft, corresponding to Form
-337 or equivalent records. The Records tab is visible to all authenticated users (owners, pilots, and
+337 or equivalent records. The Maintenance tab is visible to all authenticated users (owners, pilots, and
 admins) and to visitors using a maintenance share link. It is hidden from
 visitors using a status-only share link.
 

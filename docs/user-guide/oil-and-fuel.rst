@@ -1,17 +1,17 @@
 Oil & Fuel Tracking
 ===================
 
-The **Consumables** tab contains three sub-tabs: **Oil**, **Fuel**, and
+The **Health** tab contains three sub-tabs: **Oil Usage**, **Fuel Usage**, and
 **Oil Analysis**. Oil and Fuel track consumable usage over time and display
 trend charts. Oil Analysis records and trends lab reports from companies
 such as Blackstone Laboratories and Aviation Laboratories (AvLab).
 
-Oil Sub-Tab
------------
+Oil Usage Sub-Tab
+-----------------
 
-The Oil sub-tab tracks oil additions and consumption.
+The Oil Usage sub-tab tracks oil additions and consumption.
 
-.. TODO: Screenshot of the Oil sub-tab showing the consumption trend chart and records table
+.. TODO: Screenshot of the Oil Usage sub-tab showing the consumption trend chart and records table
 
 Adding an Oil Record
 ^^^^^^^^^^^^^^^^^^^^
@@ -65,12 +65,12 @@ level after, type, and notes. Records whose consumption rate was identified as
 an outlier are marked with a **⚠ icon** next to the date. Owners can click
 the **pencil** icon to edit a record.
 
-Fuel Sub-Tab
-------------
+Fuel Usage Sub-Tab
+------------------
 
-The Fuel sub-tab works identically to the Oil sub-tab but tracks fuel consumption.
+The Fuel Usage sub-tab works identically to the Oil Usage sub-tab but tracks fuel consumption.
 
-.. TODO: Screenshot of the Fuel sub-tab showing the burn rate chart and records table
+.. TODO: Screenshot of the Fuel Usage sub-tab showing the burn rate chart and records table
 
 Adding a Fuel Record
 ^^^^^^^^^^^^^^^^^^^^

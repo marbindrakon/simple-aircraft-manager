@@ -119,17 +119,22 @@
                         <span class="pf-v5-c-tabs__item-text">Overview</span>
                     </button>
                 </li>
-                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activePrimaryTab === 'components' }">
-                    <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('components')">
-                        <span class="pf-v5-c-tabs__item-text">Components</span>
-                    </button>
-                </li>
                 <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activePrimaryTab === 'squawks' }">
                     <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('squawks')">
                         <span class="pf-v5-c-tabs__item-text">Squawks</span>
                         <template x-if="activeSquawks.length > 0">
                             <span class="pf-v5-c-badge pf-m-unread" style="margin-left: 0.5rem;" x-text="activeSquawks.length"></span>
                         </template>
+                    </button>
+                </li>
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activePrimaryTab === 'consumables' }">
+                    <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('consumables')">
+                        <span class="pf-v5-c-tabs__item-text">Health</span>
+                    </button>
+                </li>
+                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activePrimaryTab === 'components' }">
+                    <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('components')">
+                        <span class="pf-v5-c-tabs__item-text">Components</span>
                     </button>
                 </li>
                 <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activePrimaryTab === 'compliance' }">
@@ -142,12 +147,7 @@
                 </li>
                 <li class="pf-v5-c-tabs__item" x-show="isMaintenance" :class="{ 'pf-m-current': activePrimaryTab === 'records' }">
                     <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('records')">
-                        <span class="pf-v5-c-tabs__item-text">Records</span>
-                    </button>
-                </li>
-                <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activePrimaryTab === 'consumables' }">
-                    <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('consumables')">
-                        <span class="pf-v5-c-tabs__item-text">Consumables</span>
+                        <span class="pf-v5-c-tabs__item-text">Maintenance</span>
                     </button>
                 </li>
                 <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activePrimaryTab === 'documents' }">
@@ -2036,14 +2036,14 @@
                         <button class="pf-v5-c-toggle-group__button"
                                 :class="{ 'pf-m-selected': activeTab === 'oil' }"
                                 @click="activeTab = 'oil'">
-                            Oil
+                            Oil Usage
                         </button>
                     </div>
                     <div class="pf-v5-c-toggle-group__item">
                         <button class="pf-v5-c-toggle-group__button"
                                 :class="{ 'pf-m-selected': activeTab === 'fuel' }"
                                 @click="activeTab = 'fuel'">
-                            Fuel
+                            Fuel Usage
                         </button>
                     </div>
                     <div class="pf-v5-c-toggle-group__item">
