@@ -101,6 +101,9 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
                         if (tab === 'fuel' && this.fuelRecords.length >= 2) {
                             this.$nextTick(() => this.renderFuelChart());
                         }
+                        if (tab === 'oil-analysis' && this.oilAnalysisReports.length >= 2) {
+                            this.$nextTick(() => this.renderOilAnalysisChart());
+                        }
                     });
                     return;
                 }
@@ -209,6 +212,12 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
 
                 this.majorRecords = data.major_records || [];
                 this.majorRecordsLoaded = true;
+
+                this.oilAnalysisReports = data.oil_analysis_reports || [];
+                this.oilAnalysisEngineComponents = (data.components || []).filter(
+                    c => c.tbo_critical && c.status === 'IN-USE'
+                );
+                this.oilAnalysisLoaded = true;
 
                 this.rolesLoaded = true;
                 this.eventsLoaded = true;

@@ -1556,6 +1556,10 @@ class PublicAircraftSummaryAPI(View):
             ],
             'documents': DocumentNestedSerializer(uncollected_docs, many=True).data,
             'major_records': major_records_data,
+            'oil_analysis_reports': OilAnalysisReportSerializer(
+                OilAnalysisReport.objects.filter(aircraft=aircraft).select_related('component__component_type'),
+                many=True,
+            ).data if privilege == 'maintenance' else [],
         }
 
         # Build set of publicly visible document IDs
