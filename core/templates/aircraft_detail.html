@@ -2379,6 +2379,12 @@
                                         <span x-text="report.component_display || '-'"></span>
                                     </td>
                                     <td data-label="Actions">
+                                        <button class="pf-v5-c-button pf-m-plain"
+                                                @click="toggleOilAnalysisChartVisibility(report)"
+                                                :title="oilAnalysisHiddenIds.has(report.id) ? 'Show on chart' : 'Hide from chart'"
+                                                :style="oilAnalysisHiddenIds.has(report.id) ? 'color: #8a8d90;' : ''">
+                                            <i :class="oilAnalysisHiddenIds.has(report.id) ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                                        </button>
                                         <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
                                                 @click="toggleOilAnalysisExcludeFromAverages(report)"
                                                 :title="report.excluded_from_averages ? 'Include in averages' : 'Exclude from averages'"

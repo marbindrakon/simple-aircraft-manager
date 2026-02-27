@@ -41,6 +41,9 @@ function oilAnalysisMixin() {
         // Element toggles — Set of element names to chart
         oilAnalysisSelectedElements: new Set(OIL_ANALYSIS_DEFAULT_ELEMENTS),
 
+        // Visibility — Set of report IDs hidden from the chart (client-side only)
+        oilAnalysisHiddenIds: new Set(),
+
         // CRUD modal
         oilAnalysisModalOpen: false,
         oilAnalysisSubmitting: false,
@@ -369,7 +372,7 @@ function oilAnalysisMixin() {
         // ---- Chart ---------------------------------------------------------
         renderOilAnalysisChart() {
             const reports = [...this.oilAnalysisFilteredReports]
-                .filter(r => r.sample_date)
+                .filter(r => r.sample_date && !this.oilAnalysisHiddenIds.has(r.id))
                 .sort((a, b) => a.sample_date.localeCompare(b.sample_date));
 
             const canvas = document.getElementById('oilAnalysisChart');
@@ -478,6 +481,20 @@ function oilAnalysisMixin() {
         cardDeleteOilAnalysisReport(report) {
             this.editingOilAnalysisReport = report;
             this.deleteOilAnalysisReport();
+        },
+
+        /**
+         * Toggle a report's visibility on the chart (client-side only, not persisted).
+         */
+        toggleOilAnalysisChartVisibility(report) {
+            if (this.oilAnalysisHiddenIds.has(report.id)) {
+                this.oilAnalysisHiddenIds.delete(report.id);
+            } else {
+                this.oilAnalysisHiddenIds.add(report.id);
+            }
+            // Trigger Alpine reactivity for Sets
+            this.oilAnalysisHiddenIds = new Set(this.oilAnalysisHiddenIds);
+            this.$nextTick(() => this.renderOilAnalysisChart());
         },
 
         /**
