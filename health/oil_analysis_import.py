@@ -5,6 +5,10 @@ Public API:
     run_extraction(pdf_path, model, provider) -> dict
         Extracts oil analysis data from a PDF. Returns the raw extracted dict
         (not saved to DB). Raises ValueError on failure.
+
+    run_oil_analysis_job(job_id, pdf_path, model, provider)
+        Background job runner. Fetches ImportJob by job_id, calls run_extraction,
+        stores result or error, and cleans up the temp file. Called from a daemon thread.
 """
 
 import base64
@@ -41,28 +45,73 @@ def _retry_after(exc, default_backoff: float) -> float:
     return default_backoff
 
 
-def run_extraction(pdf_path: Path, model: str, provider: str) -> dict:
+def run_extraction(pdf_path: Path, model: str, provider: str = 'parser') -> dict:
     """
-    Extract oil analysis data from a PDF using AI.
+    Extract oil analysis data from a PDF.
+
+    provider='parser' (default) uses deterministic lab-specific OCR parsers
+    (no API key required). Supports Blackstone and AVLab report formats.
+
+    provider='anthropic' or 'ollama' use AI extraction (legacy path).
 
     Returns the raw extracted dict conforming to the AircraftOilAnalysisReport schema
     (with a top-level 'samples' array). Does NOT save to DB.
 
-    Raises ValueError on API failure or unsupported provider.
+    Raises ValueError on failure or unsupported provider.
     """
+    if provider == 'parser':
+        from health.oil_analysis_parsers import parse
+        return parse(pdf_path)
+
     system_prompt = _load_prompt('oil_analysis_system_prompt.txt')
     output_schema = json.loads(_load_prompt('oil_analysis_schema.json'))
 
     if provider == 'anthropic':
-        return _call_anthropic(pdf_path, model, system_prompt, output_schema)
+        result = _call_anthropic(pdf_path, model, system_prompt, output_schema)
     elif provider == 'ollama':
-        return _call_ollama(pdf_path, model, system_prompt, output_schema)
+        result = _call_ollama(pdf_path, model, system_prompt, output_schema)
     else:
         raise ValueError(f"Unknown provider: {provider}")
 
+    _normalize_elements_ppm(result)
+    return result
+
+
+def _normalize_elements_ppm(result: dict) -> None:
+    """
+    Convert elements_ppm from the AI array format [{element, ppm}, ...]
+    to the dict format {element: ppm, ...} expected by the rest of the app.
+    Mutates result in place.
+    """
+    for sample in result.get('samples', []):
+        raw = sample.get('elements_ppm')
+        if isinstance(raw, list):
+            sample['elements_ppm'] = {
+                item['element']: item.get('ppm')
+                for item in raw
+                if isinstance(item, dict) and 'element' in item
+            }
+
+
+def _pdf_to_images(pdf_path: Path, dpi: int = 150) -> list:
+    """Render each page of a PDF to PNG bytes using PyMuPDF. Returns a list of bytes objects."""
+    try:
+        import fitz  # PyMuPDF
+    except ImportError:
+        raise ValueError("The 'pymupdf' package is not installed (pip install pymupdf)")
+
+    doc = fitz.open(str(pdf_path))
+    mat = fitz.Matrix(dpi / 72, dpi / 72)
+    images = []
+    for page in doc:
+        pix = page.get_pixmap(matrix=mat)
+        images.append(pix.tobytes('png'))
+    doc.close()
+    return images
+
 
 def _call_anthropic(pdf_path: Path, model: str, system_prompt: str, output_schema: dict) -> dict:
-    """Send PDF to Anthropic API using native document support."""
+    """Convert PDF to images and send to Anthropic API."""
     import os
 
     try:
@@ -76,23 +125,23 @@ def _call_anthropic(pdf_path: Path, model: str, system_prompt: str, output_schem
 
     client = anthropic.Anthropic(api_key=api_key)
 
-    pdf_bytes = pdf_path.read_bytes()
-    pdf_b64 = base64.standard_b64encode(pdf_bytes).decode('utf-8')
+    pdf_images = _pdf_to_images(pdf_path)
 
-    content = [
-        {
-            'type': 'document',
+    content = []
+    for img_bytes in pdf_images:
+        img_b64 = base64.standard_b64encode(img_bytes).decode('utf-8')
+        content.append({
+            'type': 'image',
             'source': {
                 'type': 'base64',
-                'media_type': 'application/pdf',
-                'data': pdf_b64,
+                'media_type': 'image/png',
+                'data': img_b64,
             },
-        },
-        {
-            'type': 'text',
-            'text': 'Extract all oil analysis sample data from this report and return the JSON as specified.',
-        },
-    ]
+        })
+    content.append({
+        'type': 'text',
+        'text': 'Extract all oil analysis sample data from this report and return the JSON as specified.',
+    })
 
     request_kwargs = dict(
         model=model,
@@ -149,8 +198,8 @@ def _call_ollama(pdf_path: Path, model: str, system_prompt: str, output_schema: 
     base_url = getattr(django_settings, 'OLLAMA_BASE_URL', 'http://localhost:11434')
     timeout = getattr(django_settings, 'OLLAMA_TIMEOUT', 1200)
 
-    pdf_bytes = pdf_path.read_bytes()
-    pdf_b64 = base64.standard_b64encode(pdf_bytes).decode('utf-8')
+    pdf_images = _pdf_to_images(pdf_path)
+    images_b64 = [base64.standard_b64encode(img).decode('utf-8') for img in pdf_images]
 
     payload = {
         "model": model,
@@ -159,7 +208,7 @@ def _call_ollama(pdf_path: Path, model: str, system_prompt: str, output_schema: 
             {
                 "role": "user",
                 "content": "Extract all oil analysis sample data from this report and return the JSON as specified.",
-                "images": [pdf_b64],
+                "images": images_b64,
             },
         ],
         "format": output_schema,
@@ -181,3 +230,42 @@ def _call_ollama(pdf_path: Path, model: str, system_prompt: str, output_schema: 
         return json.loads(raw_content)
     except json.JSONDecodeError as exc:
         raise ValueError(f"Ollama returned invalid JSON: {raw_content[:200]}") from exc
+
+
+def run_oil_analysis_job(job_id, pdf_path: Path, model: str, provider: str) -> None:
+    """
+    Background job runner for oil analysis AI extraction.
+    Called from a daemon thread — do NOT call synchronously in a request.
+
+    job_id   — UUID of an ImportJob (status='pending')
+    pdf_path — Path to the temp PDF file (deleted in finally block)
+    model    — AI model identifier
+    provider — 'anthropic' or 'ollama'
+    """
+    from health.models import ImportJob
+
+    try:
+        job = ImportJob.objects.get(pk=job_id)
+    except ImportJob.DoesNotExist:
+        log.error("ImportJob %s not found", job_id)
+        return
+
+    try:
+        job.status = 'running'
+        job.save(update_fields=['status'])
+
+        result = run_extraction(pdf_path, model=model, provider=provider)
+
+        job.result = result
+        job.status = 'completed'
+        job.save(update_fields=['result', 'status'])
+    except Exception as exc:
+        log.exception("Oil analysis job %s failed", job_id)
+        error_event = {'type': 'error', 'message': str(exc)}
+        ImportJob.objects.filter(pk=job.pk).update(
+            events=ImportJob.objects.values_list('events', flat=True).get(pk=job.pk) + [error_event]
+        )
+        job.status = 'failed'
+        job.save(update_fields=['status'])
+    finally:
+        pdf_path.unlink(missing_ok=True)

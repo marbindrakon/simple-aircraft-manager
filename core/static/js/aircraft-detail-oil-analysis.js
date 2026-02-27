@@ -13,6 +13,14 @@ const OIL_ANALYSIS_PALETTE = [
 // Default elements shown on the chart
 const OIL_ANALYSIS_DEFAULT_ELEMENTS = ['iron', 'copper', 'chromium', 'aluminum', 'lead', 'silicon'];
 
+// All tracked elements (lowercase, matches model constraint)
+const OIL_ANALYSIS_ALL_ELEMENTS = [
+    'iron', 'copper', 'chromium', 'aluminum', 'lead', 'silicon',
+    'nickel', 'tin', 'molybdenum', 'magnesium', 'potassium', 'boron',
+    'sodium', 'calcium', 'phosphorus', 'zinc', 'barium', 'silver',
+    'titanium', 'manganese',
+];
+
 function oilAnalysisMixin() {
     return {
         // ---- State ---------------------------------------------------------
@@ -37,8 +45,8 @@ function oilAnalysisMixin() {
         oilAnalysisAiResults: null,
         oilAnalysisAiSampleIncludes: [],   // parallel array: true/false per sample
         oilAnalysisAiSampleComponents: [], // parallel array: component id per sample
-        oilAnalysisAiModel: '',            // set during init
-        oilAnalysisAiProvider: 'anthropic',
+        oilAnalysisAiJobId: null,
+        oilAnalysisAiPollTimer: null,
 
         // ---- Computed getters ----------------------------------------------
         get oilAnalysisFilteredReports() {
@@ -78,6 +86,11 @@ function oilAnalysisMixin() {
 
         editOilAnalysisReport(report) {
             this.editingOilAnalysisReport = report;
+            const elemPpm = Object.fromEntries(OIL_ANALYSIS_ALL_ELEMENTS.map(el => [el, '']));
+            for (const [k, v] of Object.entries(report.elements_ppm || {})) {
+                const key = k.toLowerCase();
+                if (key in elemPpm && v != null) elemPpm[key] = v;
+            }
             this.oilAnalysisForm = {
                 component: report.component || '',
                 sample_date: report.sample_date || '',
@@ -88,7 +101,7 @@ function oilAnalysisMixin() {
                 oil_hours: report.oil_hours != null ? report.oil_hours : '',
                 engine_hours: report.engine_hours != null ? report.engine_hours : '',
                 oil_added_quarts: report.oil_added_quarts != null ? report.oil_added_quarts : '',
-                elements_ppm: JSON.stringify(report.elements_ppm || {}, null, 2),
+                elements_ppm: elemPpm,
                 oil_properties: report.oil_properties ? JSON.stringify(report.oil_properties, null, 2) : '',
                 lab_comments: report.lab_comments || '',
                 status: report.status || '',
@@ -112,18 +125,16 @@ function oilAnalysisMixin() {
                 if (this.editingOilAnalysisReport) {
                     resp = await apiRequest(
                         `/api/oil-analysis-reports/${this.editingOilAnalysisReport.id}/`,
-                        'PATCH',
-                        payload
+                        { method: 'PATCH', body: JSON.stringify(payload) }
                     );
                 } else {
                     resp = await apiRequest(
                         `/api/aircraft/${this.aircraftId}/oil_analysis/`,
-                        'POST',
-                        payload
+                        { method: 'POST', body: JSON.stringify(payload) }
                     );
                 }
 
-                if (resp.ok || resp.status === 201) {
+                if (resp.ok) {
                     showNotification(
                         this.editingOilAnalysisReport ? 'Oil analysis report updated' : 'Oil analysis report added',
                         'success'
@@ -132,8 +143,7 @@ function oilAnalysisMixin() {
                     this.oilAnalysisLoaded = false;
                     await this.loadOilAnalysis();
                 } else {
-                    const err = await resp.json().catch(() => ({}));
-                    showNotification(formatApiError(err, 'Failed to save oil analysis report'), 'danger');
+                    showNotification(formatApiError(resp.data || {}, 'Failed to save oil analysis report'), 'danger');
                 }
             } catch (err) {
                 console.error('Error saving oil analysis report:', err);
@@ -149,9 +159,9 @@ function oilAnalysisMixin() {
             try {
                 const resp = await apiRequest(
                     `/api/oil-analysis-reports/${this.editingOilAnalysisReport.id}/`,
-                    'DELETE'
+                    { method: 'DELETE' }
                 );
-                if (resp.ok || resp.status === 204) {
+                if (resp.ok) {
                     showNotification('Oil analysis report deleted', 'success');
                     this.closeOilAnalysisModal();
                     this.oilAnalysisLoaded = false;
@@ -177,8 +187,17 @@ function oilAnalysisMixin() {
         },
 
         closeOilAnalysisAiModal() {
+            this._stopOilAnalysisPoll();
             this.oilAnalysisAiModalOpen = false;
             this.oilAnalysisAiResults = null;
+            this.oilAnalysisAiJobId = null;
+        },
+
+        _stopOilAnalysisPoll() {
+            if (this.oilAnalysisAiPollTimer !== null) {
+                clearInterval(this.oilAnalysisAiPollTimer);
+                this.oilAnalysisAiPollTimer = null;
+            }
         },
 
         async submitOilAnalysisAiFile() {
@@ -188,11 +207,11 @@ function oilAnalysisMixin() {
                 return;
             }
             this.oilAnalysisAiExtracting = true;
+            this.oilAnalysisAiJobId = null;
+
             try {
                 const formData = new FormData();
                 formData.append('file', fileInput.files[0]);
-                formData.append('model', this.oilAnalysisAiModel || 'claude-sonnet-4-6');
-                formData.append('provider', this.oilAnalysisAiProvider || 'anthropic');
 
                 const resp = await fetch(
                     `/api/aircraft/${this.aircraftId}/oil_analysis_ai_extract/`,
@@ -203,26 +222,62 @@ function oilAnalysisMixin() {
                     }
                 );
 
-                if (resp.ok) {
+                if (resp.status === 202) {
                     const data = await resp.json();
-                    this.oilAnalysisAiResults = data;
-                    const samples = data.samples || [];
-                    this.oilAnalysisAiSampleIncludes = samples.map(() => true);
-                    // Pre-select first engine component if only one
-                    const defaultComp = this.oilAnalysisEngineComponents.length === 1
-                        ? this.oilAnalysisEngineComponents[0].id
-                        : '';
-                    this.oilAnalysisAiSampleComponents = samples.map(() => defaultComp);
+                    this.oilAnalysisAiJobId = data.job_id;
+                    this._startOilAnalysisPoll();
                 } else {
                     const err = await resp.json().catch(() => ({}));
                     showNotification(formatApiError(err, 'Extraction failed'), 'danger');
+                    this.oilAnalysisAiExtracting = false;
                 }
             } catch (err) {
                 console.error('Oil analysis AI extraction error:', err);
                 showNotification('Extraction failed', 'danger');
-            } finally {
                 this.oilAnalysisAiExtracting = false;
             }
+        },
+
+        _startOilAnalysisPoll() {
+            let cursor = 0;
+            this.oilAnalysisAiPollTimer = setInterval(async () => {
+                try {
+                    const resp = await fetch(
+                        `/api/aircraft/import/${this.oilAnalysisAiJobId}/?after=${cursor}`
+                    );
+                    if (!resp.ok) {
+                        this._stopOilAnalysisPoll();
+                        showNotification('Extraction failed: could not poll job status', 'danger');
+                        this.oilAnalysisAiExtracting = false;
+                        return;
+                    }
+                    const data = await resp.json();
+                    cursor += (data.events || []).length;
+
+                    if (data.status === 'completed') {
+                        this._stopOilAnalysisPoll();
+                        this.oilAnalysisAiExtracting = false;
+                        const result = data.result || {};
+                        this.oilAnalysisAiResults = result;
+                        const samples = result.samples || [];
+                        this.oilAnalysisAiSampleIncludes = samples.map(() => true);
+                        // Pre-select first engine component if only one
+                        const defaultComp = this.oilAnalysisEngineComponents.length === 1
+                            ? this.oilAnalysisEngineComponents[0].id
+                            : '';
+                        this.oilAnalysisAiSampleComponents = samples.map(() => defaultComp);
+                    } else if (data.status === 'failed') {
+                        this._stopOilAnalysisPoll();
+                        this.oilAnalysisAiExtracting = false;
+                        const errorEvent = (data.events || []).findLast(e => e.type === 'error');
+                        const msg = errorEvent ? errorEvent.message : 'Extraction failed';
+                        showNotification(msg, 'danger');
+                    }
+                } catch (err) {
+                    console.error('Oil analysis poll error:', err);
+                    // Keep polling — transient network errors should not abort
+                }
+            }, 2000);
         },
 
         async saveOilAnalysisAiResults() {
@@ -258,15 +313,13 @@ function oilAnalysisMixin() {
                 try {
                     const resp = await apiRequest(
                         `/api/aircraft/${this.aircraftId}/oil_analysis/`,
-                        'POST',
-                        payload
+                        { method: 'POST', body: JSON.stringify(payload) }
                     );
-                    if (resp.ok || resp.status === 201) {
+                    if (resp.ok) {
                         saved++;
                     } else {
                         failed++;
-                        const err = await resp.json().catch(() => ({}));
-                        console.error('Failed to save sample', i, err);
+                        console.error('Failed to save sample', i, resp.data);
                     }
                 } catch (err) {
                     failed++;
@@ -432,7 +485,7 @@ function _oilAnalysisEmptyForm() {
         oil_hours: '',
         engine_hours: '',
         oil_added_quarts: '',
-        elements_ppm: '{}',
+        elements_ppm: Object.fromEntries(OIL_ANALYSIS_ALL_ELEMENTS.map(el => [el, ''])),
         oil_properties: '',
         lab_comments: '',
         status: '',
@@ -457,11 +510,14 @@ function _buildOilAnalysisPayload(form, aircraftId) {
     if (form.status) payload.status = form.status;
     if (form.notes) payload.notes = form.notes;
 
-    try {
-        payload.elements_ppm = form.elements_ppm ? JSON.parse(form.elements_ppm) : {};
-    } catch (e) {
-        payload.elements_ppm = {};
+    const elements = {};
+    for (const [k, v] of Object.entries(form.elements_ppm || {})) {
+        if (v !== '' && v !== null && v !== undefined) {
+            const n = parseFloat(v);
+            if (!isNaN(n)) elements[k] = n;
+        }
     }
+    payload.elements_ppm = elements;
     try {
         payload.oil_properties = form.oil_properties ? JSON.parse(form.oil_properties) : null;
     } catch (e) {
@@ -473,7 +529,7 @@ function _buildOilAnalysisPayload(form, aircraftId) {
 function _stripNullElements(elementsObj) {
     const result = {};
     for (const [k, v] of Object.entries(elementsObj)) {
-        if (v !== null && v !== undefined) result[k] = v;
+        if (v !== null && v !== undefined) result[k.toLowerCase()] = v;
     }
     return result;
 }

@@ -5277,16 +5277,22 @@
                                 </select>
                             </div>
                         </div>
-                        <!-- Elements PPM (JSON) -->
+                        <!-- Elements PPM -->
                         <div class="pf-v5-c-form__group">
                             <div class="pf-v5-c-form__group-label">
-                                <label class="pf-v5-c-form__label" for="oa-elements">
-                                    <span class="pf-v5-c-form__label-text">Elements (PPM, JSON)</span>
+                                <label class="pf-v5-c-form__label">
+                                    <span class="pf-v5-c-form__label-text">Elements (PPM)</span>
                                 </label>
                             </div>
                             <div class="pf-v5-c-form__group-control">
-                                <textarea id="oa-elements" class="pf-v5-c-form-control" rows="4" x-model="oilAnalysisForm.elements_ppm" style="font-family: monospace; font-size: 0.85rem;" placeholder='{"iron": 15, "copper": 8, "chromium": 2}'></textarea>
-                                <p class="pf-v5-u-font-size-sm pf-v5-u-color-200" style="margin-top: 0.25rem;">Enter element concentrations in PPM as a JSON object.</p>
+                                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem 1rem;">
+                                    <template x-for="el in ['iron','copper','chromium','aluminum','lead','silicon','nickel','tin','molybdenum','magnesium','potassium','boron','sodium','calcium','phosphorus','zinc','barium','silver','titanium','manganese']" :key="el">
+                                        <div>
+                                            <label class="pf-v5-c-form__label" :for="'oa-el-' + el" style="font-size: 0.8rem; margin-bottom: 0.15rem; display: block; text-transform: capitalize;" x-text="el.charAt(0).toUpperCase() + el.slice(1)"></label>
+                                            <input type="number" class="pf-v5-c-form-control" :id="'oa-el-' + el" min="0" step="0.1" style="font-size: 0.85rem;" x-model="oilAnalysisForm.elements_ppm[el]" placeholder="—">
+                                        </div>
+                                    </template>
+                                </div>
                             </div>
                         </div>
                         <!-- Lab Comments -->
@@ -5328,7 +5334,7 @@
         </div>
     </div>
 
-    <!-- Oil Analysis AI Extract Modal -->
+    <!-- Oil Analysis PDF Import Modal -->
     <div class="pf-v5-c-backdrop" x-show="oilAnalysisAiModalOpen" x-cloak @click.self="closeOilAnalysisAiModal()">
         <div class="pf-v5-l-bullseye">
             <div class="pf-v5-c-modal-box pf-m-lg" @click.stop>
@@ -5345,7 +5351,7 @@
                     <template x-if="!oilAnalysisAiResults">
                         <div class="pf-v5-c-form">
                             <p style="margin-bottom: 1rem; color: var(--pf-v5-global--Color--200);">
-                                Upload a PDF oil analysis report from Blackstone, AvLab, or similar labs. AI will extract all sample data.
+                                Upload a PDF oil analysis report from Blackstone Laboratories or Aviation Laboratories (AvLab). Sample data is extracted automatically.
                             </p>
                             <div class="pf-v5-c-form__group">
                                 <label class="pf-v5-c-form__label" for="oilAnalysisAiFileInput">
@@ -5354,20 +5360,6 @@
                                 </label>
                                 <div class="pf-v5-c-form__group-control">
                                     <input type="file" id="oilAnalysisAiFileInput" class="pf-v5-c-form-control" accept=".pdf">
-                                </div>
-                            </div>
-                            <div class="pf-v5-c-form__group">
-                                <label class="pf-v5-c-form__label" for="oa-ai-model">
-                                    <span class="pf-v5-c-form__label-text">Model</span>
-                                </label>
-                                <div class="pf-v5-c-form__group-control">
-                                    <select id="oa-ai-model" class="pf-v5-c-form-control"
-                                            x-model="oilAnalysisAiModel"
-                                            x-init="if (!oilAnalysisAiModel) oilAnalysisAiModel = '{{ import_default_model }}'">
-                                        {% for model in import_models %}
-                                        <option value="{{ model.id }}" data-provider="{{ model.provider }}">{{ model.name }}</option>
-                                        {% endfor %}
-                                    </select>
                                 </div>
                             </div>
                         </div>

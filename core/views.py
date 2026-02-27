@@ -720,11 +720,12 @@ class AircraftViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='oil_analysis_ai_extract')
     def oil_analysis_ai_extract(self, request, pk=None):
         """
-        Extract oil analysis data from a PDF using AI. Does NOT save to DB.
+        Start an async oil analysis AI extraction job. Does NOT save to DB.
         POST /api/aircraft/{id}/oil_analysis_ai_extract/
         Multipart fields: file (PDF), model, provider
+        Returns 202 immediately with {job_id}. Poll /api/aircraft/import/{job_id}/ for status.
         """
-        aircraft = self.get_object()  # noqa: F841 — checks permission/ownership
+        aircraft = self.get_object()  # checks permission/ownership
 
         uploaded_file = request.FILES.get('file')
         if not uploaded_file:
@@ -737,10 +738,10 @@ class AircraftViewSet(viewsets.ModelViewSet):
         except Exception as exc:
             return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        model = request.data.get('model', 'claude-sonnet-4-6')
-        provider = request.data.get('provider', 'anthropic')
+        model = request.data.get('model', '')
+        provider = request.data.get('provider', 'parser')
 
-        # Write to a temp file so oil_analysis_import can read it as a Path
+        # Write to a temp file; the job runner is responsible for cleanup
         import tempfile
         from pathlib import Path as _Path
         suffix = Path(uploaded_file.name).suffix.lower() if uploaded_file.name else '.pdf'
@@ -749,22 +750,22 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 tmp.write(chunk)
             tmp_path = _Path(tmp.name)
 
-        try:
-            from health.oil_analysis_import import run_extraction
-            result = run_extraction(tmp_path, model=model, provider=provider)
-        except ValueError as exc:
-            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception:
-            logger.exception("Oil analysis AI extraction failed")
-            return Response({'error': 'Extraction failed. See server logs for details.'},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        finally:
-            try:
-                tmp_path.unlink(missing_ok=True)
-            except Exception:
-                pass
+        from health.models import ImportJob
+        from health.oil_analysis_import import run_oil_analysis_job
+        job = ImportJob.objects.create(
+            aircraft=aircraft,
+            user=request.user,
+            job_type='oil_analysis',
+        )
 
-        return Response(result)
+        t = threading.Thread(
+            target=run_oil_analysis_job,
+            args=(job.id, tmp_path, model, provider),
+            daemon=True,
+        )
+        t.start()
+
+        return Response({'job_id': str(job.id)}, status=status.HTTP_202_ACCEPTED)
 
     @action(detail=True, methods=['post'], url_path='remove_inspection_type')
     def remove_inspection_type(self, request, pk=None):

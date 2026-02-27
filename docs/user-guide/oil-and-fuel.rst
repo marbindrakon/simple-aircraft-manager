@@ -109,8 +109,7 @@ elemental wear-metal data over time. Each report stores the PPM values for
 up to 20 elements (iron, copper, chromium, aluminum, lead, silicon, etc.)
 and optional oil properties (flashpoint, viscosity, water content).
 
-Reports can be added manually or imported from a PDF lab report using AI
-extraction.
+Reports can be added manually or imported from a PDF lab report.
 
 Adding a Report Manually
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -137,26 +136,24 @@ Adding a Report Manually
 Importing from a PDF
 ^^^^^^^^^^^^^^^^^^^^
 
-AI-assisted extraction reads PDF lab reports and automatically populates all
-sample fields. A single PDF may contain multiple samples (current plus
-historical); all are extracted and presented for review.
+PDF import reads lab reports and automatically populates all sample fields.
+A single PDF may contain multiple samples (current plus historical); all are
+extracted and presented for review.
 
 1. Click **Import from PDF**.
 2. Select the PDF file from your computer.
-3. Choose the AI model to use for extraction.
-4. Click **Extract Data** and wait for the AI to process the document.
-5. Review the extracted samples. For each sample:
+3. Click **Extract Data** and wait for the report to be processed.
+4. Review the extracted samples. For each sample:
 
    - Check the checkbox to include it (all are checked by default).
    - Assign an **engine component** from the dropdown.
    - Verify element values and lab comments.
 
-6. Click **Save Selected Samples**.
+5. Click **Save Selected Samples**.
 
-**Supported labs**: Blackstone Laboratories, Aviation Laboratories (AvLab),
-and most other labs that produce PDF reports with tabular element data. AI
-extraction works best with text-based PDFs; scanned images may produce
-lower-quality results.
+**Supported labs**: Blackstone Laboratories and Aviation Laboratories (AvLab).
+PDF import requires a text-based PDF (the standard output from both labs);
+scanned image PDFs are not supported.
 
 Element Trend Chart
 ^^^^^^^^^^^^^^^^^^^
@@ -188,4 +185,4 @@ Each report can carry a lab-assigned status:
 - **Action Required** (red) — Immediate attention needed; investigate before further flight.
 
 Status labels appear in the reports table and are derived from lab comments
-during AI extraction or set manually.
+during PDF import or set manually.

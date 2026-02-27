@@ -383,12 +383,17 @@ class ADCompliance(models.Model):
 
 
 class ImportJob(models.Model):
-    """Track background import jobs (logbook or aircraft)."""
+    """Track background import jobs (logbook, oil analysis, or aircraft)."""
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('running', 'Running'),
         ('completed', 'Completed'),
         ('failed', 'Failed'),
+    ]
+    JOB_TYPE_CHOICES = [
+        ('logbook', 'Logbook Import'),
+        ('oil_analysis', 'Oil Analysis Extraction'),
+        ('aircraft', 'Aircraft Import'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -398,6 +403,7 @@ class ImportJob(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
                              null=True, blank=True, related_name='import_jobs')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    job_type = models.CharField(max_length=20, choices=JOB_TYPE_CHOICES, blank=True, default='')
     events = models.JSONField(default=list)
     result = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
