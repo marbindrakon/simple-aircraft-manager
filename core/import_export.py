@@ -1017,6 +1017,7 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
                         consumable_type=cr_data.get('consumable_type', ''),
                         flight_hours=_parse_decimal(cr_data.get('flight_hours')) or Decimal('0.0'),
                         notes=cr_data.get('notes', ''),
+                        excluded_from_averages=cr_data.get('excluded_from_averages', False),
                     )
                 counts['consumable_records'] = len(manifest.get('consumable_records', []))
 
@@ -1077,6 +1078,7 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
                         lab_comments=oar_data.get('lab_comments', ''),
                         status=oar_data.get('status'),
                         notes=oar_data.get('notes', ''),
+                        excluded_from_averages=oar_data.get('excluded_from_averages', False),
                     )
                 counts['oil_analysis_reports'] = len(manifest.get('oil_analysis_reports', []))
 

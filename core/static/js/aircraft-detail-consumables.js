@@ -202,6 +202,32 @@ function makeConsumableMixin(cfg) {
         },
 
         /**
+         * Toggle excluded_from_averages on a record in-place via PATCH.
+         */
+        async [`toggle${Cap}ExcludeFromAverages`](record) {
+            const newVal = !record.excluded_from_averages;
+            try {
+                const response = await fetch(`/api/consumable-records/${record.id}/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({ excluded_from_averages: newVal }),
+                });
+                if (response.ok) {
+                    record.excluded_from_averages = newVal;
+                    this.$nextTick(() => this[`render${Cap}Chart`]());
+                } else {
+                    showNotification(`Failed to update ${prefix} record`, 'danger');
+                }
+            } catch (error) {
+                console.error(`Error toggling ${prefix} exclude:`, error);
+                showNotification(`Error updating ${prefix} record`, 'danger');
+            }
+        },
+
+        /**
          * Returns true if the given record ID was flagged as an outlier
          * during the last chart render.
          */
@@ -225,6 +251,7 @@ function makeConsumableMixin(cfg) {
             const labels = [];
             const dataPoints = [];
             const pointIds = [];  // record ID for each datapoint (the "current" record in the pair)
+            const pointExcluded = [];  // whether each datapoint's record is excluded from averages
             for (let i = 1; i < sorted.length; i++) {
                 const hoursDelta = parseFloat(sorted[i].flight_hours) - parseFloat(sorted[i - 1].flight_hours);
                 const qty = parseFloat(sorted[i].quantity_added);
@@ -232,6 +259,7 @@ function makeConsumableMixin(cfg) {
                     labels.push(parseFloat(sorted[i].flight_hours).toFixed(1));
                     dataPoints.push(chartMetric(hoursDelta, qty));
                     pointIds.push(sorted[i].id);
+                    pointExcluded.push(!!sorted[i].excluded_from_averages);
                 }
             }
 
@@ -251,21 +279,31 @@ function makeConsumableMixin(cfg) {
             isOutlierPoint.forEach((isOut, i) => { if (isOut) newOutlierIds.add(pointIds[i]); });
             this[outlierIds] = newOutlierIds;
 
-            // --- Average: last 20 datapoints, outliers excluded ---
-            const avgWindow      = dataPoints.slice(-20);
-            const avgWindowFlags = isOutlierPoint.slice(-20);
-            const avgValues      = avgWindow.filter((_, i) => !avgWindowFlags[i]);
-            const excludedCount  = avgWindow.length - avgValues.length;
-            // Fallback: if every point in the window is an outlier, include them all
+            // --- Average: last 20 datapoints, outliers and manually excluded records excluded ---
+            const avgWindow         = dataPoints.slice(-20);
+            const avgWindowOutliers = isOutlierPoint.slice(-20);
+            const avgWindowExcluded = pointExcluded.slice(-20);
+            const avgValues         = avgWindow.filter((_, i) => !avgWindowOutliers[i] && !avgWindowExcluded[i]);
+            const excludedCount     = avgWindow.length - avgValues.length;
+            // Fallback: if every point is excluded, include them all
             const avgSource = avgValues.length > 0 ? avgValues : avgWindow;
             const avg = (avgSource.reduce((sum, v) => sum + parseFloat(v), 0) / avgSource.length).toFixed(1);
 
             // --- Per-point chart styling ---
-            const pointColors = isOutlierPoint.map(isOut => isOut ? OUTLIER_COLOR : chartColor);
-            const pointRadii  = isOutlierPoint.map(isOut => isOut ? 6 : 3);
+            const EXCLUDED_COLOR = '#8a8d90';  // grey for manually excluded points
+            const pointColors = dataPoints.map((_, i) => {
+                if (isOutlierPoint[i]) return OUTLIER_COLOR;
+                if (pointExcluded[i]) return EXCLUDED_COLOR;
+                return chartColor;
+            });
+            const pointRadii = dataPoints.map((_, i) => {
+                if (isOutlierPoint[i]) return 6;
+                if (pointExcluded[i]) return 5;
+                return 3;
+            });
 
             const avgLabel = excludedCount > 0
-                ? `Average (${avg}, ${excludedCount} outlier${excludedCount !== 1 ? 's' : ''} excluded)`
+                ? `Average (${avg}, ${excludedCount} excluded)`
                 : `Average (${avg})`;
 
             this[chart] = new Chart(canvas, {

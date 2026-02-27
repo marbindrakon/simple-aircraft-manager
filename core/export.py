@@ -267,6 +267,7 @@ def _consumable_record_dict(rec):
         'consumable_type': rec.consumable_type,
         'flight_hours': _decimal(rec.flight_hours),
         'notes': rec.notes,
+        'excluded_from_averages': rec.excluded_from_averages,
     }
 
 
@@ -319,6 +320,7 @@ def _oil_analysis_report_dict(report):
         'lab_comments': report.lab_comments,
         'status': report.status,
         'notes': report.notes,
+        'excluded_from_averages': report.excluded_from_averages,
     }
 
 

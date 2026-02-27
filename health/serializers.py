@@ -442,13 +442,13 @@ class ComponentCreateUpdateSerializer(serializers.ModelSerializer):
 class ConsumableRecordNestedSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConsumableRecord
-        fields = ['id', 'record_type', 'aircraft', 'date', 'quantity_added', 'level_after', 'consumable_type', 'flight_hours', 'notes', 'created_at']
+        fields = ['id', 'record_type', 'aircraft', 'date', 'quantity_added', 'level_after', 'consumable_type', 'flight_hours', 'notes', 'excluded_from_averages', 'created_at']
 
 
 class ConsumableRecordCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConsumableRecord
-        fields = ['id', 'record_type', 'aircraft', 'date', 'quantity_added', 'level_after', 'consumable_type', 'flight_hours', 'notes']
+        fields = ['id', 'record_type', 'aircraft', 'date', 'quantity_added', 'level_after', 'consumable_type', 'flight_hours', 'notes', 'excluded_from_averages']
         read_only_fields = ['id']
 
 
@@ -470,7 +470,7 @@ class OilAnalysisReportSerializer(serializers.ModelSerializer):
             'sample_date', 'analysis_date', 'lab', 'lab_number',
             'oil_type', 'oil_hours', 'engine_hours', 'oil_added_quarts',
             'elements_ppm', 'oil_properties', 'lab_comments',
-            'status', 'notes', 'created_at',
+            'status', 'notes', 'excluded_from_averages', 'created_at',
         ]
 
     def get_component_display(self, obj):
@@ -493,7 +493,7 @@ class OilAnalysisReportCreateUpdateSerializer(serializers.ModelSerializer):
             'sample_date', 'analysis_date', 'lab', 'lab_number',
             'oil_type', 'oil_hours', 'engine_hours', 'oil_added_quarts',
             'elements_ppm', 'oil_properties', 'lab_comments',
-            'status', 'notes',
+            'status', 'notes', 'excluded_from_averages',
         ]
 
     def validate_elements_ppm(self, value):

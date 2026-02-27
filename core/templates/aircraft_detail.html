@@ -2139,6 +2139,12 @@
                                     <td data-label="Type" :class="{ 'consumable-empty-field': !record.consumable_type }" x-text="record.consumable_type || '-'"></td>
                                     <td data-label="Notes" :class="{ 'consumable-empty-field': !record.notes }" x-text="record.notes || '-'"></td>
                                     <td data-label="Actions">
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                                @click="toggleOilExcludeFromAverages(record)"
+                                                :title="record.excluded_from_averages ? 'Include in averages' : 'Exclude from averages'"
+                                                :style="record.excluded_from_averages ? 'color: #8a8d90;' : ''">
+                                            <i class="fas fa-chart-line"></i>
+                                        </button>
                                         <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editOilRecord(record)" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
@@ -2221,6 +2227,12 @@
                                     <td data-label="Type" :class="{ 'consumable-empty-field': !record.consumable_type }" x-text="record.consumable_type || '-'"></td>
                                     <td data-label="Notes" :class="{ 'consumable-empty-field': !record.notes }" x-text="record.notes || '-'"></td>
                                     <td data-label="Actions">
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                                @click="toggleFuelExcludeFromAverages(record)"
+                                                :title="record.excluded_from_averages ? 'Include in averages' : 'Exclude from averages'"
+                                                :style="record.excluded_from_averages ? 'color: #8a8d90;' : ''">
+                                            <i class="fas fa-chart-line"></i>
+                                        </button>
                                         <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editFuelRecord(record)" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
@@ -2367,6 +2379,12 @@
                                         <span x-text="report.component_display || '-'"></span>
                                     </td>
                                     <td data-label="Actions">
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                                @click="toggleOilAnalysisExcludeFromAverages(report)"
+                                                :title="report.excluded_from_averages ? 'Include in averages' : 'Exclude from averages'"
+                                                :style="report.excluded_from_averages ? 'color: #8a8d90;' : ''">
+                                            <i class="fas fa-chart-line"></i>
+                                        </button>
                                         <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editOilAnalysisReport(report)" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>

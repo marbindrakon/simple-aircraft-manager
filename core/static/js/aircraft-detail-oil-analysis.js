@@ -401,20 +401,23 @@ function oilAnalysisMixin() {
                 const nonNull = rawValues.filter(v => v !== null);
                 const bounds = computeOutlierBounds(nonNull);
 
-                const pointColors = rawValues.map(v => {
+                const pointColors = rawValues.map((v, i) => {
                     if (v === null) return color;
                     if (bounds && (v < bounds.lower || v > bounds.upper)) return '#f0ab00';
+                    if (reports[i].excluded_from_averages) return '#8a8d90';
                     return color;
                 });
-                const pointRadii = rawValues.map(v => {
+                const pointRadii = rawValues.map((v, i) => {
                     if (v === null) return 0;
                     if (bounds && (v < bounds.lower || v > bounds.upper)) return 6;
+                    if (reports[i].excluded_from_averages) return 5;
                     return 3;
                 });
 
-                // Per-element average (non-null, non-outlier)
+                // Per-element average (non-null, non-outlier, non-excluded)
                 const avgVals = rawValues.filter((v, i) => {
                     if (v === null) return false;
+                    if (reports[i].excluded_from_averages) return false;
                     if (!bounds) return true;
                     return v >= bounds.lower && v <= bounds.upper;
                 });
@@ -475,6 +478,28 @@ function oilAnalysisMixin() {
         cardDeleteOilAnalysisReport(report) {
             this.editingOilAnalysisReport = report;
             this.deleteOilAnalysisReport();
+        },
+
+        /**
+         * Toggle excluded_from_averages on a report in-place via PATCH.
+         */
+        async toggleOilAnalysisExcludeFromAverages(report) {
+            const newVal = !report.excluded_from_averages;
+            try {
+                const resp = await apiRequest(
+                    `/api/oil-analysis-reports/${report.id}/`,
+                    { method: 'PATCH', body: JSON.stringify({ excluded_from_averages: newVal }) }
+                );
+                if (resp.ok) {
+                    report.excluded_from_averages = newVal;
+                    this.$nextTick(() => this.renderOilAnalysisChart());
+                } else {
+                    showNotification('Failed to update oil analysis report', 'danger');
+                }
+            } catch (err) {
+                console.error('Error toggling oil analysis exclude:', err);
+                showNotification('Error updating oil analysis report', 'danger');
+            }
         },
 
         // ---- Status helpers ------------------------------------------------

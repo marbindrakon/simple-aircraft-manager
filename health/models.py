@@ -443,6 +443,7 @@ class OilAnalysisReport(models.Model):
     lab_comments = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=OIL_ANALYSIS_STATUS_CHOICES, null=True, blank=True)
     notes = models.TextField(blank=True)
+    excluded_from_averages = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -471,6 +472,7 @@ class ConsumableRecord(models.Model):
     consumable_type = models.CharField(max_length=100, blank=True, help_text="e.g. 'Aeroshell W100' for oil or '100LL' for fuel")
     flight_hours = models.DecimalField(max_digits=8, decimal_places=1, help_text="Aircraft hours at time of record")
     notes = models.TextField(blank=True)
+    excluded_from_averages = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
