@@ -451,6 +451,7 @@ function oilAnalysisMixin() {
 
             if (datasets.length === 0) return;
 
+            const isMobile = window.innerWidth < 768;
             this.oilAnalysisChart = new Chart(canvas, {
                 type: 'line',
                 data: { labels, datasets },
@@ -461,7 +462,7 @@ function oilAnalysisMixin() {
                         y: { title: { display: true, text: 'PPM' }, beginAtZero: true },
                     },
                     plugins: {
-                        legend: { display: true, position: 'bottom' },
+                        legend: { display: !isMobile, position: 'bottom' },
                     },
                 },
             });
