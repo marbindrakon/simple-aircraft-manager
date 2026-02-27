@@ -10,8 +10,16 @@ const OIL_ANALYSIS_PALETTE = [
     '#06c',    '#40199a', '#004368', '#8f4700', '#1d6060',
 ];
 
-// Default elements shown on the chart
-const OIL_ANALYSIS_DEFAULT_ELEMENTS = ['iron', 'copper', 'chromium', 'aluminum', 'lead', 'silicon'];
+// Default elements shown on the chart (lead excluded — high values blow out the scale)
+const OIL_ANALYSIS_DEFAULT_ELEMENTS = ['iron', 'copper', 'chromium', 'aluminum', 'silicon'];
+
+// Periodic table symbols for each tracked element
+const OIL_ANALYSIS_ELEMENT_SYMBOLS = {
+    iron: 'Fe', copper: 'Cu', chromium: 'Cr', aluminum: 'Al', lead: 'Pb',
+    silicon: 'Si', nickel: 'Ni', tin: 'Sn', molybdenum: 'Mo', magnesium: 'Mg',
+    potassium: 'K', boron: 'B', sodium: 'Na', calcium: 'Ca', phosphorus: 'P',
+    zinc: 'Zn', barium: 'Ba', silver: 'Ag', titanium: 'Ti', manganese: 'Mn',
+};
 
 // All tracked elements (lowercase, matches model constraint)
 const OIL_ANALYSIS_ALL_ELEMENTS = [
@@ -348,6 +356,10 @@ function oilAnalysisMixin() {
             // Trigger Alpine reactivity for Sets
             this.oilAnalysisSelectedElements = new Set(this.oilAnalysisSelectedElements);
             this.$nextTick(() => this.renderOilAnalysisChart());
+        },
+
+        elementSymbol(name) {
+            return OIL_ANALYSIS_ELEMENT_SYMBOLS[name] || name;
         },
 
         isOilAnalysisElementSelected(name) {

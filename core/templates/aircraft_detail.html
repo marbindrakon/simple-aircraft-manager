@@ -2296,7 +2296,7 @@
                                         :class="isOilAnalysisElementSelected(el) ? 'pf-m-primary' : 'pf-m-secondary'"
                                         style="padding: 0.2rem 0.6rem; font-size: 0.8rem; text-transform: capitalize;"
                                         @click="toggleOilAnalysisElement(el)"
-                                        x-text="el"></button>
+                                        x-text="elementSymbol(el)"></button>
                             </template>
                         </div>
 
@@ -2353,7 +2353,7 @@
                                             <span>
                                                 <template x-for="el in ['iron','copper','chromium','aluminum','lead','silicon']" :key="el">
                                                     <span x-show="report.elements_ppm[el] != null" style="margin-right: 0.5rem;">
-                                                        <span style="text-transform: capitalize; font-weight: 500;" x-text="el.slice(0,2).toUpperCase() + ':'"></span>
+                                                        <span style="font-weight: 500;" x-text="elementSymbol(el) + ':'"></span>
                                                         <span x-text="report.elements_ppm[el]"></span>
                                                     </span>
                                                 </template>
