@@ -127,7 +127,7 @@ Adding a Report Manually
    - **Oil Type** -- Oil brand and grade (e.g., Phillips XC 20W/50).
    - **Oil Added (qt)** -- Makeup oil added during the sample interval.
    - **Lab Status** -- Overall assessment: Normal, Monitor, or Action Required.
-   - **Elements (PPM, JSON)** -- Element concentrations as a JSON object, e.g., ``{"iron": 15, "copper": 8}``.
+   - **Elements (PPM)** -- Element concentrations in PPM. Enter the elements that appear on your report and leave the rest empty.
    - **Lab Comments** -- Verbatim lab technician comments.
    - **Notes** -- Your own notes about this sample.
 
