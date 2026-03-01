@@ -13,6 +13,14 @@ The Oil Usage sub-tab tracks oil additions and consumption.
 
 .. TODO: Screenshot of the Oil Usage sub-tab showing the consumption trend chart and records table
 
+Auto-Created Records from Flight Log
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When you log a flight on the **Flights** tab and enter a value in the
+**Oil Added** or **Fuel Added** fields, the app automatically creates the
+corresponding oil or fuel record here, dated to the flight date. You can
+edit or delete these records independently of the flight log.
+
 Adding an Oil Record
 ^^^^^^^^^^^^^^^^^^^^
 

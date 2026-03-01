@@ -31,9 +31,9 @@ Card Actions
 
 Each card has two buttons at the bottom:
 
-- **Update Hours** -- Opens a modal to log new flight time. This button is
-  disabled when the aircraft has a red (grounding) airworthiness status to
-  prevent logging hours on a grounded aircraft.
+- **Update Hours** -- Opens a modal to log new tach time (and optionally Hobbs
+  time). This button is disabled when the aircraft has a red (grounding)
+  airworthiness status to prevent logging hours on a grounded aircraft.
 - **Details** -- Navigates to the :doc:`aircraft detail page <aircraft-detail>`.
 
 Adding a New Aircraft

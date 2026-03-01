@@ -19,6 +19,7 @@ and individual owners.
    user-guide/ads
    user-guide/inspections
    user-guide/oil-and-fuel
+   user-guide/flights
    user-guide/documents
    user-guide/major-records
    user-guide/sharing-and-access
