@@ -211,7 +211,6 @@ function flightsMixin() {
                 if (ok) {
                     showNotification('Flight log deleted', 'success');
                     await this.loadFlightLogs();
-                    await this.loadData();  // refresh aircraft totals
                 } else {
                     showNotification('Failed to delete flight log', 'danger');
                 }

@@ -311,9 +311,5 @@ class FlightLogViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelVie
 
     def perform_destroy(self, instance):
         aircraft = instance.aircraft
-        aircraft.tach_time -= instance.tach_time
-        if instance.hobbs_time:
-            aircraft.hobbs_time -= instance.hobbs_time
-        aircraft.save()
         log_event(aircraft, 'flight', 'Flight log deleted', user=self.request.user)
         instance.delete()
