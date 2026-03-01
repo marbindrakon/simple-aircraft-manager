@@ -16,12 +16,12 @@
                 <div class="pf-v5-c-modal-box__body">
                     <form @submit.prevent="submit">
                         <div class="pf-v5-c-form">
-                            <!-- Current Tach (Read-only) -->
+                            <!-- Current Tach Reading (Read-only) -->
                             <div class="pf-v5-c-form__group">
                                 <label class="pf-v5-c-form__label">
-                                    <span class="pf-v5-c-form__label-text">Current Tach Time:</span>
+                                    <span class="pf-v5-c-form__label-text">Current Tach Reading:</span>
                                 </label>
-                                <p class="pf-v5-u-font-size-2xl pf-v5-u-font-weight-bold" x-text="currentTachTime"></p>
+                                <p class="pf-v5-u-font-size-2xl pf-v5-u-font-weight-bold" x-text="currentTachReading"></p>
                             </div>
 
                             <!-- New Tach Reading (meter value) -->
@@ -37,9 +37,6 @@
                                        step="0.1"
                                        min="0"
                                        required>
-                                <p class="pf-v5-c-form__helper-text" x-show="tachOffset > 0">
-                                    Enter meter reading. Cumulative total = reading + offset (<span x-text="tachOffset"></span>).
-                                </p>
                             </div>
 
                             <!-- Hours Change (Calculated) -->

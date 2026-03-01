@@ -79,19 +79,20 @@
                                 </select>
                             </div>
 
-                            <!-- Tach Time + Offset -->
+                            <!-- Tach Reading + Offset -->
                             <div class="pf-v5-l-grid pf-m-gutter">
                                 <div class="pf-v5-l-grid__item pf-m-6-col">
                                     <div class="pf-v5-c-form__group">
-                                        <label class="pf-v5-c-form__label" for="tach-time">
-                                            <span class="pf-v5-c-form__label-text">Tach Time (hours):</span>
+                                        <label class="pf-v5-c-form__label" for="tach-reading">
+                                            <span class="pf-v5-c-form__label-text">Tach Reading (hours):</span>
                                         </label>
                                         <input type="number"
-                                               id="tach-time"
+                                               id="tach-reading"
                                                class="pf-v5-c-form-control"
-                                               x-model="aircraftForm.tach_time"
+                                               x-model="aircraftForm.tach_reading"
                                                step="0.1"
                                                min="0">
+                                        <p class="pf-v5-c-form__helper-text">Current tach meter reading.</p>
                                     </div>
                                 </div>
                                 <div class="pf-v5-l-grid__item pf-m-6-col">
@@ -105,24 +106,25 @@
                                                x-model="aircraftForm.tach_time_offset"
                                                step="0.1"
                                                min="0">
-                                        <p class="pf-v5-c-form__helper-text">Hours accumulated before this system. Meter reading + offset = total tach time.</p>
+                                        <p class="pf-v5-c-form__helper-text">Hours to add to the meter reading for total time (e.g. after a tach replacement).</p>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Hobbs Time + Offset -->
+                            <!-- Hobbs Reading + Offset -->
                             <div class="pf-v5-l-grid pf-m-gutter">
                                 <div class="pf-v5-l-grid__item pf-m-6-col">
                                     <div class="pf-v5-c-form__group">
-                                        <label class="pf-v5-c-form__label" for="hobbs-time">
-                                            <span class="pf-v5-c-form__label-text">Hobbs Time (hours):</span>
+                                        <label class="pf-v5-c-form__label" for="hobbs-reading">
+                                            <span class="pf-v5-c-form__label-text">Hobbs Reading (hours):</span>
                                         </label>
                                         <input type="number"
-                                               id="hobbs-time"
+                                               id="hobbs-reading"
                                                class="pf-v5-c-form-control"
-                                               x-model="aircraftForm.hobbs_time"
+                                               x-model="aircraftForm.hobbs_reading"
                                                step="0.1"
                                                min="0">
+                                        <p class="pf-v5-c-form__helper-text">Current Hobbs meter reading. Leave 0 if not tracking Hobbs.</p>
                                     </div>
                                 </div>
                                 <div class="pf-v5-l-grid__item pf-m-6-col">
@@ -136,7 +138,7 @@
                                                x-model="aircraftForm.hobbs_time_offset"
                                                step="0.1"
                                                min="0">
-                                        <p class="pf-v5-c-form__helper-text">Hours accumulated before this system. Leave 0 if not tracking Hobbs.</p>
+                                        <p class="pf-v5-c-form__helper-text">Hours to add to the Hobbs reading for total time. Leave 0 if not tracking Hobbs.</p>
                                     </div>
                                 </div>
                             </div>

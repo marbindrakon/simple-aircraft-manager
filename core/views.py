@@ -446,7 +446,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
             component_ads = AD.objects.filter(applicable_component__in=component_ids)
             all_ads = (aircraft_ads | component_ads).distinct()
 
-            current_hours = aircraft.tach_time
+            current_hours = aircraft.tach_time - aircraft.tach_time_offset
 
             ads_data = []
             for ad in all_ads:
@@ -565,7 +565,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
             component_inspections = InspectionType.objects.filter(applicable_component__in=component_ids)
             all_types = (aircraft_inspections | component_inspections).distinct()
 
-            current_hours = aircraft.tach_time
+            current_hours = aircraft.tach_time - aircraft.tach_time_offset
             today = date_cls.today()
 
             result = []
@@ -1484,7 +1484,7 @@ class PublicAircraftSummaryAPI(View):
 
         drf_request = Request(request, parsers=[JSONParser()])
 
-        current_hours = aircraft.tach_time
+        current_hours = aircraft.tach_time - aircraft.tach_time_offset
         today = date_cls.today()
 
         # Build AD status list (same logic as AircraftViewSet.ads GET)

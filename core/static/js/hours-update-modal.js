@@ -17,6 +17,14 @@ function hoursUpdateModal() {
             return parseFloat(this.aircraft?.hobbs_time_offset) || 0;
         },
 
+        get currentTachReading() {
+            return (this.currentTachTime - this.tachOffset).toFixed(1);
+        },
+
+        get currentHobbsReading() {
+            return (this.currentHobbsTime - this.hobbsOffset).toFixed(1);
+        },
+
         get hoursChange() {
             const cumulative = this.newTachReading + this.tachOffset;
             const delta = cumulative - this.currentTachTime;

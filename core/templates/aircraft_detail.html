@@ -70,8 +70,18 @@
                     </div>
                     <!-- Current Hours -->
                     <div x-show="aircraft" x-cloak style="display: flex; align-items: baseline; gap: 0.4rem; margin-left: 0.5rem; color: var(--pf-v5-global--Color--200);">
-                        <span style="font-size: 0.85rem;">Tach Time</span>
-                        <span class="hours-display" style="font-size: 1.25rem;" x-text="formatHours(aircraft?.tach_time)"></span>
+                        <span style="font-size: 0.85rem;">Tach</span>
+                        <span class="hours-display" style="font-size: 1.25rem;" x-text="formatHours(parseFloat(aircraft?.tach_time_offset) !== 0 ? parseFloat(aircraft?.tach_time) - parseFloat(aircraft?.tach_time_offset) : aircraft?.tach_time)"></span>
+                        <template x-if="parseFloat(aircraft?.tach_time_offset) !== 0">
+                            <span style="font-size: 0.85rem; opacity: 0.75;" x-text="'(' + formatHours(aircraft?.tach_time) + ' total)'"></span>
+                        </template>
+                    </div>
+                    <div x-show="aircraft && parseFloat(aircraft?.hobbs_time) > 0" x-cloak style="display: flex; align-items: baseline; gap: 0.4rem; margin-left: 0.5rem; color: var(--pf-v5-global--Color--200);">
+                        <span style="font-size: 0.85rem;">Hobbs</span>
+                        <span class="hours-display" style="font-size: 1.25rem;" x-text="formatHours(parseFloat(aircraft?.hobbs_time_offset) !== 0 ? parseFloat(aircraft?.hobbs_time) - parseFloat(aircraft?.hobbs_time_offset) : aircraft?.hobbs_time)"></span>
+                        <template x-if="parseFloat(aircraft?.hobbs_time_offset) !== 0">
+                            <span style="font-size: 0.85rem; opacity: 0.75;" x-text="'(' + formatHours(aircraft?.hobbs_time) + ' total)'"></span>
+                        </template>
                     </div>
                 </div>
                 <div x-show="aircraft" x-cloak style="display: flex; gap: 0.5rem; align-items: center; position: relative;"
