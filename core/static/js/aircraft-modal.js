@@ -15,6 +15,9 @@ function aircraftModal() {
             purchased: '',
             status: 'AVAILABLE',
             tach_time: 0,
+            tach_time_offset: 0,
+            hobbs_time: 0,
+            hobbs_time_offset: 0,
         },
         pictureFile: null,
         removePicture: false,
@@ -48,6 +51,9 @@ function aircraftModal() {
                 purchased: '',
                 status: 'AVAILABLE',
                 tach_time: 0,
+                tach_time_offset: 0,
+                hobbs_time: 0,
+                hobbs_time_offset: 0,
             };
             this.pictureFile = null;
             this.removePicture = false;
@@ -65,6 +71,9 @@ function aircraftModal() {
                 purchased: aircraft.purchased || '',
                 status: aircraft.status || 'AVAILABLE',
                 tach_time: aircraft.tach_time || 0,
+                tach_time_offset: aircraft.tach_time_offset || 0,
+                hobbs_time: aircraft.hobbs_time || 0,
+                hobbs_time_offset: aircraft.hobbs_time_offset || 0,
             };
             this.pictureFile = null;
             this.removePicture = false;
@@ -117,6 +126,9 @@ function aircraftModal() {
                 formData.append('description', this.aircraftForm.description);
                 formData.append('status', this.aircraftForm.status);
                 formData.append('tach_time', this.aircraftForm.tach_time);
+                formData.append('tach_time_offset', this.aircraftForm.tach_time_offset || 0);
+                formData.append('hobbs_time', this.aircraftForm.hobbs_time || 0);
+                formData.append('hobbs_time_offset', this.aircraftForm.hobbs_time_offset || 0);
 
                 if (this.aircraftForm.purchased) {
                     formData.append('purchased', this.aircraftForm.purchased);
