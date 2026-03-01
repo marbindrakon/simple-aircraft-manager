@@ -83,8 +83,14 @@
                         <dl>
                             <dt>Make/Model:</dt>
                             <dd x-text="`${aircraft.make} ${aircraft.model}`"></dd>
-                            <dt>Hours:</dt>
-                            <dd class="hours-display" x-text="formatHours(aircraft.flight_time)"></dd>
+                            <dt>Tach:</dt>
+                            <dd class="hours-display" x-text="formatHours(parseFloat(aircraft.tach_time_offset) !== 0 ? parseFloat(aircraft.tach_time) - parseFloat(aircraft.tach_time_offset) : aircraft.tach_time)"></dd>
+                            <template x-if="parseFloat(aircraft.hobbs_time) > 0">
+                                <dt>Hobbs:</dt>
+                            </template>
+                            <template x-if="parseFloat(aircraft.hobbs_time) > 0">
+                                <dd class="hours-display" x-text="formatHours(parseFloat(aircraft.hobbs_time_offset) !== 0 ? parseFloat(aircraft.hobbs_time) - parseFloat(aircraft.hobbs_time_offset) : aircraft.hobbs_time)"></dd>
+                            </template>
                             <dt>Status:</dt>
                             <dd>
                                 <span class="pf-v5-c-label pf-m-blue" x-text="aircraft.status"></span>
@@ -110,12 +116,13 @@
                         </template>
                     </div>
                     <div class="pf-v5-c-card__footer">
-                        <button class="pf-v5-c-button pf-m-primary"
-                                x-show="canUpdateHours(aircraft)"
-                                @click="openHoursModal(aircraft)"
-                                :disabled="aircraft.airworthiness?.status === 'RED'">
-                            Update Hours
-                        </button>
+                        <a class="pf-v5-c-button pf-m-primary"
+                           x-show="canUpdateHours(aircraft)"
+                           :href="`/aircraft/${aircraft.id}/#log-flight`"
+                           :class="{ 'pf-m-disabled': aircraft.airworthiness?.status === 'RED' }"
+                           :aria-disabled="aircraft.airworthiness?.status === 'RED'">
+                            <i class="fas fa-plane"></i> Log Flight
+                        </a>
                         <a :href="`/aircraft/${aircraft.id}/`"
                            class="pf-v5-c-button pf-m-secondary">
                             Details

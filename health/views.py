@@ -14,10 +14,13 @@ class LogbookPagination(LimitOffsetPagination):
 from core.events import log_event
 from core.mixins import AircraftScopedMixin, EventLoggingMixin
 from core.permissions import IsAdAircraftOwnerOrAdmin
+from decimal import Decimal
+
+from core.permissions import IsAircraftOwnerOrAdmin, IsAircraftPilotOrAbove
 from health.models import (
     ComponentType, Component, DocumentCollection, Document, DocumentImage,
     LogbookEntry, Squawk, InspectionType, AD, MajorRepairAlteration,
-    InspectionRecord, ADCompliance, ConsumableRecord, OilAnalysisReport,
+    InspectionRecord, ADCompliance, ConsumableRecord, OilAnalysisReport, FlightLog,
 )
 from health.serializers import (
     ComponentTypeSerializer, ComponentSerializer, ComponentCreateUpdateSerializer,
@@ -28,6 +31,7 @@ from health.serializers import (
     ADComplianceSerializer, ADComplianceNestedSerializer,
     ConsumableRecordNestedSerializer, ConsumableRecordCreateSerializer,
     OilAnalysisReportSerializer, OilAnalysisReportCreateUpdateSerializer,
+    FlightLogNestedSerializer, FlightLogCreateUpdateSerializer,
 )
 
 class ComponentTypeViewSet(viewsets.ModelViewSet):
@@ -269,3 +273,43 @@ class OilAnalysisReportViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.
             return OilAnalysisReportCreateUpdateSerializer
         return OilAnalysisReportSerializer
 
+
+
+class FlightLogViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelViewSet):
+    """
+    Handles detail GET, PATCH, DELETE for individual flight log entries.
+    POST (create) is handled by AircraftViewSet.flight_logs action.
+    """
+    queryset = FlightLog.objects.all()
+    aircraft_fk_path = 'aircraft'
+    event_category = 'flight'
+    http_method_names = ['get', 'patch', 'delete', 'head', 'options']
+
+    def get_serializer_class(self):
+        if self.action in ('update', 'partial_update'):
+            return FlightLogCreateUpdateSerializer
+        return FlightLogNestedSerializer
+
+    def get_permissions(self):
+        if self.action in ('update', 'partial_update', 'destroy'):
+            return [IsAuthenticated(), IsAircraftOwnerOrAdmin()]
+        return [IsAuthenticated(), IsAircraftPilotOrAbove()]
+
+    def perform_update(self, serializer):
+        old_tach = serializer.instance.tach_time
+        old_hobbs = serializer.instance.hobbs_time or Decimal('0')
+        flight = serializer.save()
+        tach_delta = flight.tach_time - old_tach
+        if tach_delta:
+            flight.aircraft.tach_time += tach_delta
+            flight.aircraft.save()
+        hobbs_delta = (flight.hobbs_time or Decimal('0')) - old_hobbs
+        if hobbs_delta:
+            flight.aircraft.hobbs_time += hobbs_delta
+            flight.aircraft.save()
+        log_event(flight.aircraft, 'flight', 'Flight log updated', user=self.request.user)
+
+    def perform_destroy(self, instance):
+        aircraft = instance.aircraft
+        log_event(aircraft, 'flight', 'Flight log deleted', user=self.request.user)
+        instance.delete()

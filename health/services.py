@@ -180,7 +180,7 @@ def calculate_airworthiness(aircraft) -> AirworthinessStatus:
     - issues: List of specific issues found
     """
     result = AirworthinessStatus()
-    current_hours = aircraft.flight_time
+    current_hours = aircraft.tach_time - aircraft.tach_time_offset
     today = date.today()
 
     # Check all conditions

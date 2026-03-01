@@ -64,34 +64,81 @@
                                        x-model="aircraftForm.serial_number">
                             </div>
 
-                            <!-- Status and Flight Time -->
+                            <!-- Status -->
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="status">
+                                    <span class="pf-v5-c-form__label-text">Status:</span>
+                                </label>
+                                <select id="status"
+                                        class="pf-v5-c-form-control"
+                                        x-model="aircraftForm.status">
+                                    <option value="AVAILABLE">Available</option>
+                                    <option value="MX">In Maintenance</option>
+                                    <option value="GROUND">Grounded</option>
+                                    <option value="UNAVAILABLE">Unavailable</option>
+                                </select>
+                            </div>
+
+                            <!-- Tach Reading + Offset -->
                             <div class="pf-v5-l-grid pf-m-gutter">
                                 <div class="pf-v5-l-grid__item pf-m-6-col">
                                     <div class="pf-v5-c-form__group">
-                                        <label class="pf-v5-c-form__label" for="status">
-                                            <span class="pf-v5-c-form__label-text">Status:</span>
+                                        <label class="pf-v5-c-form__label" for="tach-reading">
+                                            <span class="pf-v5-c-form__label-text">Tach Reading (hours):</span>
                                         </label>
-                                        <select id="status"
-                                                class="pf-v5-c-form-control"
-                                                x-model="aircraftForm.status">
-                                            <option value="AVAILABLE">Available</option>
-                                            <option value="MX">In Maintenance</option>
-                                            <option value="GROUND">Grounded</option>
-                                            <option value="UNAVAILABLE">Unavailable</option>
-                                        </select>
+                                        <input type="number"
+                                               id="tach-reading"
+                                               class="pf-v5-c-form-control"
+                                               x-model="aircraftForm.tach_reading"
+                                               step="0.1"
+                                               min="0">
+                                        <p class="pf-v5-c-form__helper-text">Current tach meter reading.</p>
                                     </div>
                                 </div>
                                 <div class="pf-v5-l-grid__item pf-m-6-col">
                                     <div class="pf-v5-c-form__group">
-                                        <label class="pf-v5-c-form__label" for="flight-time">
-                                            <span class="pf-v5-c-form__label-text">Flight Time (hours):</span>
+                                        <label class="pf-v5-c-form__label" for="tach-offset">
+                                            <span class="pf-v5-c-form__label-text">Tach Offset (hours):</span>
                                         </label>
                                         <input type="number"
-                                               id="flight-time"
+                                               id="tach-offset"
                                                class="pf-v5-c-form-control"
-                                               x-model="aircraftForm.flight_time"
+                                               x-model="aircraftForm.tach_time_offset"
                                                step="0.1"
                                                min="0">
+                                        <p class="pf-v5-c-form__helper-text">Hours to add to the meter reading for total time (e.g. after a tach replacement).</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Hobbs Reading + Offset -->
+                            <div class="pf-v5-l-grid pf-m-gutter">
+                                <div class="pf-v5-l-grid__item pf-m-6-col">
+                                    <div class="pf-v5-c-form__group">
+                                        <label class="pf-v5-c-form__label" for="hobbs-reading">
+                                            <span class="pf-v5-c-form__label-text">Hobbs Reading (hours):</span>
+                                        </label>
+                                        <input type="number"
+                                               id="hobbs-reading"
+                                               class="pf-v5-c-form-control"
+                                               x-model="aircraftForm.hobbs_reading"
+                                               step="0.1"
+                                               min="0">
+                                        <p class="pf-v5-c-form__helper-text">Current Hobbs meter reading. Leave 0 if not tracking Hobbs.</p>
+                                    </div>
+                                </div>
+                                <div class="pf-v5-l-grid__item pf-m-6-col">
+                                    <div class="pf-v5-c-form__group">
+                                        <label class="pf-v5-c-form__label" for="hobbs-offset">
+                                            <span class="pf-v5-c-form__label-text">Hobbs Offset (hours):</span>
+                                        </label>
+                                        <input type="number"
+                                               id="hobbs-offset"
+                                               class="pf-v5-c-form-control"
+                                               x-model="aircraftForm.hobbs_time_offset"
+                                               step="0.1"
+                                               min="0">
+                                        <p class="pf-v5-c-form__helper-text">Hours to add to the Hobbs reading for total time. Leave 0 if not tracking Hobbs.</p>
                                     </div>
                                 </div>
                             </div>

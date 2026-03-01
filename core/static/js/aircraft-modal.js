@@ -14,7 +14,10 @@ function aircraftModal() {
             description: '',
             purchased: '',
             status: 'AVAILABLE',
-            flight_time: 0,
+            tach_reading: 0,
+            tach_time_offset: 0,
+            hobbs_reading: 0,
+            hobbs_time_offset: 0,
         },
         pictureFile: null,
         removePicture: false,
@@ -47,7 +50,10 @@ function aircraftModal() {
                 description: '',
                 purchased: '',
                 status: 'AVAILABLE',
-                flight_time: 0,
+                tach_reading: 0,
+                tach_time_offset: 0,
+                hobbs_reading: 0,
+                hobbs_time_offset: 0,
             };
             this.pictureFile = null;
             this.removePicture = false;
@@ -64,7 +70,10 @@ function aircraftModal() {
                 description: aircraft.description || '',
                 purchased: aircraft.purchased || '',
                 status: aircraft.status || 'AVAILABLE',
-                flight_time: aircraft.flight_time || 0,
+                tach_reading: (parseFloat(aircraft.tach_time) || 0) - (parseFloat(aircraft.tach_time_offset) || 0),
+                tach_time_offset: aircraft.tach_time_offset || 0,
+                hobbs_reading: (parseFloat(aircraft.hobbs_time) || 0) - (parseFloat(aircraft.hobbs_time_offset) || 0),
+                hobbs_time_offset: aircraft.hobbs_time_offset || 0,
             };
             this.pictureFile = null;
             this.removePicture = false;
@@ -116,7 +125,12 @@ function aircraftModal() {
                 formData.append('serial_number', this.aircraftForm.serial_number);
                 formData.append('description', this.aircraftForm.description);
                 formData.append('status', this.aircraftForm.status);
-                formData.append('flight_time', this.aircraftForm.flight_time);
+                const tachOffset = parseFloat(this.aircraftForm.tach_time_offset) || 0;
+                const hobbsOffset = parseFloat(this.aircraftForm.hobbs_time_offset) || 0;
+                formData.append('tach_time', (parseFloat(this.aircraftForm.tach_reading) || 0) + tachOffset);
+                formData.append('tach_time_offset', tachOffset);
+                formData.append('hobbs_time', (parseFloat(this.aircraftForm.hobbs_reading) || 0) + hobbsOffset);
+                formData.append('hobbs_time_offset', hobbsOffset);
 
                 if (this.aircraftForm.purchased) {
                     formData.append('purchased', this.aircraftForm.purchased);

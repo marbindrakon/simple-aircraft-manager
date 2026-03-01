@@ -43,6 +43,7 @@ router.register(r'inspections', health_views.InspectionRecordViewSet)
 router.register(r'ad-compliances', health_views.ADComplianceViewSet)
 router.register(r'consumable-records', health_views.ConsumableRecordViewSet)
 router.register(r'oil-analysis-reports', health_views.OilAnalysisReportViewSet)
+router.register(r'flight-logs', health_views.FlightLogViewSet)
 router.register(r'invitation-codes', core_views.InvitationCodeViewSet, basename='invitation-code')
 router.register(r'invitation-code-roles', core_views.InvitationCodeAircraftRoleViewSet, basename='invitation-code-role')
 

@@ -31,7 +31,10 @@ class Aircraft(models.Model):
     added = models.DateTimeField(auto_now_add=True, editable=False)
     picture = models.ImageField(upload_to=random_picture_filename, blank=True)
     status = models.CharField(max_length=254, blank=False, choices=AIRCRAFT_STATUSES, default="AVAILABLE")
-    flight_time = models.DecimalField(max_digits=8, decimal_places=1, default=0.0)
+    tach_time = models.DecimalField(max_digits=8, decimal_places=1, default=0.0)
+    tach_time_offset = models.DecimalField(max_digits=8, decimal_places=1, default=0.0)
+    hobbs_time = models.DecimalField(max_digits=8, decimal_places=1, default=0.0)
+    hobbs_time_offset = models.DecimalField(max_digits=8, decimal_places=1, default=0.0)
 
     def __str__(self):
         return f"{self.tail_number} - {self.make} {self.model}"
@@ -50,6 +53,7 @@ class AircraftNote(models.Model):
 
 EVENT_CATEGORIES = (
     ('hours', 'Hours Update'),
+    ('flight', 'Flight'),
     ('component', 'Component'),
     ('squawk', 'Squawk'),
     ('note', 'Note'),

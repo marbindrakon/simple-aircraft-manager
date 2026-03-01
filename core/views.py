@@ -51,7 +51,7 @@ from core.serializers import (
 from health.models import (
     Component, LogbookEntry, Squawk, Document, DocumentCollection,
     ConsumableRecord, AD, ADCompliance, InspectionType, InspectionRecord,
-    MajorRepairAlteration, OilAnalysisReport,
+    MajorRepairAlteration, OilAnalysisReport, FlightLog,
 )
 from health.serializers import (
     ComponentSerializer, ComponentCreateUpdateSerializer,
@@ -65,6 +65,7 @@ from health.serializers import (
     InspectionRecordNestedSerializer,
     MajorRepairAlterationNestedSerializer,
     OilAnalysisReportSerializer, OilAnalysisReportCreateUpdateSerializer,
+    FlightLogNestedSerializer, FlightLogCreateUpdateSerializer,
 )
 from health.services import (
     end_of_month_after, ad_compliance_status, inspection_compliance_status,
@@ -100,7 +101,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
                 return [IsAuthenticated(), IsAircraftPilotOrAbove()]
             return [IsAuthenticated(), IsAircraftOwnerOrAdmin()]
         if self.action in ('update_hours', 'squawks', 'notes',
-                           'oil_records', 'fuel_records'):
+                           'oil_records', 'fuel_records', 'flight_logs'):
             return [IsAuthenticated(), IsAircraftPilotOrAbove()]
         # list, retrieve, summary, documents, events
         return [IsAuthenticated(), IsAircraftPilotOrAbove()]
@@ -130,57 +131,71 @@ class AircraftViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def update_hours(self, request, pk=None):
         """
-        Update aircraft hours and automatically sync to all in-service components
+        Update aircraft tach/hobbs hours and automatically sync to all in-service components.
         POST /api/aircraft/{id}/update_hours/
 
         Body: {
-            "new_hours": 1234.5
+            "new_tach_time": 1234.5,   # primary (cumulative total)
+            "new_hours": 1234.5,        # backward-compat alias for new_tach_time
+            "new_hobbs_time": 1240.0,  # optional
         }
         """
         aircraft = self.get_object()
-        new_hours = request.data.get('new_hours')
 
-        # Validation
-        if new_hours is None:
-            return Response({'error': 'new_hours required'},
+        # Support both new_tach_time and backward-compat new_hours
+        new_tach_raw = request.data.get('new_tach_time') or request.data.get('new_hours')
+
+        if new_tach_raw is None:
+            return Response({'error': 'new_tach_time required'},
                           status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            new_hours = Decimal(str(new_hours))
+            new_tach_time = Decimal(str(new_tach_raw))
         except (ValueError, InvalidOperation, TypeError):
-            return Response({'error': 'Invalid hours value'},
+            return Response({'error': 'Invalid tach time value'},
                           status=status.HTTP_400_BAD_REQUEST)
 
-        if new_hours < aircraft.flight_time:
-            return Response({'error': 'Hours cannot decrease'},
-                          status=status.HTTP_400_BAD_REQUEST)
+        hours_delta = new_tach_time - aircraft.tach_time
+        old_tach = aircraft.tach_time
 
-        hours_delta = new_hours - aircraft.flight_time
-        old_hours = aircraft.flight_time
+        # Update aircraft tach
+        aircraft.tach_time = new_tach_time
 
-        # Update aircraft
-        aircraft.flight_time = new_hours
+        # Optional hobbs update
+        new_hobbs_raw = request.data.get('new_hobbs_time')
+        if new_hobbs_raw is not None:
+            try:
+                new_hobbs_time = Decimal(str(new_hobbs_raw))
+                aircraft.hobbs_time = new_hobbs_time
+            except (ValueError, InvalidOperation, TypeError):
+                return Response({'error': 'Invalid hobbs time value'},
+                              status=status.HTTP_400_BAD_REQUEST)
+
         aircraft.save()
 
         # ALWAYS update all in-service components (not optional)
+        # Clamp component hours at 0 to prevent negative values on corrections.
         components = aircraft.components.filter(status='IN-USE')
         updated_components = []
         for component in components:
-            component.hours_in_service += hours_delta
-            component.hours_since_overhaul += hours_delta
+            component.hours_in_service = max(Decimal('0'), component.hours_in_service + hours_delta)
+            component.hours_since_overhaul = max(Decimal('0'), component.hours_since_overhaul + hours_delta)
             component.save()
             updated_components.append(str(component.id))
 
+        delta_sign = '+' if hours_delta >= 0 else ''
         log_event(
             aircraft, 'hours',
-            f"Hours updated to {new_hours}",
+            f"Hours {'updated' if hours_delta >= 0 else 'corrected'} to {new_tach_time}",
             user=request.user,
-            notes=f"Previous: {old_hours}, delta: +{hours_delta}",
+            notes=f"Previous: {old_tach}, delta: {delta_sign}{hours_delta}",
         )
 
         return Response({
             'success': True,
-            'aircraft_hours': float(aircraft.flight_time),
+            'aircraft_hours': float(aircraft.tach_time),  # backward compat
+            'tach_time': float(aircraft.tach_time),
+            'hobbs_time': float(aircraft.hobbs_time),
             'hours_added': float(hours_delta),
             'components_updated': len(updated_components),
         })
@@ -356,7 +371,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
         data['aircraft'] = aircraft.id
         data['record_type'] = record_type
         if 'flight_hours' not in data or not data['flight_hours']:
-            data['flight_hours'] = str(aircraft.flight_time)
+            data['flight_hours'] = str(aircraft.tach_time)
 
         serializer = ConsumableRecordCreateSerializer(data=data)
         if serializer.is_valid():
@@ -431,7 +446,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
             component_ads = AD.objects.filter(applicable_component__in=component_ids)
             all_ads = (aircraft_ads | component_ads).distinct()
 
-            current_hours = aircraft.flight_time
+            current_hours = aircraft.tach_time - aircraft.tach_time_offset
 
             ads_data = []
             for ad in all_ads:
@@ -550,7 +565,7 @@ class AircraftViewSet(viewsets.ModelViewSet):
             component_inspections = InspectionType.objects.filter(applicable_component__in=component_ids)
             all_types = (aircraft_inspections | component_inspections).distinct()
 
-            current_hours = aircraft.flight_time
+            current_hours = aircraft.tach_time - aircraft.tach_time_offset
             today = date_cls.today()
 
             result = []
@@ -645,6 +660,81 @@ class AircraftViewSet(viewsets.ModelViewSet):
                   user=request.user)
         return Response(
             MajorRepairAlterationNestedSerializer(record).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=True, methods=['get', 'post'], url_path='flight_logs')
+    def flight_logs(self, request, pk=None):
+        """
+        Get or create flight log entries for an aircraft.
+        GET  /api/aircraft/{id}/flight_logs/
+        POST /api/aircraft/{id}/flight_logs/
+        """
+        aircraft = self.get_object()
+
+        if request.method == 'GET':
+            logs = aircraft.flight_logs.all()
+            return Response({
+                'flight_logs': FlightLogNestedSerializer(logs, many=True).data,
+            })
+
+        # POST — create a new flight log
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+        data['aircraft'] = str(aircraft.id)
+
+        serializer = FlightLogCreateUpdateSerializer(data=data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            flight = serializer.save()
+            tach_delta = flight.tach_time
+            aircraft.tach_time += tach_delta
+            if flight.hobbs_time:
+                aircraft.hobbs_time += flight.hobbs_time
+            aircraft.save()
+
+            # Sync IN-USE component hours
+            for comp in aircraft.components.filter(status='IN-USE'):
+                comp.hours_in_service += tach_delta
+                comp.hours_since_overhaul += tach_delta
+                comp.save()
+
+            # Auto-create ConsumableRecords for oil/fuel added
+            if flight.oil_added:
+                ConsumableRecord.objects.create(
+                    record_type=ConsumableRecord.RECORD_TYPE_OIL,
+                    aircraft=aircraft,
+                    date=flight.date,
+                    quantity_added=flight.oil_added,
+                    level_after=flight.oil_level_after,
+                    consumable_type=flight.oil_added_type or '',
+                    flight_hours=aircraft.tach_time,
+                    notes=f"Auto-created from flight log {flight.id}",
+                )
+            if flight.fuel_added:
+                ConsumableRecord.objects.create(
+                    record_type=ConsumableRecord.RECORD_TYPE_FUEL,
+                    aircraft=aircraft,
+                    date=flight.date,
+                    quantity_added=flight.fuel_added,
+                    level_after=flight.fuel_level_after,
+                    consumable_type=flight.fuel_added_type or '',
+                    flight_hours=aircraft.tach_time,
+                    notes=f"Auto-created from flight log {flight.id}",
+                )
+
+            route_str = ''
+            if flight.departure_location and flight.destination_location:
+                route_str = f" ({flight.departure_location}→{flight.destination_location})"
+            log_event(
+                aircraft, 'flight',
+                f"Flight logged: {flight.tach_time} hrs{route_str}",
+                user=request.user,
+            )
+
+        return Response(
+            FlightLogNestedSerializer(flight).data,
             status=status.HTTP_201_CREATED,
         )
 
@@ -1394,7 +1484,7 @@ class PublicAircraftSummaryAPI(View):
 
         drf_request = Request(request, parsers=[JSONParser()])
 
-        current_hours = aircraft.flight_time
+        current_hours = aircraft.tach_time - aircraft.tach_time_offset
         today = date_cls.today()
 
         # Build AD status list (same logic as AircraftViewSet.ads GET)

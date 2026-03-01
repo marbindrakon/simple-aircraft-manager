@@ -352,12 +352,12 @@ function adsMixin() {
                 compliance_notes: '',
                 permanent: false,
                 next_due_at_time: '',
-                aircraft_hours: this.aircraft ? parseFloat(this.aircraft.flight_time || 0).toFixed(1) : '',
+                aircraft_hours: this.aircraft ? parseFloat(this.aircraft.tach_time || 0).toFixed(1) : '',
                 logbook_entry_id: '',
             };
             if (ad.recurring && ad.recurring_hours > 0 && this.aircraft) {
                 this.complianceForm.next_due_at_time = (
-                    parseFloat(this.aircraft.flight_time) + parseFloat(ad.recurring_hours)
+                    parseFloat(this.aircraft.tach_time) + parseFloat(ad.recurring_hours)
                 ).toFixed(1);
             }
             this.pickerInit('complianceForm', 'logbook_entry_id', '');

@@ -12,7 +12,7 @@ class AircraftRoleInline(admin.TabularInline):
 
 class AircraftAdmin(admin.ModelAdmin):
     inlines = [AircraftRoleInline]
-    list_display = ('tail_number', 'make', 'model', 'status', 'flight_time')
+    list_display = ('tail_number', 'make', 'model', 'status', 'tach_time')
 
 
 admin.site.register(Aircraft, AircraftAdmin)

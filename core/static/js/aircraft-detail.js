@@ -17,6 +17,7 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
         documentsMixin(),
         eventsMixin(),
         rolesMixin(),
+        flightsMixin(),
 
         // Core state and methods (last so they win on any key collision)
         {
@@ -24,6 +25,7 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
             _publicShareToken: shareToken || null,
             _privilegeLevel: privilegeLevel || null,
             aircraft: null,
+            headerMenuOpen: false,
             components: [],
             recentLogs: [],
             linkedLogbookEntriesById: {},
@@ -46,6 +48,7 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
                 'oil-analysis': 'consumables',
                 'documents': 'documents',
                 'roles': 'roles',
+                'flights': 'flights',
             },
             _primaryTabDefaults: {
                 'overview': 'overview',
@@ -56,6 +59,7 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
                 'consumables': 'oil',
                 'documents': 'documents',
                 'roles': 'roles',
+                'flights': 'flights',
             },
             primaryTabFor(tab) {
                 return this._primaryTabMap[tab] || tab;
@@ -138,7 +142,19 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
                     if (tab === 'roles' && !this.rolesLoaded) {
                         this.loadRoles();
                     }
+                    if (tab === 'flights' && !this.flightLogsLoaded) {
+                        this.loadFlightLogs();
+                    }
                 });
+
+                // Open flight log modal when navigated here with #log-flight
+                if (window.location.hash === '#log-flight' && this.canCreateConsumable) {
+                    history.replaceState(null, '', window.location.pathname);
+                    this.$nextTick(() => {
+                        this.switchPrimaryTab('flights');
+                        this.openFlightLogModal();
+                    });
+                }
             },
 
             async loadData() {

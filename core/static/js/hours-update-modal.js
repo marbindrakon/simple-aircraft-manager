@@ -2,24 +2,51 @@ function hoursUpdateModal() {
     return {
         isOpen: false,
         aircraft: null,
-        currentHours: 0,
-        newHours: 0,
+        currentTachTime: 0,
+        newTachReading: 0,
+        currentHobbsTime: 0,
+        newHobbsReading: 0,
         submitting: false,
         errorMessage: '',
 
-        get hoursAdded() {
-            const delta = this.newHours - this.currentHours;
-            return delta > 0 ? delta.toFixed(1) : 0;
+        get tachOffset() {
+            return parseFloat(this.aircraft?.tach_time_offset) || 0;
+        },
+
+        get hobbsOffset() {
+            return parseFloat(this.aircraft?.hobbs_time_offset) || 0;
+        },
+
+        get currentTachReading() {
+            return (this.currentTachTime - this.tachOffset).toFixed(1);
+        },
+
+        get currentHobbsReading() {
+            return (this.currentHobbsTime - this.hobbsOffset).toFixed(1);
+        },
+
+        get hoursChange() {
+            const cumulative = this.newTachReading + this.tachOffset;
+            const delta = cumulative - this.currentTachTime;
+            return delta !== 0 ? delta.toFixed(1) : null;
+        },
+
+        get isCorrection() {
+            return this.hoursChange !== null && parseFloat(this.hoursChange) < 0;
         },
 
         get canSubmit() {
-            return this.newHours >= this.currentHours && !this.submitting;
+            const cumulative = this.newTachReading + this.tachOffset;
+            return cumulative >= 0 && !this.submitting;
         },
 
         open(aircraft) {
             this.aircraft = aircraft;
-            this.currentHours = parseFloat(aircraft.flight_time) || 0;
-            this.newHours = this.currentHours;
+            this.currentTachTime = parseFloat(aircraft.tach_time) || 0;
+            // Pre-fill reading = cumulative - offset
+            this.newTachReading = this.currentTachTime - this.tachOffset;
+            this.currentHobbsTime = parseFloat(aircraft.hobbs_time) || 0;
+            this.newHobbsReading = this.currentHobbsTime - this.hobbsOffset;
             this.errorMessage = '';
             this.isOpen = true;
         },
@@ -32,8 +59,10 @@ function hoursUpdateModal() {
         reset() {
             setTimeout(() => {
                 this.aircraft = null;
-                this.currentHours = 0;
-                this.newHours = 0;
+                this.currentTachTime = 0;
+                this.newTachReading = 0;
+                this.currentHobbsTime = 0;
+                this.newHobbsReading = 0;
                 this.submitting = false;
                 this.errorMessage = '';
             }, 300);
@@ -45,18 +74,28 @@ function hoursUpdateModal() {
             this.submitting = true;
             this.errorMessage = '';
 
+            const newTachCumulative = this.newTachReading + this.tachOffset;
+            const newHobbsCumulative = this.newHobbsReading + this.hobbsOffset;
+            const body = { new_tach_time: newTachCumulative };
+            if (newHobbsCumulative > 0) {
+                body.new_hobbs_time = newHobbsCumulative;
+            }
+
             try {
                 const { ok, data } = await apiRequest(
                     `/api/aircraft/${this.aircraft.id}/update_hours/`,
                     {
                         method: 'POST',
-                        body: JSON.stringify({ new_hours: this.newHours }),
+                        body: JSON.stringify(body),
                     }
                 );
 
                 if (ok && data.success) {
+                    const delta = data.hours_added;
+                    const deltaStr = delta >= 0 ? `+${delta.toFixed(1)}` : delta.toFixed(1);
+                    const action = delta >= 0 ? 'updated' : 'corrected';
                     showNotification(
-                        `Hours updated to ${data.aircraft_hours} (+${data.hours_added} hours, ${data.components_updated} components updated)`,
+                        `Hours ${action} to ${data.tach_time} (${deltaStr} hours, ${data.components_updated} components updated)`,
                         'success'
                     );
                     window.dispatchEvent(new CustomEvent('aircraft-updated'));

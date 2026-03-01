@@ -223,7 +223,7 @@ function logbookMixin() {
                 entry_type: 'MAINTENANCE',
                 log_type: 'AC',
                 text: '',
-                aircraft_hours_at_entry: this.aircraft ? parseFloat(this.aircraft.flight_time || 0).toFixed(1) : '',
+                aircraft_hours_at_entry: this.aircraft ? parseFloat(this.aircraft.tach_time || 0).toFixed(1) : '',
                 signoff_person: '',
                 signoff_location: '',
                 document_collection: '',

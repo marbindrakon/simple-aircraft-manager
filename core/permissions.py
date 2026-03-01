@@ -8,11 +8,11 @@ ROLE_HIERARCHY = {'admin': 3, 'owner': 2, 'pilot': 1}
 
 # Actions that pilots are allowed to write to
 PILOT_WRITE_ACTIONS = {
-    'update_hours', 'squawks', 'notes', 'oil_records', 'fuel_records',
+    'update_hours', 'squawks', 'notes', 'oil_records', 'fuel_records', 'flight_logs',
 }
 
 # Models that pilots can create/update via standalone viewsets
-PILOT_WRITABLE_MODELS = {'squawk', 'consumablerecord', 'aircraftnote'}
+PILOT_WRITABLE_MODELS = {'squawk', 'consumablerecord', 'aircraftnote', 'flightlog'}
 
 
 def get_user_role(user, aircraft):
