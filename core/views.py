@@ -155,10 +155,6 @@ class AircraftViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Invalid tach time value'},
                           status=status.HTTP_400_BAD_REQUEST)
 
-        if new_tach_time < aircraft.tach_time:
-            return Response({'error': 'Hours cannot decrease'},
-                          status=status.HTTP_400_BAD_REQUEST)
-
         hours_delta = new_tach_time - aircraft.tach_time
         old_tach = aircraft.tach_time
 
@@ -178,19 +174,21 @@ class AircraftViewSet(viewsets.ModelViewSet):
         aircraft.save()
 
         # ALWAYS update all in-service components (not optional)
+        # Clamp component hours at 0 to prevent negative values on corrections.
         components = aircraft.components.filter(status='IN-USE')
         updated_components = []
         for component in components:
-            component.hours_in_service += hours_delta
-            component.hours_since_overhaul += hours_delta
+            component.hours_in_service = max(Decimal('0'), component.hours_in_service + hours_delta)
+            component.hours_since_overhaul = max(Decimal('0'), component.hours_since_overhaul + hours_delta)
             component.save()
             updated_components.append(str(component.id))
 
+        delta_sign = '+' if hours_delta >= 0 else ''
         log_event(
             aircraft, 'hours',
-            f"Hours updated to {new_tach_time}",
+            f"Hours {'updated' if hours_delta >= 0 else 'corrected'} to {new_tach_time}",
             user=request.user,
-            notes=f"Previous: {old_tach}, delta: +{hours_delta}",
+            notes=f"Previous: {old_tach}, delta: {delta_sign}{hours_delta}",
         )
 
         return Response({

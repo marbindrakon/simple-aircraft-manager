@@ -17,15 +17,19 @@ function hoursUpdateModal() {
             return parseFloat(this.aircraft?.hobbs_time_offset) || 0;
         },
 
-        get hoursAdded() {
+        get hoursChange() {
             const cumulative = this.newTachReading + this.tachOffset;
             const delta = cumulative - this.currentTachTime;
-            return delta > 0 ? delta.toFixed(1) : 0;
+            return delta !== 0 ? delta.toFixed(1) : null;
+        },
+
+        get isCorrection() {
+            return this.hoursChange !== null && parseFloat(this.hoursChange) < 0;
         },
 
         get canSubmit() {
             const cumulative = this.newTachReading + this.tachOffset;
-            return cumulative >= this.currentTachTime && !this.submitting;
+            return cumulative >= 0 && !this.submitting;
         },
 
         open(aircraft) {
@@ -79,8 +83,11 @@ function hoursUpdateModal() {
                 );
 
                 if (ok && data.success) {
+                    const delta = data.hours_added;
+                    const deltaStr = delta >= 0 ? `+${delta.toFixed(1)}` : delta.toFixed(1);
+                    const action = delta >= 0 ? 'updated' : 'corrected';
                     showNotification(
-                        `Hours updated to ${data.tach_time} (+${data.hours_added} hours, ${data.components_updated} components updated)`,
+                        `Hours ${action} to ${data.tach_time} (${deltaStr} hours, ${data.components_updated} components updated)`,
                         'success'
                     );
                     window.dispatchEvent(new CustomEvent('aircraft-updated'));

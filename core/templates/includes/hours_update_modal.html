@@ -42,13 +42,24 @@
                                 </p>
                             </div>
 
-                            <!-- Hours Added (Calculated) -->
-                            <div class="pf-v5-c-form__group" x-show="hoursAdded > 0">
+                            <!-- Hours Change (Calculated) -->
+                            <div class="pf-v5-c-form__group" x-show="hoursChange !== null">
                                 <label class="pf-v5-c-form__label">
-                                    <span class="pf-v5-c-form__label-text">Hours Added:</span>
+                                    <span class="pf-v5-c-form__label-text" x-text="isCorrection ? 'Hours Removed (Correction):' : 'Hours Added:'"></span>
                                 </label>
-                                <p class="pf-v5-u-font-size-xl pf-v5-u-font-weight-bold pf-v5-u-success-color-100"
-                                   x-text="`+${hoursAdded}`"></p>
+                                <p class="pf-v5-u-font-size-xl pf-v5-u-font-weight-bold"
+                                   :class="isCorrection ? 'pf-v5-u-warning-color-100' : 'pf-v5-u-success-color-100'"
+                                   x-text="isCorrection ? hoursChange : `+${hoursChange}`"></p>
+                            </div>
+
+                            <!-- Correction warning -->
+                            <div class="pf-v5-c-alert pf-m-warning pf-m-inline" role="alert" x-show="isCorrection" x-cloak>
+                                <div class="pf-v5-c-alert__icon">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <div class="pf-v5-c-alert__description">
+                                    This is a backwards correction. Component hours will be reduced (clamped at 0).
+                                </div>
                             </div>
 
                             <!-- Hobbs Time (optional) -->
