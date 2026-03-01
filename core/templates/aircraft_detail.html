@@ -2918,8 +2918,8 @@
                                 </div>
                             </div>
 
-                            <!-- Hobbs fields -->
-                            <div class="pf-v5-c-form__group">
+                            <!-- Hobbs fields (only shown if aircraft has a Hobbs meter) -->
+                            <div class="pf-v5-c-form__group" x-show="parseFloat(aircraft?.hobbs_time) > 0 || parseFloat(aircraft?.hobbs_time_offset) > 0">
                                 <label class="pf-v5-c-form__label"><span class="pf-v5-c-form__label-text">Hobbs (optional)</span></label>
                                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                                     <div>

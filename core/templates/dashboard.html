@@ -83,13 +83,13 @@
                         <dl>
                             <dt>Make/Model:</dt>
                             <dd x-text="`${aircraft.make} ${aircraft.model}`"></dd>
-                            <dt>Tach Time:</dt>
-                            <dd class="hours-display" x-text="formatHours(aircraft.tach_time)"></dd>
+                            <dt>Tach:</dt>
+                            <dd class="hours-display" x-text="formatHours(parseFloat(aircraft.tach_time_offset) !== 0 ? parseFloat(aircraft.tach_time) - parseFloat(aircraft.tach_time_offset) : aircraft.tach_time)"></dd>
                             <template x-if="parseFloat(aircraft.hobbs_time) > 0">
                                 <dt>Hobbs:</dt>
                             </template>
                             <template x-if="parseFloat(aircraft.hobbs_time) > 0">
-                                <dd class="hours-display" x-text="formatHours(aircraft.hobbs_time)"></dd>
+                                <dd class="hours-display" x-text="formatHours(parseFloat(aircraft.hobbs_time_offset) !== 0 ? parseFloat(aircraft.hobbs_time) - parseFloat(aircraft.hobbs_time_offset) : aircraft.hobbs_time)"></dd>
                             </template>
                             <dt>Status:</dt>
                             <dd>
