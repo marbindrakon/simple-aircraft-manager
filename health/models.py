@@ -455,6 +455,43 @@ class OilAnalysisReport(models.Model):
         return f"{tail} - Oil Analysis - {self.sample_date}"
 
 
+random_track_log_filename = make_upload_path("track_logs")
+
+
+class FlightLog(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    aircraft = models.ForeignKey(core_models.Aircraft, related_name='flight_logs', on_delete=models.CASCADE)
+    date = models.DateField()
+    # Tach (required)
+    tach_time = models.DecimalField(max_digits=6, decimal_places=1)
+    tach_out = models.DecimalField(max_digits=8, decimal_places=1, null=True, blank=True)
+    tach_in = models.DecimalField(max_digits=8, decimal_places=1, null=True, blank=True)
+    # Hobbs (optional)
+    hobbs_time = models.DecimalField(max_digits=6, decimal_places=1, null=True, blank=True)
+    hobbs_out = models.DecimalField(max_digits=8, decimal_places=1, null=True, blank=True)
+    hobbs_in = models.DecimalField(max_digits=8, decimal_places=1, null=True, blank=True)
+    # Route
+    departure_location = models.CharField(max_length=10, blank=True)
+    destination_location = models.CharField(max_length=10, blank=True)
+    route = models.TextField(blank=True)
+    # Consumables added
+    oil_added = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    oil_added_type = models.CharField(max_length=100, blank=True)
+    fuel_added = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    fuel_added_type = models.CharField(max_length=100, blank=True)
+    # Track log
+    track_log = models.FileField(upload_to=random_track_log_filename, null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date', '-created_at']
+
+    def __str__(self):
+        tail = self.aircraft.tail_number if self.aircraft else '?'
+        return f"{tail} - Flight {self.tach_time}hrs - {self.date}"
+
+
 class ConsumableRecord(models.Model):
     RECORD_TYPE_OIL = 'oil'
     RECORD_TYPE_FUEL = 'fuel'

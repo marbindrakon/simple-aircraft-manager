@@ -83,8 +83,14 @@
                         <dl>
                             <dt>Make/Model:</dt>
                             <dd x-text="`${aircraft.make} ${aircraft.model}`"></dd>
-                            <dt>Hours:</dt>
-                            <dd class="hours-display" x-text="formatHours(aircraft.flight_time)"></dd>
+                            <dt>Tach Time:</dt>
+                            <dd class="hours-display" x-text="formatHours(aircraft.tach_time)"></dd>
+                            <template x-if="parseFloat(aircraft.hobbs_time) > 0">
+                                <dt>Hobbs:</dt>
+                            </template>
+                            <template x-if="parseFloat(aircraft.hobbs_time) > 0">
+                                <dd class="hours-display" x-text="formatHours(aircraft.hobbs_time)"></dd>
+                            </template>
                             <dt>Status:</dt>
                             <dd>
                                 <span class="pf-v5-c-label pf-m-blue" x-text="aircraft.status"></span>

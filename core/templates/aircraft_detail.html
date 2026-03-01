@@ -70,8 +70,8 @@
                     </div>
                     <!-- Current Hours -->
                     <div x-show="aircraft" x-cloak style="display: flex; align-items: baseline; gap: 0.4rem; margin-left: 0.5rem; color: var(--pf-v5-global--Color--200);">
-                        <span style="font-size: 0.85rem;">Current Hours</span>
-                        <span class="hours-display" style="font-size: 1.25rem;" x-text="formatHours(aircraft?.flight_time)"></span>
+                        <span style="font-size: 0.85rem;">Tach Time</span>
+                        <span class="hours-display" style="font-size: 1.25rem;" x-text="formatHours(aircraft?.tach_time)"></span>
                     </div>
                 </div>
                 <div x-show="aircraft" x-cloak style="display: flex; gap: 0.5rem;">
@@ -158,6 +158,11 @@
                 <li class="pf-v5-c-tabs__item" x-show="isOwner" :class="{ 'pf-m-current': activePrimaryTab === 'roles' }">
                     <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('roles')">
                         <span class="pf-v5-c-tabs__item-text">Sharing &amp; Access</span>
+                    </button>
+                </li>
+                <li class="pf-v5-c-tabs__item" x-show="!isPublicView" :class="{ 'pf-m-current': activePrimaryTab === 'flights' }">
+                    <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('flights')">
+                        <span class="pf-v5-c-tabs__item-text">Flights</span>
                     </button>
                 </li>
             </ul>
@@ -2766,6 +2771,203 @@
         </div>
     </div>
 
+    <!-- Flights Tab -->
+    <div x-show="activeTab === 'flights'" x-cloak class="pf-v5-c-page__main-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2>Flight Log</h2>
+            <button class="pf-v5-c-button pf-m-primary" x-show="canCreateConsumable" @click="openFlightLogModal()">
+                <i class="fas fa-plus"></i> Log a Flight
+            </button>
+        </div>
+
+        <!-- Loading state -->
+        <div x-show="!flightLogsLoaded" style="text-align: center; padding: 2rem; color: var(--pf-v5-global--Color--200);">
+            <i class="fas fa-spinner fa-spin"></i> Loading flights…
+        </div>
+
+        <!-- Empty state -->
+        <div x-show="flightLogsLoaded && flightLogs.length === 0" style="text-align: center; padding: 2rem; color: var(--pf-v5-global--Color--200);">
+            No flights logged yet.
+        </div>
+
+        <!-- Flights table -->
+        <div x-show="flightLogsLoaded && flightLogs.length > 0">
+            <table class="pf-v5-c-table pf-m-compact">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Route</th>
+                        <th>Tach Time</th>
+                        <th>Hobbs</th>
+                        <th>Oil Added</th>
+                        <th>Fuel Added</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="log in flightLogs" :key="log.id">
+                        <tr>
+                            <td x-text="formatDate(log.date)"></td>
+                            <td x-text="formatFlightRoute(log)"></td>
+                            <td x-text="formatHours(log.tach_time)"></td>
+                            <td x-text="log.hobbs_time ? formatHours(log.hobbs_time) : '—'"></td>
+                            <td x-text="log.oil_added ? log.oil_added + ' qt' + (log.oil_added_type ? ' ' + log.oil_added_type : '') : '—'"></td>
+                            <td x-text="log.fuel_added ? log.fuel_added + ' gal' + (log.fuel_added_type ? ' ' + log.fuel_added_type : '') : '—'"></td>
+                            <td style="white-space: nowrap;">
+                                <button class="pf-v5-c-button pf-m-link pf-m-sm" x-show="canWrite" @click="openFlightLogModal(log)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="pf-v5-c-button pf-m-link pf-m-sm" x-show="canWrite" style="color: var(--pf-v5-global--danger-color--100);" @click="openFlightLogDeleteConfirm(log)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Log Flight Modal -->
+    <div class="pf-v5-c-backdrop" x-show="flightLogModalOpen" x-cloak @click.self="closeFlightLogModal()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-md" @click.stop style="max-height: 90vh; overflow-y: auto;">
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeFlightLogModal()" style="position: absolute; top: 1rem; right: 1rem;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="pf-v5-c-modal-box__header">
+                    <h2 class="pf-v5-c-modal-box__title" x-text="editingFlightLog ? 'Edit Flight Log' : 'Log a Flight'"></h2>
+                </div>
+                <div class="pf-v5-c-modal-box__body">
+                    <form @submit.prevent="submitFlightLog()">
+                        <div class="pf-v5-c-form">
+                            <!-- Date -->
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="fl-date">
+                                    <span class="pf-v5-c-form__label-text">Date <span style="color: red;">*</span></span>
+                                </label>
+                                <input type="date" id="fl-date" class="pf-v5-c-form-control" x-model="flightLogForm.date" required>
+                            </div>
+
+                            <!-- Tach fields -->
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label"><span class="pf-v5-c-form__label-text">Tach</span></label>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <div>
+                                        <label style="font-size: 0.8em; color: var(--pf-v5-global--Color--200);">Out</label>
+                                        <input type="number" step="0.1" min="0" class="pf-v5-c-form-control" x-model="flightLogForm.tach_out" placeholder="Reading" style="width: 100px;"
+                                               @change="if (computedTachTime) flightLogForm.tach_time = computedTachTime">
+                                    </div>
+                                    <span style="margin-top: 1.2rem;">→</span>
+                                    <div>
+                                        <label style="font-size: 0.8em; color: var(--pf-v5-global--Color--200);">In</label>
+                                        <input type="number" step="0.1" min="0" class="pf-v5-c-form-control" x-model="flightLogForm.tach_in" placeholder="Reading" style="width: 100px;"
+                                               @change="if (computedTachTime) flightLogForm.tach_time = computedTachTime">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.8em; color: var(--pf-v5-global--Color--200);">Tach Time <span style="color: red;">*</span></label>
+                                        <input type="number" step="0.1" min="0" id="fl-tach-time" class="pf-v5-c-form-control" x-model="flightLogForm.tach_time" placeholder="e.g. 1.5" style="width: 100px;" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Hobbs fields -->
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label"><span class="pf-v5-c-form__label-text">Hobbs (optional)</span></label>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <div>
+                                        <label style="font-size: 0.8em; color: var(--pf-v5-global--Color--200);">Out</label>
+                                        <input type="number" step="0.1" min="0" class="pf-v5-c-form-control" x-model="flightLogForm.hobbs_out" placeholder="Reading" style="width: 100px;"
+                                               @change="if (computedHobbsTime) flightLogForm.hobbs_time = computedHobbsTime">
+                                    </div>
+                                    <span style="margin-top: 1.2rem;">→</span>
+                                    <div>
+                                        <label style="font-size: 0.8em; color: var(--pf-v5-global--Color--200);">In</label>
+                                        <input type="number" step="0.1" min="0" class="pf-v5-c-form-control" x-model="flightLogForm.hobbs_in" placeholder="Reading" style="width: 100px;"
+                                               @change="if (computedHobbsTime) flightLogForm.hobbs_time = computedHobbsTime">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.8em; color: var(--pf-v5-global--Color--200);">Hobbs Time</label>
+                                        <input type="number" step="0.1" min="0" class="pf-v5-c-form-control" x-model="flightLogForm.hobbs_time" placeholder="optional" style="width: 100px;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Route -->
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label"><span class="pf-v5-c-form__label-text">Route (optional)</span></label>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <input type="text" class="pf-v5-c-form-control" x-model="flightLogForm.departure_location" placeholder="Departure (e.g. KBOS)" maxlength="10" style="width: 120px;">
+                                    <span>→</span>
+                                    <input type="text" class="pf-v5-c-form-control" x-model="flightLogForm.destination_location" placeholder="Destination" maxlength="10" style="width: 120px;">
+                                </div>
+                                <input type="text" class="pf-v5-c-form-control" x-model="flightLogForm.route" placeholder="Full route (optional)" style="margin-top: 0.4rem;">
+                            </div>
+
+                            <!-- Oil Added -->
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="fl-oil"><span class="pf-v5-c-form__label-text">Oil Added (qt, optional)</span></label>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <input type="number" step="0.1" min="0" id="fl-oil" class="pf-v5-c-form-control" x-model="flightLogForm.oil_added" placeholder="Quarts" style="width: 100px;">
+                                    <input type="text" class="pf-v5-c-form-control" x-model="flightLogForm.oil_added_type" placeholder="Type (e.g. W100)" style="flex: 1;">
+                                </div>
+                            </div>
+
+                            <!-- Fuel Added -->
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="fl-fuel"><span class="pf-v5-c-form__label-text">Fuel Added (gal, optional)</span></label>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <input type="number" step="0.1" min="0" id="fl-fuel" class="pf-v5-c-form-control" x-model="flightLogForm.fuel_added" placeholder="Gallons" style="width: 100px;">
+                                    <input type="text" class="pf-v5-c-form-control" x-model="flightLogForm.fuel_added_type" placeholder="Type (e.g. 100LL)" style="flex: 1;">
+                                </div>
+                            </div>
+
+                            <!-- Track Log (create only) -->
+                            <div class="pf-v5-c-form__group" x-show="!editingFlightLog">
+                                <label class="pf-v5-c-form__label" for="fl-track"><span class="pf-v5-c-form__label-text">Track Log (.kml, optional)</span></label>
+                                <input type="file" id="fl-track" accept=".kml" @change="handleFlightTrackFileChange($event)">
+                            </div>
+
+                            <!-- Notes -->
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="fl-notes"><span class="pf-v5-c-form__label-text">Notes (optional)</span></label>
+                                <textarea id="fl-notes" class="pf-v5-c-form-control" rows="2" x-model="flightLogForm.notes"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary" type="button" @click="submitFlightLog()" :disabled="flightLogSubmitting">
+                        <span x-show="!flightLogSubmitting" x-text="editingFlightLog ? 'Save Changes' : 'Log Flight'"></span>
+                        <span x-show="flightLogSubmitting"><i class="fas fa-spinner fa-spin"></i> Saving…</span>
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link" type="button" @click="closeFlightLogModal()">Cancel</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Flight Log Confirm Modal -->
+    <div class="pf-v5-c-backdrop" x-show="flightLogDeleteConfirmOpen" x-cloak @click.self="closeFlightLogDeleteConfirm()">
+        <div class="pf-v5-l-bullseye">
+            <div class="pf-v5-c-modal-box pf-m-sm" @click.stop>
+                <button class="pf-v5-c-button pf-m-plain" type="button" aria-label="Close" @click="closeFlightLogDeleteConfirm()" style="position: absolute; top: 1rem; right: 1rem;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="pf-v5-c-modal-box__header">
+                    <h2 class="pf-v5-c-modal-box__title">Delete Flight Log?</h2>
+                </div>
+                <div class="pf-v5-c-modal-box__body">
+                    <p>This will remove the flight log and adjust aircraft tach/hobbs totals accordingly. Oil and fuel records auto-created from this flight will <strong>not</strong> be deleted automatically.</p>
+                </div>
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-danger" type="button" @click="deleteFlightLog()">Delete</button>
+                    <button class="pf-v5-c-button pf-m-link" type="button" @click="closeFlightLogDeleteConfirm()">Cancel</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
     <!-- Create Share Token Modal -->
     <div class="pf-v5-c-backdrop" x-show="shareTokenModalOpen" x-cloak @click.self="closeShareTokenModal()">
         <div class="pf-v5-l-bullseye">
@@ -4183,7 +4385,7 @@
                                 <span class="pf-v5-c-form__label-text">Aircraft Hours</span>
                             </label>
                             <div class="pf-v5-c-form__group-control">
-                                <input type="number" step="0.1" min="0" id="oil-hours" class="pf-v5-c-form-control" x-model="oilForm.flight_hours" :placeholder="formatHours(aircraft?.flight_time)">
+                                <input type="number" step="0.1" min="0" id="oil-hours" class="pf-v5-c-form-control" x-model="oilForm.flight_hours" :placeholder="formatHours(aircraft?.tach_time)">
                             </div>
                         </div>
                         <div class="pf-v5-c-form__group">
@@ -4549,7 +4751,7 @@
                                     <span class="pf-v5-c-form__label-text">Next Due At (aircraft hours)</span>
                                 </label>
                                 <div class="pf-v5-c-form__group-control">
-                                    <input type="number" step="0.1" min="0" id="compliance-next-due" class="pf-v5-c-form-control" x-model="complianceForm.next_due_at_time" :placeholder="'Current: ' + formatHours(aircraft?.flight_time)">
+                                    <input type="number" step="0.1" min="0" id="compliance-next-due" class="pf-v5-c-form-control" x-model="complianceForm.next_due_at_time" :placeholder="'Current: ' + formatHours(aircraft?.tach_time)">
                                 </div>
                             </div>
                         </template>
@@ -4756,7 +4958,7 @@
                             <div class="pf-v5-c-form__group-control">
                                 <input type="number" step="0.1" min="0" id="inspection-aircraft-hours" class="pf-v5-c-form-control"
                                        x-model="inspectionForm.aircraft_hours"
-                                       :placeholder="formatHours(aircraft?.flight_time)">
+                                       :placeholder="formatHours(aircraft?.tach_time)">
                             </div>
                         </div>
                         <div class="pf-v5-c-form__group">
@@ -5137,7 +5339,7 @@
                                 <span class="pf-v5-c-form__label-text">Aircraft Hours</span>
                             </label>
                             <div class="pf-v5-c-form__group-control">
-                                <input type="number" step="0.1" min="0" id="fuel-hours" class="pf-v5-c-form-control" x-model="fuelForm.flight_hours" :placeholder="formatHours(aircraft?.flight_time)">
+                                <input type="number" step="0.1" min="0" id="fuel-hours" class="pf-v5-c-form-control" x-model="fuelForm.flight_hours" :placeholder="formatHours(aircraft?.tach_time)">
                             </div>
                         </div>
                         <div class="pf-v5-c-form__group">
@@ -5851,6 +6053,7 @@
 <script src="{% static 'js/aircraft-detail-documents.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-events.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-roles.js' %}"></script>
+<script src="{% static 'js/aircraft-detail-flights.js' %}"></script>
 <script src="{% static 'js/aircraft-switcher.js' %}"></script>
 <script src="{% static 'js/aircraft-detail.js' %}"></script>
 <script src="{% static 'js/aircraft-modal.js' %}"></script>

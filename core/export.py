@@ -5,7 +5,7 @@ Public API:
     export_aircraft_zip(aircraft, response_file)  — write ZIP to a file-like object
     build_manifest(aircraft)                       — return the manifest dict
 
-Manifest schema version: 1
+Manifest schema version: 2
 """
 
 import io
@@ -20,7 +20,7 @@ from django.core.files.storage import default_storage
 from django.utils import timezone
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +80,10 @@ def _aircraft_dict(aircraft):
         'description': aircraft.description,
         'purchased': _date(aircraft.purchased),
         'status': aircraft.status,
-        'flight_time': _decimal(aircraft.flight_time),
+        'tach_time': _decimal(aircraft.tach_time),
+        'tach_time_offset': _decimal(aircraft.tach_time_offset),
+        'hobbs_time': _decimal(aircraft.hobbs_time),
+        'hobbs_time_offset': _decimal(aircraft.hobbs_time_offset),
         'picture': _file_path(aircraft.picture),
     }
 
@@ -291,6 +294,30 @@ def _major_record_dict(rec):
     }
 
 
+def _flight_log_dict(log):
+    return {
+        'id': _str(log.id),
+        'aircraft_id': _str(log.aircraft_id),
+        'date': _date(log.date),
+        'tach_time': _decimal(log.tach_time),
+        'tach_out': _decimal(log.tach_out),
+        'tach_in': _decimal(log.tach_in),
+        'hobbs_time': _decimal(log.hobbs_time),
+        'hobbs_out': _decimal(log.hobbs_out),
+        'hobbs_in': _decimal(log.hobbs_in),
+        'departure_location': log.departure_location,
+        'destination_location': log.destination_location,
+        'route': log.route,
+        'oil_added': _decimal(log.oil_added),
+        'oil_added_type': log.oil_added_type,
+        'fuel_added': _decimal(log.fuel_added),
+        'fuel_added_type': log.fuel_added_type,
+        'track_log': _file_path(log.track_log),
+        'notes': log.notes,
+        'created_at': _date(log.created_at),
+    }
+
+
 def _note_dict(note):
     return {
         'id': _str(note.id),
@@ -337,7 +364,7 @@ def build_manifest(aircraft):
     from health.models import (
         Component, ComponentType, DocumentCollection, Document, DocumentImage,
         LogbookEntry, Squawk, InspectionType, InspectionRecord, AD, ADCompliance,
-        ConsumableRecord, MajorRepairAlteration, OilAnalysisReport,
+        ConsumableRecord, MajorRepairAlteration, OilAnalysisReport, FlightLog,
     )
     from core.models import AircraftNote
 
@@ -400,6 +427,7 @@ def build_manifest(aircraft):
         aircraft.notes.all().select_related('added_by')
     )
     oil_analysis_reports = list(OilAnalysisReport.objects.filter(aircraft=aircraft))
+    flight_logs = list(FlightLog.objects.filter(aircraft=aircraft))
 
     # --- Build manifest -----------------------------------------------------
     request_host = getattr(settings, 'ALLOWED_HOSTS', [''])[0] or ''
@@ -424,6 +452,7 @@ def build_manifest(aircraft):
         'major_records': [_major_record_dict(r) for r in major_records],
         'notes': [_note_dict(n) for n in notes],
         'oil_analysis_reports': [_oil_analysis_report_dict(r) for r in oil_analysis_reports],
+        'flight_logs': [_flight_log_dict(fl) for fl in flight_logs],
     }
     return manifest
 
@@ -453,6 +482,8 @@ def _collect_file_paths(manifest):
         _add(img.get('image'))
     for sq in manifest['squawks']:
         _add(sq.get('attachment'))
+    for fl in manifest.get('flight_logs', []):
+        _add(fl.get('track_log'))
 
     return paths
 
@@ -486,6 +517,8 @@ def export_aircraft_zip(aircraft, dest_file):
         _mark_missing(img, 'image')
     for sq in manifest['squawks']:
         _mark_missing(sq, 'attachment')
+    for fl in manifest.get('flight_logs', []):
+        _mark_missing(fl, 'track_log')
 
     manifest_bytes = json.dumps(manifest, indent=2, default=str).encode('utf-8')
 

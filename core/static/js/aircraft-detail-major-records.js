@@ -74,7 +74,7 @@ function majorRecordsMixin() {
                 stc_holder: '',
                 stc_document: '',
                 logbook_entry: '',
-                aircraft_hours: this.aircraft ? parseFloat(this.aircraft.flight_time || 0).toFixed(1) : '',
+                aircraft_hours: this.aircraft ? parseFloat(this.aircraft.tach_time || 0).toFixed(1) : '',
                 has_ica: false,
                 ica_notes: '',
                 notes: '',

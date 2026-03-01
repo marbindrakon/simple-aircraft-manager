@@ -2,12 +2,13 @@ import os
 
 from rest_framework import serializers
 
-from .models import ComponentType, Component, DocumentCollection, Document, DocumentImage, LogbookEntry, Squawk, InspectionType, AD, MajorRepairAlteration, InspectionRecord, ADCompliance, ConsumableRecord, OilAnalysisReport
+from .models import ComponentType, Component, DocumentCollection, Document, DocumentImage, LogbookEntry, Squawk, InspectionType, AD, MajorRepairAlteration, InspectionRecord, ADCompliance, ConsumableRecord, OilAnalysisReport, FlightLog
 
-ALLOWED_UPLOAD_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.pdf', '.txt'}
+ALLOWED_UPLOAD_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.pdf', '.txt', '.kml'}
 ALLOWED_UPLOAD_CONTENT_TYPES = {
     'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff',
     'application/pdf', 'text/plain',
+    'application/vnd.google-earth.kml+xml', 'text/xml', 'application/xml',
 }
 MAX_UPLOAD_SIZE = 512 * 1024 * 1024  # 512 MB
 
@@ -528,3 +529,41 @@ class OilAnalysisReportCreateUpdateSerializer(serializers.ModelSerializer):
                     {'component': 'Component does not belong to this aircraft.'}
                 )
         return data
+
+
+class FlightLogNestedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FlightLog
+        fields = [
+            'id', 'aircraft', 'date',
+            'tach_time', 'tach_out', 'tach_in',
+            'hobbs_time', 'hobbs_out', 'hobbs_in',
+            'departure_location', 'destination_location', 'route',
+            'oil_added', 'oil_added_type',
+            'fuel_added', 'fuel_added_type',
+            'track_log', 'notes', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
+class FlightLogCreateUpdateSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(read_only=True)
+    track_log = serializers.FileField(required=False, allow_null=True)
+
+    class Meta:
+        model = FlightLog
+        fields = [
+            'id', 'aircraft', 'date',
+            'tach_time', 'tach_out', 'tach_in',
+            'hobbs_time', 'hobbs_out', 'hobbs_in',
+            'departure_location', 'destination_location', 'route',
+            'oil_added', 'oil_added_type',
+            'fuel_added', 'fuel_added_type',
+            'track_log', 'notes',
+        ]
+        read_only_fields = ['id']
+
+    def validate_track_log(self, value):
+        if value:
+            return validate_uploaded_file(value)
+        return value

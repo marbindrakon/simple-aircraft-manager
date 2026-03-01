@@ -26,9 +26,9 @@ The header displays:
   aircraft with their airworthiness status dots; click any aircraft to
   navigate directly to its detail page.
 - **Airworthiness status badge** -- same color-coded indicator as the Aircraft page.
-- **Current flight hours**.
+- **Current tach time** (and Hobbs if tracked).
 - **Update Hours** button (visible to owners and pilots) -- opens a modal to
-  log new flight time. Disabled when the aircraft is grounded.
+  log new tach time and optionally Hobbs time. Disabled when the aircraft is grounded.
 - **Edit** button (owners only) -- edit aircraft details like tail number, make,
   model, and photo.
 - **Delete** button (owners only) -- permanently delete the aircraft and all

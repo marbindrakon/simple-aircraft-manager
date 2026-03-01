@@ -31,6 +31,7 @@ class AircraftSerializer(AirworthinessMixin, UserRoleMixin, serializers.Hyperlin
     notes = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     events = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     roles = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    flight_logs = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
         model = Aircraft
@@ -46,7 +47,10 @@ class AircraftSerializer(AirworthinessMixin, UserRoleMixin, serializers.Hyperlin
                 'added',
                 'picture',
                 'status',
-                'flight_time',
+                'tach_time',
+                'tach_time_offset',
+                'hobbs_time',
+                'hobbs_time_offset',
                 'airworthiness',
                 'user_role',
                 'has_share_links',
@@ -60,7 +64,8 @@ class AircraftSerializer(AirworthinessMixin, UserRoleMixin, serializers.Hyperlin
                 'components',
                 'doc_collections',
                 'documents',
-                'applicable_inspections'
+                'applicable_inspections',
+                'flight_logs',
                 ]
         depth = 1
 
@@ -86,7 +91,10 @@ class AircraftListSerializer(AirworthinessMixin, UserRoleMixin, serializers.Hype
             'make',
             'model',
             'status',
-            'flight_time',
+            'tach_time',
+            'tach_time_offset',
+            'hobbs_time',
+            'hobbs_time_offset',
             'picture',
             'airworthiness',
             'user_role',

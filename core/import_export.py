@@ -30,7 +30,7 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-CURRENT_SCHEMA_VERSION = 1
+CURRENT_SCHEMA_VERSION = 2
 
 # Manifest top-level keys (unknown keys are rejected)
 KNOWN_MANIFEST_KEYS = {
@@ -38,7 +38,7 @@ KNOWN_MANIFEST_KEYS = {
     'component_types', 'components', 'document_collections', 'documents',
     'document_images', 'logbook_entries', 'squawks', 'inspection_types',
     'inspection_records', 'ads', 'ad_compliances', 'consumable_records',
-    'major_records', 'notes', 'oil_analysis_reports',
+    'major_records', 'notes', 'oil_analysis_reports', 'flight_logs',
 }
 
 # Per-entity record count limits (configurable in settings)
@@ -57,6 +57,7 @@ _DEFAULT_LIMITS = {
     'major_records': 5_000,
     'notes': 5_000,
     'oil_analysis_reports': 5_000,
+    'flight_logs': 50_000,
 }
 
 # File-type magic bytes for content validation
@@ -183,7 +184,7 @@ def validate_archive_quick(zip_path, tail_number_override=None):
         if not isinstance(manifest, dict):
             return None, None, "manifest.json must be a JSON object."
 
-        # 5. Schema version
+        # 5. Schema version (accept v1 for backward compat)
         version = manifest.get('schema_version')
         if not isinstance(version, int) or version > CURRENT_SCHEMA_VERSION:
             return None, None, (
@@ -192,7 +193,9 @@ def validate_archive_quick(zip_path, tail_number_override=None):
             )
 
         # 6. Required top-level keys
-        missing_keys = KNOWN_MANIFEST_KEYS - set(manifest.keys())
+        # flight_logs was added in schema v2; v1 manifests may omit it
+        required_keys = KNOWN_MANIFEST_KEYS - ({'flight_logs'} if version < 2 else set())
+        missing_keys = required_keys - set(manifest.keys())
         if missing_keys:
             return None, None, f"manifest.json is missing required keys: {sorted(missing_keys)}"
         unknown_keys = set(manifest.keys()) - KNOWN_MANIFEST_KEYS
@@ -333,7 +336,7 @@ def run_aircraft_import_job(job_id, zip_path, owner_user, tail_number_override=N
     from health.models import (
         ImportJob, Component, ComponentType, DocumentCollection, Document,
         DocumentImage, LogbookEntry, Squawk, InspectionType, InspectionRecord,
-        AD, ADCompliance, ConsumableRecord, MajorRepairAlteration, OilAnalysisReport,
+        AD, ADCompliance, ConsumableRecord, MajorRepairAlteration, OilAnalysisReport, FlightLog,
     )
     from core.models import Aircraft, AircraftNote, AircraftRole
     from core.events import log_event
@@ -375,7 +378,7 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
     from health.models import (
         ImportJob, Component, ComponentType, DocumentCollection, Document,
         DocumentImage, LogbookEntry, Squawk, InspectionType, InspectionRecord,
-        AD, ADCompliance, ConsumableRecord, MajorRepairAlteration, OilAnalysisReport,
+        AD, ADCompliance, ConsumableRecord, MajorRepairAlteration, OilAnalysisReport, FlightLog,
     )
     from core.models import Aircraft, AircraftNote, AircraftRole
     from core.events import log_event
@@ -588,6 +591,10 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
             with transaction.atomic():
                 # --- Aircraft -----------------------------------------------
                 ev('info', 'Creating aircraft…')
+                # Backward-compat: v1 manifests used 'flight_time', v2 uses 'tach_time'
+                tach_time = _parse_decimal(
+                    aircraft_data.get('tach_time') or aircraft_data.get('flight_time')
+                ) or Decimal('0.0')
                 new_aircraft = Aircraft.objects.create(
                     tail_number=effective_tail,
                     make=aircraft_data.get('make', ''),
@@ -596,7 +603,10 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
                     description=aircraft_data.get('description', ''),
                     purchased=_parse_date(aircraft_data.get('purchased')),
                     status=aircraft_data.get('status', 'AVAILABLE'),
-                    flight_time=_parse_decimal(aircraft_data.get('flight_time')) or Decimal('0.0'),
+                    tach_time=tach_time,
+                    tach_time_offset=_parse_decimal(aircraft_data.get('tach_time_offset')) or Decimal('0.0'),
+                    hobbs_time=_parse_decimal(aircraft_data.get('hobbs_time')) or Decimal('0.0'),
+                    hobbs_time_offset=_parse_decimal(aircraft_data.get('hobbs_time_offset')) or Decimal('0.0'),
                 )
                 # Aircraft picture
                 picture_path = aircraft_data.get('picture')
@@ -1081,6 +1091,43 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
                         excluded_from_averages=oar_data.get('excluded_from_averages', False),
                     )
                 counts['oil_analysis_reports'] = len(manifest.get('oil_analysis_reports', []))
+
+                # --- FlightLogs ---------------------------------------------
+                flight_logs_data = manifest.get('flight_logs', [])
+                ev('info', f"Creating {len(flight_logs_data)} flight logs…")
+                for fl_data in flight_logs_data:
+                    fl_kwargs = dict(
+                        aircraft=new_aircraft,
+                        date=_parse_date(fl_data.get('date')) or '1900-01-01',
+                        tach_time=_parse_decimal(fl_data.get('tach_time')) or Decimal('0.0'),
+                        tach_out=_parse_decimal(fl_data.get('tach_out')),
+                        tach_in=_parse_decimal(fl_data.get('tach_in')),
+                        hobbs_time=_parse_decimal(fl_data.get('hobbs_time')),
+                        hobbs_out=_parse_decimal(fl_data.get('hobbs_out')),
+                        hobbs_in=_parse_decimal(fl_data.get('hobbs_in')),
+                        departure_location=fl_data.get('departure_location', ''),
+                        destination_location=fl_data.get('destination_location', ''),
+                        route=fl_data.get('route', ''),
+                        oil_added=_parse_decimal(fl_data.get('oil_added')),
+                        oil_added_type=fl_data.get('oil_added_type', ''),
+                        fuel_added=_parse_decimal(fl_data.get('fuel_added')),
+                        fuel_added_type=fl_data.get('fuel_added_type', ''),
+                        notes=fl_data.get('notes', ''),
+                    )
+                    new_fl = FlightLog(**fl_kwargs)
+                    track_log_path = fl_data.get('track_log')
+                    if track_log_path and not fl_data.get('_missing'):
+                        ext = track_log_path.rsplit('.', 1)[-1].lower()
+                        if ext in ALLOWED_EXTENSIONS or ext == 'kml':
+                            data, err = _extract_file_from_zip(zf, track_log_path, ext)
+                            if data:
+                                storage_path = _save_file_to_storage(data, 'track_logs', ext)
+                                new_fl.track_log = storage_path
+                                extracted_files.append(storage_path)
+                            elif err:
+                                warnings.append(f"FlightLog {fl_data.get('id', '?')}: {err}")
+                    new_fl.save()
+                counts['flight_logs'] = len(flight_logs_data)
 
                 # --- Log import event ---------------------------------------
                 count_summary = ', '.join(f"{v} {k}" for k, v in counts.items() if v)

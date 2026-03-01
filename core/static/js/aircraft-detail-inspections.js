@@ -217,7 +217,7 @@ function inspectionsMixin() {
             this.selectedInspectionType = insp;
             this.inspectionForm = {
                 date: new Date().toISOString().split('T')[0],
-                aircraft_hours: this.aircraft ? parseFloat(this.aircraft.flight_time || 0).toFixed(1) : '',
+                aircraft_hours: this.aircraft ? parseFloat(this.aircraft.tach_time || 0).toFixed(1) : '',
                 logbook_entry_id: '',
             };
             this.pickerInit('inspectionForm', 'logbook_entry_id', '');

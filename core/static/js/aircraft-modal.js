@@ -14,7 +14,7 @@ function aircraftModal() {
             description: '',
             purchased: '',
             status: 'AVAILABLE',
-            flight_time: 0,
+            tach_time: 0,
         },
         pictureFile: null,
         removePicture: false,
@@ -47,7 +47,7 @@ function aircraftModal() {
                 description: '',
                 purchased: '',
                 status: 'AVAILABLE',
-                flight_time: 0,
+                tach_time: 0,
             };
             this.pictureFile = null;
             this.removePicture = false;
@@ -64,7 +64,7 @@ function aircraftModal() {
                 description: aircraft.description || '',
                 purchased: aircraft.purchased || '',
                 status: aircraft.status || 'AVAILABLE',
-                flight_time: aircraft.flight_time || 0,
+                tach_time: aircraft.tach_time || 0,
             };
             this.pictureFile = null;
             this.removePicture = false;
@@ -116,7 +116,7 @@ function aircraftModal() {
                 formData.append('serial_number', this.aircraftForm.serial_number);
                 formData.append('description', this.aircraftForm.description);
                 formData.append('status', this.aircraftForm.status);
-                formData.append('flight_time', this.aircraftForm.flight_time);
+                formData.append('tach_time', this.aircraftForm.tach_time);
 
                 if (this.aircraftForm.purchased) {
                     formData.append('purchased', this.aircraftForm.purchased);
