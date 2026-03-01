@@ -74,23 +74,57 @@
                         <span class="hours-display" style="font-size: 1.25rem;" x-text="formatHours(aircraft?.tach_time)"></span>
                     </div>
                 </div>
-                <div x-show="aircraft" x-cloak style="display: flex; gap: 0.5rem;">
+                <div x-show="aircraft" x-cloak style="display: flex; gap: 0.5rem; align-items: center;">
                     <button class="pf-v5-c-button pf-m-primary"
-                            x-show="canUpdateHours"
-                            @click="openHoursModal()"
-                            :disabled="aircraft?.airworthiness?.status === 'RED'">
-                        Update Hours
+                            x-show="!isPublicView && canCreateConsumable"
+                            @click="switchPrimaryTab('flights'); openFlightLogModal()">
+                        <i class="fas fa-plane"></i> Log Flight
                     </button>
-                    <button class="pf-v5-c-button pf-m-secondary"
-                            x-show="isOwner"
-                            @click="openEditModal()">
-                        <i class="fas fa-edit"></i> Edit
-                    </button>
-                    <button class="pf-v5-c-button pf-m-danger"
-                            x-show="isOwner"
-                            @click="openDeleteModal()">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
+                    <div x-show="canUpdateHours || isOwner"
+                         x-data="{ menuOpen: false }"
+                         style="position: relative;"
+                         @keydown.escape="menuOpen = false"
+                         @click.away="menuOpen = false">
+                        <button class="pf-v5-c-button pf-m-secondary"
+                                @click="menuOpen = !menuOpen"
+                                aria-haspopup="true"
+                                :aria-expanded="menuOpen">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <div x-show="menuOpen" x-cloak
+                             class="pf-v5-c-menu"
+                             style="position: absolute; right: 0; top: calc(100% + 4px); z-index: 200; min-width: 12rem;">
+                            <ul class="pf-v5-c-menu__list">
+                                <li class="pf-v5-c-menu__list-item" x-show="canUpdateHours">
+                                    <button class="pf-v5-c-menu__item"
+                                            @click="menuOpen = false; openHoursModal()"
+                                            :disabled="aircraft?.airworthiness?.status === 'RED'">
+                                        <span class="pf-v5-c-menu__item-main">
+                                            <span class="pf-v5-c-menu__item-text"><i class="fas fa-tachometer-alt" style="width: 1rem; margin-right: 0.5rem;"></i>Update Hours</span>
+                                        </span>
+                                    </button>
+                                </li>
+                                <li class="pf-v5-c-menu__list-item" x-show="isOwner">
+                                    <button class="pf-v5-c-menu__item"
+                                            @click="menuOpen = false; openEditModal()">
+                                        <span class="pf-v5-c-menu__item-main">
+                                            <span class="pf-v5-c-menu__item-text"><i class="fas fa-edit" style="width: 1rem; margin-right: 0.5rem;"></i>Edit</span>
+                                        </span>
+                                    </button>
+                                </li>
+                                <li class="pf-v5-c-divider" x-show="isOwner" role="separator"></li>
+                                <li class="pf-v5-c-menu__list-item" x-show="isOwner">
+                                    <button class="pf-v5-c-menu__item"
+                                            style="color: var(--pf-v5-global--danger-color--100);"
+                                            @click="menuOpen = false; openDeleteModal()">
+                                        <span class="pf-v5-c-menu__item-main">
+                                            <span class="pf-v5-c-menu__item-text"><i class="fas fa-trash" style="width: 1rem; margin-right: 0.5rem;"></i>Delete</span>
+                                        </span>
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -117,6 +151,11 @@
                 <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activePrimaryTab === 'overview' }">
                     <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('overview')">
                         <span class="pf-v5-c-tabs__item-text">Overview</span>
+                    </button>
+                </li>
+                <li class="pf-v5-c-tabs__item" x-show="!isPublicView" :class="{ 'pf-m-current': activePrimaryTab === 'flights' }">
+                    <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('flights')">
+                        <span class="pf-v5-c-tabs__item-text">Flights</span>
                     </button>
                 </li>
                 <li class="pf-v5-c-tabs__item" :class="{ 'pf-m-current': activePrimaryTab === 'squawks' }">
@@ -158,11 +197,6 @@
                 <li class="pf-v5-c-tabs__item" x-show="isOwner" :class="{ 'pf-m-current': activePrimaryTab === 'roles' }">
                     <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('roles')">
                         <span class="pf-v5-c-tabs__item-text">Sharing &amp; Access</span>
-                    </button>
-                </li>
-                <li class="pf-v5-c-tabs__item" x-show="!isPublicView" :class="{ 'pf-m-current': activePrimaryTab === 'flights' }">
-                    <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('flights')">
-                        <span class="pf-v5-c-tabs__item-text">Flights</span>
                     </button>
                 </li>
             </ul>
