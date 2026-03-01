@@ -1110,8 +1110,10 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
                         route=fl_data.get('route', ''),
                         oil_added=_parse_decimal(fl_data.get('oil_added')),
                         oil_added_type=fl_data.get('oil_added_type', ''),
+                        oil_level_after=_parse_decimal(fl_data.get('oil_level_after')),
                         fuel_added=_parse_decimal(fl_data.get('fuel_added')),
                         fuel_added_type=fl_data.get('fuel_added_type', ''),
+                        fuel_level_after=_parse_decimal(fl_data.get('fuel_level_after')),
                         notes=fl_data.get('notes', ''),
                     )
                     new_fl = FlightLog(**fl_kwargs)

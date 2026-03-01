@@ -25,6 +25,7 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
             _publicShareToken: shareToken || null,
             _privilegeLevel: privilegeLevel || null,
             aircraft: null,
+            headerMenuOpen: false,
             components: [],
             recentLogs: [],
             linkedLogbookEntriesById: {},
@@ -145,6 +146,15 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
                         this.loadFlightLogs();
                     }
                 });
+
+                // Open flight log modal when navigated here with #log-flight
+                if (window.location.hash === '#log-flight' && this.canCreateConsumable) {
+                    history.replaceState(null, '', window.location.pathname);
+                    this.$nextTick(() => {
+                        this.switchPrimaryTab('flights');
+                        this.openFlightLogModal();
+                    });
+                }
             },
 
             async loadData() {

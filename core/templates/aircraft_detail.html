@@ -74,56 +74,59 @@
                         <span class="hours-display" style="font-size: 1.25rem;" x-text="formatHours(aircraft?.tach_time)"></span>
                     </div>
                 </div>
-                <div x-show="aircraft" x-cloak style="display: flex; gap: 0.5rem; align-items: center;">
+                <div x-show="aircraft" x-cloak style="display: flex; gap: 0.5rem; align-items: center; position: relative;"
+                     @keydown.escape.window="headerMenuOpen = false"
+                     @click.outside="headerMenuOpen = false">
                     <button class="pf-v5-c-button pf-m-primary"
                             x-show="!isPublicView && canCreateConsumable"
+                            :disabled="aircraft?.airworthiness?.status === 'RED'"
                             @click="switchPrimaryTab('flights'); openFlightLogModal()">
                         <i class="fas fa-plane"></i> Log Flight
                     </button>
-                    <div x-show="canUpdateHours || isOwner"
-                         x-data="{ menuOpen: false }"
-                         style="position: relative;"
-                         @keydown.escape="menuOpen = false"
-                         @click.away="menuOpen = false">
-                        <button class="pf-v5-c-button pf-m-secondary"
-                                @click="menuOpen = !menuOpen"
-                                aria-haspopup="true"
-                                :aria-expanded="menuOpen">
-                            <i class="fas fa-ellipsis-v"></i>
-                        </button>
-                        <div x-show="menuOpen" x-cloak
-                             class="pf-v5-c-menu"
-                             style="position: absolute; right: 0; top: calc(100% + 4px); z-index: 200; min-width: 12rem;">
-                            <ul class="pf-v5-c-menu__list">
-                                <li class="pf-v5-c-menu__list-item" x-show="canUpdateHours">
-                                    <button class="pf-v5-c-menu__item"
-                                            @click="menuOpen = false; openHoursModal()"
-                                            :disabled="aircraft?.airworthiness?.status === 'RED'">
-                                        <span class="pf-v5-c-menu__item-main">
-                                            <span class="pf-v5-c-menu__item-text"><i class="fas fa-tachometer-alt" style="width: 1rem; margin-right: 0.5rem;"></i>Update Hours</span>
-                                        </span>
-                                    </button>
-                                </li>
-                                <li class="pf-v5-c-menu__list-item" x-show="isOwner">
-                                    <button class="pf-v5-c-menu__item"
-                                            @click="menuOpen = false; openEditModal()">
-                                        <span class="pf-v5-c-menu__item-main">
-                                            <span class="pf-v5-c-menu__item-text"><i class="fas fa-edit" style="width: 1rem; margin-right: 0.5rem;"></i>Edit</span>
-                                        </span>
-                                    </button>
-                                </li>
-                                <li class="pf-v5-c-divider" x-show="isOwner" role="separator"></li>
-                                <li class="pf-v5-c-menu__list-item" x-show="isOwner">
-                                    <button class="pf-v5-c-menu__item"
-                                            style="color: var(--pf-v5-global--danger-color--100);"
-                                            @click="menuOpen = false; openDeleteModal()">
-                                        <span class="pf-v5-c-menu__item-main">
-                                            <span class="pf-v5-c-menu__item-text"><i class="fas fa-trash" style="width: 1rem; margin-right: 0.5rem;"></i>Delete</span>
-                                        </span>
-                                    </button>
-                                </li>
-                            </ul>
-                        </div>
+                    <button class="pf-v5-c-button pf-m-secondary"
+                            x-show="canUpdateHours || isOwner"
+                            @click="headerMenuOpen = !headerMenuOpen"
+                            aria-haspopup="true"
+                            :aria-expanded="headerMenuOpen">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <div x-show="headerMenuOpen" x-cloak
+                         class="pf-v5-c-menu"
+                         style="position: absolute; right: 0; top: calc(100% + 4px); z-index: 200; min-width: 12rem;">
+                        <ul class="pf-v5-c-menu__list">
+                            <li class="pf-v5-c-menu__list-item" x-show="canUpdateHours">
+                                <button class="pf-v5-c-menu__item"
+                                        :style="aircraft?.airworthiness?.status === 'RED' ? 'opacity: 0.5; cursor: not-allowed;' : ''"
+                                        @click="if (aircraft?.airworthiness?.status !== 'RED') { headerMenuOpen = false; openHoursModal(); }"
+                                        :disabled="aircraft?.airworthiness?.status === 'RED'"
+                                        :aria-disabled="aircraft?.airworthiness?.status === 'RED'">
+                                    <span class="pf-v5-c-menu__item-main">
+                                        <span class="pf-v5-c-menu__item-text"><i class="fas fa-tachometer-alt" style="width: 1rem; margin-right: 0.5rem;"></i>Update Hours</span>
+                                    </span>
+                                    <template x-if="aircraft?.airworthiness?.status === 'RED'">
+                                        <span class="pf-v5-c-menu__item-description">Aircraft is grounded</span>
+                                    </template>
+                                </button>
+                            </li>
+                            <li class="pf-v5-c-menu__list-item" x-show="isOwner">
+                                <button class="pf-v5-c-menu__item"
+                                        @click="headerMenuOpen = false; openEditModal()">
+                                    <span class="pf-v5-c-menu__item-main">
+                                        <span class="pf-v5-c-menu__item-text"><i class="fas fa-edit" style="width: 1rem; margin-right: 0.5rem;"></i>Edit</span>
+                                    </span>
+                                </button>
+                            </li>
+                            <li class="pf-v5-c-divider" x-show="isOwner" role="separator"></li>
+                            <li class="pf-v5-c-menu__list-item" x-show="isOwner">
+                                <button class="pf-v5-c-menu__item"
+                                        style="color: var(--pf-v5-global--danger-color--100);"
+                                        @click="headerMenuOpen = false; openDeleteModal()">
+                                    <span class="pf-v5-c-menu__item-main">
+                                        <span class="pf-v5-c-menu__item-text"><i class="fas fa-trash" style="width: 1rem; margin-right: 0.5rem;"></i>Delete</span>
+                                    </span>
+                                </button>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -2942,8 +2945,16 @@
                             <div class="pf-v5-c-form__group">
                                 <label class="pf-v5-c-form__label" for="fl-oil"><span class="pf-v5-c-form__label-text">Oil Added (qt, optional)</span></label>
                                 <div style="display: flex; gap: 0.5rem;">
-                                    <input type="number" step="0.1" min="0" id="fl-oil" class="pf-v5-c-form-control" x-model="flightLogForm.oil_added" placeholder="Quarts" style="width: 100px;">
+                                    <input type="number" step="0.1" min="0" id="fl-oil" class="pf-v5-c-form-control" x-model="flightLogForm.oil_added" placeholder="Quarts added" style="width: 110px;">
                                     <input type="text" class="pf-v5-c-form-control" x-model="flightLogForm.oil_added_type" placeholder="Type (e.g. W100)" style="flex: 1;">
+                                </div>
+                                <div x-show="flightLogForm.oil_added" style="margin-top: 0.4rem;">
+                                    <label style="font-size: 0.85rem; color: var(--pf-v5-global--Color--200);">
+                                        Level after addition (qt) <span style="color: red;">*</span>
+                                    </label>
+                                    <input type="number" step="0.1" min="0" class="pf-v5-c-form-control" x-model="flightLogForm.oil_level_after"
+                                           placeholder="Total qt in engine" style="width: 110px;"
+                                           :required="!!flightLogForm.oil_added">
                                 </div>
                             </div>
 
@@ -2951,8 +2962,16 @@
                             <div class="pf-v5-c-form__group">
                                 <label class="pf-v5-c-form__label" for="fl-fuel"><span class="pf-v5-c-form__label-text">Fuel Added (gal, optional)</span></label>
                                 <div style="display: flex; gap: 0.5rem;">
-                                    <input type="number" step="0.1" min="0" id="fl-fuel" class="pf-v5-c-form-control" x-model="flightLogForm.fuel_added" placeholder="Gallons" style="width: 100px;">
+                                    <input type="number" step="0.1" min="0" id="fl-fuel" class="pf-v5-c-form-control" x-model="flightLogForm.fuel_added" placeholder="Gallons added" style="width: 110px;">
                                     <input type="text" class="pf-v5-c-form-control" x-model="flightLogForm.fuel_added_type" placeholder="Type (e.g. 100LL)" style="flex: 1;">
+                                </div>
+                                <div x-show="flightLogForm.fuel_added" style="margin-top: 0.4rem;">
+                                    <label style="font-size: 0.85rem; color: var(--pf-v5-global--Color--200);">
+                                        Level after addition (gal) <span style="color: red;">*</span>
+                                    </label>
+                                    <input type="number" step="0.1" min="0" class="pf-v5-c-form-control" x-model="flightLogForm.fuel_level_after"
+                                           placeholder="Total gal in tanks" style="width: 110px;"
+                                           :required="!!flightLogForm.fuel_added">
                                 </div>
                             </div>
 

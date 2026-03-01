@@ -12,8 +12,10 @@ function flightsMixin() {
         route: '',
         oil_added: '',
         oil_added_type: '',
+        oil_level_after: '',
         fuel_added: '',
         fuel_added_type: '',
+        fuel_level_after: '',
         notes: '',
     });
 
@@ -75,8 +77,10 @@ function flightsMixin() {
                     route: flightLog.route || '',
                     oil_added: flightLog.oil_added || '',
                     oil_added_type: flightLog.oil_added_type || '',
+                    oil_level_after: flightLog.oil_level_after || '',
                     fuel_added: flightLog.fuel_added || '',
                     fuel_added_type: flightLog.fuel_added_type || '',
+                    fuel_level_after: flightLog.fuel_level_after || '',
                     notes: flightLog.notes || '',
                 };
             } else {
@@ -111,6 +115,14 @@ function flightsMixin() {
                 showNotification('Date and Tach Time are required', 'warning');
                 return;
             }
+            if (this.flightLogForm.oil_added && !this.flightLogForm.oil_level_after) {
+                showNotification('Oil level after addition is required when oil is added', 'warning');
+                return;
+            }
+            if (this.flightLogForm.fuel_added && !this.flightLogForm.fuel_level_after) {
+                showNotification('Fuel level after addition is required when fuel is added', 'warning');
+                return;
+            }
 
             this.flightLogSubmitting = true;
             try {
@@ -121,7 +133,8 @@ function flightsMixin() {
                     const fields = ['date', 'tach_time', 'tach_out', 'tach_in',
                                     'hobbs_time', 'hobbs_out', 'hobbs_in',
                                     'departure_location', 'destination_location', 'route',
-                                    'oil_added', 'oil_added_type', 'fuel_added', 'fuel_added_type', 'notes'];
+                                    'oil_added', 'oil_added_type', 'oil_level_after',
+                                    'fuel_added', 'fuel_added_type', 'fuel_level_after', 'notes'];
                     for (const f of fields) {
                         const v = this.flightLogForm[f];
                         body[f] = (v === '' || v === null) ? null : v;
@@ -144,7 +157,8 @@ function flightsMixin() {
                     const fields = ['date', 'tach_time', 'tach_out', 'tach_in',
                                     'hobbs_time', 'hobbs_out', 'hobbs_in',
                                     'departure_location', 'destination_location', 'route',
-                                    'oil_added', 'oil_added_type', 'fuel_added', 'fuel_added_type', 'notes'];
+                                    'oil_added', 'oil_added_type', 'oil_level_after',
+                                    'fuel_added', 'fuel_added_type', 'fuel_level_after', 'notes'];
                     for (const f of fields) {
                         const v = this.flightLogForm[f];
                         if (v !== '' && v !== null && v !== undefined) {

@@ -539,8 +539,8 @@ class FlightLogNestedSerializer(serializers.ModelSerializer):
             'tach_time', 'tach_out', 'tach_in',
             'hobbs_time', 'hobbs_out', 'hobbs_in',
             'departure_location', 'destination_location', 'route',
-            'oil_added', 'oil_added_type',
-            'fuel_added', 'fuel_added_type',
+            'oil_added', 'oil_added_type', 'oil_level_after',
+            'fuel_added', 'fuel_added_type', 'fuel_level_after',
             'track_log', 'notes', 'created_at',
         ]
         read_only_fields = ['id', 'created_at']
@@ -557,8 +557,8 @@ class FlightLogCreateUpdateSerializer(serializers.ModelSerializer):
             'tach_time', 'tach_out', 'tach_in',
             'hobbs_time', 'hobbs_out', 'hobbs_in',
             'departure_location', 'destination_location', 'route',
-            'oil_added', 'oil_added_type',
-            'fuel_added', 'fuel_added_type',
+            'oil_added', 'oil_added_type', 'oil_level_after',
+            'fuel_added', 'fuel_added_type', 'fuel_level_after',
             'track_log', 'notes',
         ]
         read_only_fields = ['id']

@@ -116,12 +116,13 @@
                         </template>
                     </div>
                     <div class="pf-v5-c-card__footer">
-                        <button class="pf-v5-c-button pf-m-primary"
-                                x-show="canUpdateHours(aircraft)"
-                                @click="openHoursModal(aircraft)"
-                                :disabled="aircraft.airworthiness?.status === 'RED'">
-                            Update Hours
-                        </button>
+                        <a class="pf-v5-c-button pf-m-primary"
+                           x-show="canUpdateHours(aircraft)"
+                           :href="`/aircraft/${aircraft.id}/#log-flight`"
+                           :class="{ 'pf-m-disabled': aircraft.airworthiness?.status === 'RED' }"
+                           :aria-disabled="aircraft.airworthiness?.status === 'RED'">
+                            <i class="fas fa-plane"></i> Log Flight
+                        </a>
                         <a :href="`/aircraft/${aircraft.id}/`"
                            class="pf-v5-c-button pf-m-secondary">
                             Details

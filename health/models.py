@@ -477,8 +477,10 @@ class FlightLog(models.Model):
     # Consumables added
     oil_added = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     oil_added_type = models.CharField(max_length=100, blank=True)
+    oil_level_after = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True, help_text="Total oil level (qt) after addition")
     fuel_added = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     fuel_added_type = models.CharField(max_length=100, blank=True)
+    fuel_level_after = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="Total fuel level (gal) after addition")
     # Track log
     track_log = models.FileField(upload_to=random_track_log_filename, null=True, blank=True)
     notes = models.TextField(blank=True)
