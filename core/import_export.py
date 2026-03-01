@@ -1074,7 +1074,7 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
                     component_id = oar_data.get('component_id')
                     OilAnalysisReport.objects.create(
                         aircraft=new_aircraft,
-                        component=id_map['component'].get(component_id) if component_id else None,
+                        component_id=id_map['component'].get(component_id) if component_id else None,
                         sample_date=_parse_date(oar_data.get('sample_date')),
                         analysis_date=_parse_date(oar_data.get('analysis_date')),
                         lab=oar_data.get('lab', ''),
