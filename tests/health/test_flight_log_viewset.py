@@ -99,22 +99,24 @@ class TestFlightLogUpdate:
         assert aircraft.tach_time == initial_tach + Decimal('5.0')
 
     def test_pilot_cannot_patch_flight_log(self, pilot_client, aircraft_with_pilot):
+        # Pilot has a role → record is in queryset → blocked by IsAircraftOwnerOrAdmin → 403
         flight = _make_flight(aircraft_with_pilot)
         resp = pilot_client.patch(
             f'/api/flight-logs/{flight.id}/',
             {'tach_time': '20.0'},
             format='json',
         )
-        assert resp.status_code in (403, 404)
+        assert resp.status_code == 403
 
     def test_other_client_cannot_patch(self, other_client, aircraft):
+        # other_client has no role → record excluded from queryset → 404
         flight = _make_flight(aircraft)
         resp = other_client.patch(
             f'/api/flight-logs/{flight.id}/',
             {'tach_time': '20.0'},
             format='json',
         )
-        assert resp.status_code in (403, 404)
+        assert resp.status_code == 404
 
 
 class TestFlightLogDelete:
@@ -132,9 +134,10 @@ class TestFlightLogDelete:
         assert events.exists()
 
     def test_pilot_cannot_delete_flight_log(self, pilot_client, aircraft_with_pilot):
+        # Pilot has a role → record is in queryset → blocked by IsAircraftOwnerOrAdmin → 403
         flight = _make_flight(aircraft_with_pilot)
         resp = pilot_client.delete(f'/api/flight-logs/{flight.id}/')
-        assert resp.status_code in (403, 404)
+        assert resp.status_code == 403
         assert FlightLog.objects.filter(id=flight.id).exists()
 
     def test_other_client_gets_404_on_delete(self, other_client, aircraft):
