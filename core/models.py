@@ -189,3 +189,19 @@ class InvitationCodeRedemption(models.Model):
 
     def __str__(self):
         return f"{self.user} redeemed '{self.code.label}'"
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='profile',
+    )
+    oidc_sub = models.CharField(max_length=255, blank=True, null=True, unique=True)
+
+    class Meta:
+        verbose_name = 'User Profile'
+        verbose_name_plural = 'User Profiles'
+
+    def __str__(self):
+        return f"Profile({self.user.username})"

@@ -2,7 +2,14 @@ from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Aircraft, AircraftNote, AircraftRole, AircraftShareToken, InvitationCode, InvitationCodeAircraftRole, InvitationCodeRedemption
+from .models import Aircraft, AircraftNote, AircraftRole, AircraftShareToken, InvitationCode, InvitationCodeAircraftRole, InvitationCodeRedemption, UserProfile
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'oidc_sub')
+    search_fields = ('user__username', 'oidc_sub')
+    readonly_fields = ('user',)
 
 
 class AircraftRoleInline(admin.TabularInline):
