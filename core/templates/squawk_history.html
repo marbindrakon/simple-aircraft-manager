@@ -93,7 +93,7 @@
                             </td>
                             <td x-text="squawk.reported_by_username || '-'"></td>
                             <td>
-                                <button class="pf-v5-c-button pf-m-plain" @click="reopenSquawk(squawk)" title="Reopen Squawk">
+                                <button class="pf-v5-c-button pf-m-plain" x-show="aircraft && aircraft.user_role !== 'pilot'" @click="reopenSquawk(squawk)" title="Reopen Squawk">
                                     <i class="fas fa-undo"></i>
                                 </button>
                             </td>

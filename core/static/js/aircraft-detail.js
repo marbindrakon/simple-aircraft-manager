@@ -112,6 +112,9 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
                     return;
                 }
 
+                // Eagerly load aircraft list so switcher hides immediately for single-aircraft users
+                this.loadSwitcherAircraft();
+
                 // Private mode: load ADs and inspections eagerly for issue count badges
                 this.loadAds();
                 this.loadInspections();

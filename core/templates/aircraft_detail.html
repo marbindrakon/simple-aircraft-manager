@@ -20,7 +20,7 @@
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                             <h1 x-text="aircraft?.tail_number || 'Loading...'"></h1>
                             <!-- Aircraft Switcher -->
-                            <div x-show="!isPublicView && (switcherAircraft.length > 0 || !switcherLoaded)" x-cloak
+                            <div x-show="!isPublicView && switcherAircraft.length > 0" x-cloak
                                  class="aircraft-switcher" @click.outside="switcherOpen = false">
                                 <button class="aircraft-switcher__toggle" @click="toggleSwitcher()"
                                         title="Switch aircraft">
