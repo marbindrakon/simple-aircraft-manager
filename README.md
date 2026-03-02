@@ -42,7 +42,17 @@ Simple Aircraft Manager is an open-source, self-hosted solution for managing rec
    python manage.py runserver
    ```
 
-4. **Access the application**
+4. **Run the test suite** *(optional)*
+   ```bash
+   pip install -r requirements-test.txt
+   python -m pytest                      # all tests + coverage report
+   python -m pytest --no-cov            # skip coverage (faster)
+   python -m pytest tests/health/       # one module
+   python -m pytest -k "test_owner"     # filter by name
+   ```
+   Coverage writes a terminal summary (`term-missing`) and an HTML report to `htmlcov/`.
+
+5. **Access the application**
    - Dashboard: http://localhost:8000/dashboard/
    - Admin: http://localhost:8000/admin/
    - API: http://localhost:8000/api/
