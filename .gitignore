@@ -48,6 +48,7 @@ static_collected/
 htmlcov/
 .pytest_cache/
 .tox/
+import_staging/
 
 # Jupyter Notebook
 .ipynb_checkpoints
