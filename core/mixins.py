@@ -33,6 +33,40 @@ class AircraftScopedMixin:
         path = self.aircraft_fk_path.replace('__', '.')
         return reduce(getattr, path.split('.'), instance)
 
+    def _resolve_aircraft_from_validated_data(self, validated_data):
+        """Resolve the Aircraft instance from serializer validated_data.
+
+        Walks the aircraft_fk_path (e.g. 'aircraft' or 'document__aircraft')
+        through validated_data then attribute access, matching the pattern used
+        by get_queryset() and _resolve_aircraft_from_instance().
+        """
+        parts = self.aircraft_fk_path.split('__')
+        obj = validated_data.get(parts[0])
+        for part in parts[1:]:
+            if obj is None:
+                return None
+            obj = getattr(obj, part, None)
+        return obj
+
+    def perform_create(self, serializer):
+        """Enforce aircraft-level role checks before saving a new instance.
+
+        DRF only calls check_object_permissions() for actions that call
+        get_object() (retrieve, update, destroy).  For create, no object
+        exists yet, so we must check the incoming aircraft FK ourselves.
+        """
+        from core.permissions import get_user_role, ROLE_HIERARCHY, PILOT_WRITABLE_MODELS
+        aircraft = self._resolve_aircraft_from_validated_data(serializer.validated_data)
+        if aircraft is not None:
+            role = get_user_role(self.request.user, aircraft)
+            if role is None:
+                self.permission_denied(self.request)
+            model_name = serializer.Meta.model.__name__.lower()
+            if model_name not in PILOT_WRITABLE_MODELS:
+                if ROLE_HIERARCHY.get(role, 0) < ROLE_HIERARCHY.get('owner', 0):
+                    self.permission_denied(self.request)
+        super().perform_create(serializer)
+
     def check_object_permissions(self, request, obj):
         """Check aircraft-level permissions after DRF's standard checks."""
         super().check_object_permissions(request, obj)

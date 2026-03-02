@@ -276,12 +276,34 @@ Changes that always require doc updates: new/renamed UI columns, modal workflows
 
 ## Testing Commands
 
+**Django system checks:**
 ```bash
 python manage.py check
 python manage.py check --settings=simple_aircraft_manager.settings_prod
-python manage.py runserver
 python manage.py makemigrations && python manage.py migrate
 ```
+
+**pytest test suite** (install `requirements-test.txt` first):
+```bash
+python -m pytest                        # all 680 tests + coverage (term-missing + htmlcov/)
+python -m pytest --no-cov              # skip coverage for speed
+python -m pytest tests/health/         # one directory
+python -m pytest tests/core/test_permissions.py  # one file
+python -m pytest -k "test_owner"       # filter by name
+python -m pytest -x                    # stop on first failure
+```
+
+**Coverage config** lives in `pyproject.toml` (`[tool.coverage.run]`). Migrations, management commands, and settings files are excluded. HTML report: `htmlcov/index.html`.
+
+**Test layout:**
+```
+tests/
+  conftest.py                  # shared fixtures (aircraft, users, clients)
+  core/                        # models, permissions, RBAC, events, import/export, views
+  health/                      # viewsets, serializers, services, parsers
+```
+
+**Thread-safety note:** Tests that trigger `ImportView` or `OilAnalysisAiExtractView` must mock their background threads (see `mock_import_worker` fixture in `test_import.py` and `patch('threading.Thread.start')` in `test_oil_analysis_viewset.py`). SQLite's test-mode transaction prevents background threads from accessing the DB.
 
 ## API Endpoints
 
