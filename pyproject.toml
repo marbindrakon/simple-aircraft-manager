@@ -1,0 +1,20 @@
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "simple_aircraft_manager.settings"
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "--cov=core --cov=health --cov-report=term-missing --cov-report=html:htmlcov"
+
+[tool.coverage.run]
+omit = [
+    "*/migrations/*",
+    "*/management/commands/*",
+    "*/settings*.py",
+    "venv/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
