@@ -230,10 +230,27 @@ class TestAircraftScopedMixinQueryscoping:
         # Should NOT see the original aircraft's squawk
         assert str(squawk.id) not in ids
 
-    def test_pilot_cannot_delete_non_pilot_writable_resource(self, aircraft_with_pilot, pilot_user, component):
-        """Pilot cannot DELETE a component (not in PILOT_WRITABLE_MODELS)."""
+    def test_pilot_cannot_delete_component(self, aircraft_with_pilot, pilot_user, component):
+        """Pilot cannot DELETE a component — check_object_permissions requires owner+."""
         client = APIClient()
         client.force_authenticate(user=pilot_user)
         response = client.delete(f'/api/components/{component.id}/')
-        # Expect 403 Forbidden
+        assert response.status_code == 403
+
+    def test_pilot_cannot_update_note(self, aircraft_with_pilot, pilot_user):
+        """Pilot cannot PATCH a note even though they can create one."""
+        from core.models import AircraftNote
+        note = AircraftNote.objects.create(aircraft=aircraft_with_pilot, text='Original')
+        client = APIClient()
+        client.force_authenticate(user=pilot_user)
+        response = client.patch(f'/api/aircraft-notes/{note.id}/', {'text': 'Changed'}, format='json')
+        assert response.status_code == 403
+
+    def test_pilot_cannot_delete_note(self, aircraft_with_pilot, pilot_user):
+        """Pilot cannot DELETE a note even though they can create one."""
+        from core.models import AircraftNote
+        note = AircraftNote.objects.create(aircraft=aircraft_with_pilot, text='Original')
+        client = APIClient()
+        client.force_authenticate(user=pilot_user)
+        response = client.delete(f'/api/aircraft-notes/{note.id}/')
         assert response.status_code == 403

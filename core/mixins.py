@@ -55,25 +55,29 @@ class AircraftScopedMixin:
         get_object() (retrieve, update, destroy).  For create, no object
         exists yet, so we must check the incoming aircraft FK ourselves.
         """
-        from core.permissions import get_user_role, ROLE_HIERARCHY, PILOT_WRITABLE_MODELS
+        from core.permissions import get_user_role, ROLE_HIERARCHY, PILOT_CREATABLE_MODELS
         aircraft = self._resolve_aircraft_from_validated_data(serializer.validated_data)
         if aircraft is not None:
             role = get_user_role(self.request.user, aircraft)
             if role is None:
                 self.permission_denied(self.request)
             model_name = serializer.Meta.model.__name__.lower()
-            if model_name not in PILOT_WRITABLE_MODELS:
+            if model_name not in PILOT_CREATABLE_MODELS:
                 if ROLE_HIERARCHY.get(role, 0) < ROLE_HIERARCHY.get('owner', 0):
                     self.permission_denied(self.request)
         super().perform_create(serializer)
 
     def check_object_permissions(self, request, obj):
-        """Check aircraft-level permissions after DRF's standard checks."""
+        """Check aircraft-level permissions after DRF's standard checks.
+
+        Safe methods (GET/HEAD/OPTIONS) are allowed for any role >= pilot.
+        All unsafe methods (POST/PUT/PATCH/DELETE) require owner+.
+
+        Create access for pilots on certain models is gated separately in
+        perform_create via PILOT_CREATABLE_MODELS, not here.
+        """
         super().check_object_permissions(request, obj)
-        from core.permissions import (
-            get_user_role, ROLE_HIERARCHY, PILOT_WRITE_ACTIONS,
-            PILOT_WRITABLE_MODELS,
-        )
+        from core.permissions import get_user_role, ROLE_HIERARCHY
         from core.models import Aircraft
         aircraft = self._resolve_aircraft_from_instance(obj)
         if not isinstance(aircraft, Aircraft):
@@ -83,16 +87,10 @@ class AircraftScopedMixin:
         if role is None:
             self.permission_denied(request)
 
-        # Safe methods allowed for any role
         if request.method in permissions.SAFE_METHODS:
             return
 
-        # Check if this model is pilot-writable
-        model_name = obj.__class__.__name__.lower()
-        if model_name in PILOT_WRITABLE_MODELS:
-            return  # pilot+ can write these
-
-        # Everything else requires owner+
+        # All mutations require owner+
         if ROLE_HIERARCHY.get(role, 0) < ROLE_HIERARCHY.get('owner', 0):
             self.permission_denied(request)
 

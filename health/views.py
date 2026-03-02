@@ -15,8 +15,6 @@ from core.events import log_event
 from core.mixins import AircraftScopedMixin, EventLoggingMixin
 from core.permissions import IsAdAircraftOwnerOrAdmin
 from decimal import Decimal
-
-from core.permissions import IsAircraftOwnerOrAdmin, IsAircraftPilotOrAbove
 from health.models import (
     ComponentType, Component, DocumentCollection, Document, DocumentImage,
     LogbookEntry, Squawk, InspectionType, AD, MajorRepairAlteration,
@@ -289,11 +287,6 @@ class FlightLogViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelVie
         if self.action in ('update', 'partial_update'):
             return FlightLogCreateUpdateSerializer
         return FlightLogNestedSerializer
-
-    def get_permissions(self):
-        if self.action in ('update', 'partial_update', 'destroy'):
-            return [IsAuthenticated(), IsAircraftOwnerOrAdmin()]
-        return [IsAuthenticated(), IsAircraftPilotOrAbove()]
 
     def perform_update(self, serializer):
         old_tach = serializer.instance.tach_time

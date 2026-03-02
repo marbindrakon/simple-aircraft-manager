@@ -61,7 +61,7 @@ class TestDocumentCollectionViewSet:
         assert resp.data['name'] == 'New Collection'
 
     def test_pilot_cannot_delete_collection(self, pilot_client, aircraft_with_pilot, doc_collection):
-        # check_object_permissions restricts pilots from deleting non-PILOT_WRITABLE_MODELS
+        # check_object_permissions requires owner+ for all mutations
         resp = pilot_client.delete(f'/api/document-collections/{doc_collection.id}/')
         assert resp.status_code == 403
 
@@ -101,7 +101,7 @@ class TestDocumentViewSet:
         assert resp.data['name'] == 'New Document'
 
     def test_pilot_cannot_delete_document(self, pilot_client, aircraft_with_pilot, document):
-        # check_object_permissions restricts pilots from deleting non-PILOT_WRITABLE_MODELS
+        # check_object_permissions requires owner+ for all mutations
         resp = pilot_client.delete(f'/api/documents/{document.id}/')
         assert resp.status_code == 403
 
@@ -158,7 +158,7 @@ class TestDocumentImageViewSet:
         assert resp.status_code == 201
 
     def test_pilot_cannot_delete_document_image(self, pilot_client, aircraft_with_pilot, document):
-        # check_object_permissions restricts pilots from deleting non-PILOT_WRITABLE_MODELS
+        # check_object_permissions requires owner+ for all mutations
         image_file = SimpleUploadedFile(
             'img.jpg', b'\xff\xd8\xff\xe0' + b'C' * 50, content_type='image/jpeg'
         )

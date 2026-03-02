@@ -245,7 +245,7 @@ class TestInspectionRecordViewSet:
         assert resp.status_code == 201
 
     def test_pilot_cannot_update_inspection_record(self, pilot_client, aircraft_with_pilot, inspection_type):
-        # check_object_permissions restricts pilots from updating non-PILOT_WRITABLE_MODELS
+        # check_object_permissions requires owner+ for all mutations
         record = InspectionRecord.objects.create(
             inspection_type=inspection_type,
             aircraft=aircraft_with_pilot,

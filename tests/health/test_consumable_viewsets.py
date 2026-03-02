@@ -65,7 +65,7 @@ class TestConsumableRecordViewSetCreate:
         assert resp.data['record_type'] == 'oil'
 
     def test_pilot_can_create_consumable_record(self, pilot_client, aircraft_with_pilot):
-        # consumablerecord is in PILOT_WRITABLE_MODELS
+        # consumablerecord is in PILOT_CREATABLE_MODELS — pilot can create but not edit/delete
         resp = pilot_client.post(
             '/api/consumable-records/',
             {
@@ -79,12 +79,17 @@ class TestConsumableRecordViewSetCreate:
         )
         assert resp.status_code == 201
 
+    def test_pilot_cannot_update_consumable_record(self, pilot_client, aircraft_with_pilot, oil_record):
+        resp = pilot_client.patch(
+            f'/api/consumable-records/{oil_record.id}/',
+            {'quantity_added': '99.0'},
+            format='json',
+        )
+        assert resp.status_code == 403
+
     def test_pilot_cannot_delete_consumable_record(self, pilot_client, aircraft_with_pilot, oil_record):
-        # consumablerecord is in PILOT_WRITABLE_MODELS — model name check applies on the object
-        # PILOT_WRITABLE_MODELS includes 'consumablerecord' so pilot CAN delete
         resp = pilot_client.delete(f'/api/consumable-records/{oil_record.id}/')
-        # consumablerecord IS in PILOT_WRITABLE_MODELS — pilot is allowed
-        assert resp.status_code == 204
+        assert resp.status_code == 403
 
 
 class TestConsumableRecordViewSetFilter:

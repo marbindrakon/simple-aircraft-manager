@@ -11,8 +11,11 @@ PILOT_WRITE_ACTIONS = {
     'update_hours', 'squawks', 'notes', 'oil_records', 'fuel_records', 'flight_logs',
 }
 
-# Models that pilots can create/update via standalone viewsets
-PILOT_WRITABLE_MODELS = {'squawk', 'consumablerecord', 'aircraftnote', 'flightlog'}
+# Models that pilots can CREATE via standalone viewsets.
+# This set is consulted only by AircraftScopedMixin.perform_create — it does NOT
+# grant update or delete access.  For all unsafe methods on existing objects,
+# check_object_permissions requires owner+ regardless of this set.
+PILOT_CREATABLE_MODELS = {'squawk', 'consumablerecord', 'aircraftnote'}
 
 
 def get_user_role(user, aircraft):

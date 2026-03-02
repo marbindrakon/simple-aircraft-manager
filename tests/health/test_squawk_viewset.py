@@ -49,7 +49,7 @@ class TestSquawkViewSetUpdate:
         assert squawk.priority == 2
 
     def test_pilot_can_create_squawk(self, pilot_client, aircraft_with_pilot):
-        # Squawk is in PILOT_WRITABLE_MODELS — pilot can create
+        # Squawk is in PILOT_CREATABLE_MODELS — pilot can create
         resp = pilot_client.post(
             '/api/squawks/',
             {
@@ -61,13 +61,17 @@ class TestSquawkViewSetUpdate:
         )
         assert resp.status_code == 201
 
+    def test_pilot_cannot_update_squawk(self, pilot_client, aircraft_with_pilot, squawk):
+        resp = pilot_client.patch(
+            f'/api/squawks/{squawk.id}/',
+            {'priority': 2},
+            format='json',
+        )
+        assert resp.status_code == 403
+
     def test_pilot_cannot_delete_squawk(self, pilot_client, aircraft_with_pilot, squawk):
-        # squawk is on aircraft_with_pilot — pilot can see it but model name 'squawk' IS in
-        # PILOT_WRITABLE_MODELS, so pilot CAN delete. Let's verify the actual permission behavior.
-        # Per PILOT_WRITABLE_MODELS = {'squawk', ...}, pilot can write squawks.
         resp = pilot_client.delete(f'/api/squawks/{squawk.id}/')
-        # Squawk is in PILOT_WRITABLE_MODELS, so pilot is allowed
-        assert resp.status_code == 204
+        assert resp.status_code == 403
 
 
 class TestSquawkLinkLogbook:
