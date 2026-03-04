@@ -37,7 +37,20 @@ simple-aircraft-manager/
 │   └── wsgi.py
 ├── core/                        # Core aircraft management
 │   ├── models.py                # Aircraft, AircraftNote, AircraftEvent, roles, share tokens
-│   ├── views.py                 # API ViewSets + template views + public sharing + import
+│   ├── views/                   # Views package (split from core/views.py)
+│   │   ├── __init__.py          # Re-exports all public names for backwards compatibility
+│   │   ├── aircraft.py          # AircraftViewSet (uses HealthAircraftActionsMixin)
+│   │   ├── auth_views.py        # custom_logout, RegisterView, ProfileView
+│   │   ├── public_views.py      # PublicAircraftView (token → template render)
+│   │   ├── import_export_views.py # ExportView, ImportView, ImportJobStatusView
+│   │   ├── template_views.py    # DashboardView, AircraftDetailView, SquawkHistoryView
+│   │   ├── logbook_import_view.py # LogbookImportView
+│   │   ├── notes_events.py      # AircraftNoteViewSet, AircraftEventViewSet, healthz
+│   │   ├── user_views.py        # UserSearchView
+│   │   └── invitations.py       # InvitationCodeViewSet, manage views
+│   ├── action_registry.py       # Permission routing registry (plugin pattern)
+│   ├── sharing.py               # validate_share_token() helper
+│   ├── urls.py                  # ROUTER_REGISTRATIONS list for core routes
 │   ├── serializers.py           # DRF serializers
 │   ├── permissions.py           # RBAC permission classes
 │   ├── mixins.py                # AircraftScopedMixin, EventLoggingMixin
@@ -52,14 +65,18 @@ simple-aircraft-manager/
 │   ├── templates/
 │   │   ├── base.html            # Base template with PatternFly + Alpine.js
 │   │   ├── dashboard.html       # Fleet dashboard
-│   │   ├── aircraft_detail.html # Tabbed aircraft detail page
-│   │   └── includes/            # Reusable template partials
+│   │   ├── aircraft_detail.html # Parent aircraft detail template (~262 lines)
+│   │   └── includes/            # Tab section includes (detail_overview.html, detail_components.html, etc.)
 │   └── static/
 │       ├── css/app.css          # Custom styles
 │       └── js/                  # Alpine.js components (see below)
 ├── health/                      # Maintenance & compliance
 │   ├── models.py                # Component, Squawk, Logbook, AD, Inspection, etc.
 │   ├── views.py                 # API ViewSets
+│   ├── aircraft_actions.py      # HealthAircraftActionsMixin — all @action methods for AircraftViewSet
+│   ├── serializer_mixins.py     # AirworthinessMixin
+│   ├── views_public.py          # PublicAircraftSummaryAPI, PublicLogbookEntriesAPI
+│   ├── urls.py                  # ROUTER_REGISTRATIONS list for health routes
 │   ├── serializers.py           # DRF serializers (includes upload validation)
 │   ├── services.py              # Airworthiness calculation logic
 │   └── logbook_import.py        # AI-assisted logbook transcription

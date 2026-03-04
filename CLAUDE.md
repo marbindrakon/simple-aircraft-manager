@@ -170,7 +170,7 @@ Backfill ownership: `python manage.py assign_owners --user <username> --all`
 
 Feature flag: `OIDC_ENABLED` env var (default `false`). Library: `mozilla-django-oidc`.
 
-Backends (when enabled): `CustomOIDCAuthenticationBackend` (OIDC first) + `ModelBackend` (fallback — local/admin accounts always work). Username strategy: `preferred_username` → email local part → `sub`. Auto-creates/syncs users on login. Logout (`core.views.custom_logout`) handles both RP-initiated OIDC logout and Django session logout.
+Backends (when enabled): `CustomOIDCAuthenticationBackend` (OIDC first) + `ModelBackend` (fallback — local/admin accounts always work). Username strategy: `preferred_username` → email local part → `sub`. Auto-creates/syncs users on login. Logout (`core.views.auth_views.custom_logout`) handles both RP-initiated OIDC logout and Django session logout.
 
 Key files: `core/oidc.py`, `core/context_processors.py` (exposes `OIDC_ENABLED` to templates).
 
@@ -242,7 +242,10 @@ Documents have `collection` FK set or `collection=null` (uncollected). Both retu
 | Event logging | `core/events.py` (`log_event`) |
 | EventLoggingMixin + AircraftScopedMixin | `core/mixins.py` |
 | Permission classes | `core/permissions.py` |
-| Public sharing views | `core/views.py` |
+| Public sharing views | `health/views_public.py` |
+| Views package | `core/views/` (`aircraft.py`, `auth_views.py`, `public_views.py`, `import_export_views.py`, etc.) |
+| Token validation helper | `core/sharing.py` (`validate_share_token`) |
+| Action permission registry | `core/action_registry.py` |
 | Public base template | `core/templates/base_public.html` |
 | Logbook import | `health/logbook_import.py` |
 | OIDC backend | `core/oidc.py` |

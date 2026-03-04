@@ -1,0 +1,186 @@
+        <!-- Logbook Tab (Records group) -->
+        <div x-show="activeTab === 'logbook'" class="pf-v5-c-page__main-section">
+            <div class="tab-subtab-bar">
+                <div class="pf-v5-c-toggle-group">
+                    <div class="pf-v5-c-toggle-group__item">
+                        <button class="pf-v5-c-toggle-group__button pf-m-selected">Logbook</button>
+                    </div>
+                    <div class="pf-v5-c-toggle-group__item">
+                        <button class="pf-v5-c-toggle-group__button" @click="activeTab = 'major-records'">Repairs &amp; Alterations</button>
+                    </div>
+                </div>
+                <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openLogbookModal()">
+                    <i class="fas fa-plus"></i> New Entry
+                </button>
+            </div>
+            <div class="tab-section-header">
+                <!-- Logbook type filter toggle group -->
+                <div class="pf-v5-c-toggle-group">
+                    <template x-for="tab in ['ALL', 'AC', 'ENG', 'PROP', 'OTHER']" :key="tab">
+                        <div class="pf-v5-c-toggle-group__item">
+                            <button class="pf-v5-c-toggle-group__button"
+                                    :class="{ 'pf-m-selected': logbookActiveTab === tab }"
+                                    @click="switchLogbookTab(tab)"
+                                    x-text="logbookTabLabel(tab)">
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div x-show="!logbookLoaded" class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
+                    <h2 class="pf-v5-c-title pf-m-lg">Loading logbook...</h2>
+                </div>
+            </div>
+
+            <div x-show="logbookLoaded" x-cloak>
+                <!-- Filter bar -->
+                <div style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+                    <input type="search"
+                           class="pf-v5-c-form-control"
+                           placeholder="Search entries..."
+                           x-model="logbookSearch"
+                           @input="onLogbookSearchInput()"
+                           style="flex: 1; min-width: 200px; max-width: 400px;">
+                    <select class="pf-v5-c-form-control"
+                            x-model="logbookEntryTypeFilter"
+                            @change="loadLogbookEntries(false)"
+                            style="width: auto;">
+                        <option value="">All Types</option>
+                        <option value="MAINTENANCE">Maintenance</option>
+                        <option value="INSPECTION">Inspection</option>
+                        <option value="FLIGHT">Flight</option>
+                        <option value="HOURS_UPDATE">Hours Update</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                    <span style="color: var(--pf-v5-global--Color--200); font-size: 0.875rem;"
+                          x-show="logbookTotal > 0"
+                          x-text="`${logbookTotal} entr${logbookTotal === 1 ? 'y' : 'ies'}`">
+                    </span>
+                </div>
+
+                <template x-if="logbookEntries.length === 0">
+                    <div class="pf-v5-c-empty-state">
+                        <div class="pf-v5-c-empty-state__content">
+                            <i class="fas fa-book" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                            <h2 class="pf-v5-c-title pf-m-lg"
+                                x-text="logbookActiveTab === 'ALL' ? 'No logbook entries' :
+                                        `No ${logbookTabLabel(logbookActiveTab)} logbook entries`">
+                            </h2>
+                            <div class="pf-v5-c-empty-state__body"
+                                 x-text="logbookSearch || logbookEntryTypeFilter
+                                         ? 'No entries match your search criteria.'
+                                         : 'No entries have been recorded yet.'">
+                            </div>
+                        </div>
+                    </div>
+                </template>
+                <template x-if="logbookEntries.length > 0">
+                    <div class="pf-v5-l-stack pf-m-gutter">
+                        <template x-for="log in logbookEntries" :key="log.id">
+                            <div class="pf-v5-c-card" :id="`log-entry-${log.id}`">
+                                <div class="pf-v5-c-card__header">
+                                    <div class="pf-v5-c-card__header-main">
+                                        <div class="pf-v5-c-card__title">
+                                            <span x-text="formatDate(log.date)" style="font-weight: 600;"></span>
+                                            <span class="pf-v5-c-label pf-m-blue" style="margin-left: 0.5rem;" x-text="log.entry_type || log.log_type"></span>
+                                            <span class="pf-v5-c-label pf-m-grey" style="margin-left: 0.25rem;"
+                                                  x-show="logbookActiveTab === 'ALL'"
+                                                  x-text="logbookTabLabel(log.log_type)">
+                                            </span>
+                                            <span class="logbook-attachment-badge" x-show="logAttachmentCount(log) > 0">
+                                                <i class="fas fa-paperclip"></i>
+                                                <span x-text="logAttachmentCount(log)"></span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="pf-v5-c-card__actions" x-show="isOwner">
+                                        <div class="logbook-overflow" @click.outside="logbookOpenOverflow = null">
+                                            <button class="pf-v5-c-button pf-m-plain"
+                                                    @click.stop="logbookOpenOverflow = (logbookOpenOverflow === log.id ? null : log.id)"
+                                                    title="More actions" aria-label="More actions">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <div class="logbook-overflow-menu" x-show="logbookOpenOverflow === log.id">
+                                                <button class="logbook-overflow-item" @click="openCreateRecordsModal(log); logbookOpenOverflow = null">
+                                                    <i class="fas fa-clipboard-check"></i> Create compliance records
+                                                </button>
+                                                <button class="logbook-overflow-item" @click="openLinkPicker(log); logbookOpenOverflow = null">
+                                                    <i class="fas fa-link"></i> Link to record
+                                                </button>
+                                                <button class="logbook-overflow-item" @click="editLogEntry(log); logbookOpenOverflow = null">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </button>
+                                                <button class="logbook-overflow-item logbook-overflow-danger" @click="deleteLogEntry(log); logbookOpenOverflow = null">
+                                                    <i class="fas fa-trash"></i> Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="pf-v5-c-card__body">
+                                    <p :class="logbookExpandedEntries[log.id] ? '' : 'logbook-text-clamped'" x-text="log.text"></p>
+                                    <button x-show="!logbookExpandedEntries[log.id] && log.text && log.text.length > 200"
+                                            class="pf-v5-c-button pf-m-link pf-m-inline"
+                                            style="font-size: 0.85rem; margin-top: 0.25rem;"
+                                            @click="toggleLogExpand(log.id)">
+                                        Show more
+                                    </button>
+                                    <template x-if="log.aircraft_hours_at_entry">
+                                        <p style="margin-top: 0.5rem;">
+                                            <strong>Aircraft Hours:</strong>
+                                            <span x-text="formatHours(log.aircraft_hours_at_entry)"></span>
+                                        </p>
+                                    </template>
+                                    <template x-if="log.signoff_person">
+                                        <p style="margin-top: 0.5rem;">
+                                            <strong>Signed by:</strong>
+                                            <span x-text="log.signoff_person"></span>
+                                            <template x-if="log.signoff_location">
+                                                <span> at <span x-text="log.signoff_location"></span></span>
+                                            </template>
+                                        </p>
+                                    </template>
+                                    <template x-if="log.log_image && (!isPublicView || log.log_image_shared)">
+                                        <p style="margin-top: 0.5rem;">
+                                            <i class="fas fa-paperclip" style="color: var(--pf-v5-global--Color--200);"></i>
+                                            <button class="pf-v5-c-button pf-m-link pf-m-inline"
+                                                    @click="viewLogEntryDocument(log)"
+                                                    style="font-size: inherit;">
+                                                View attached document
+                                            </button>
+                                        </p>
+                                    </template>
+                                    <template x-if="log.related_documents_detail && log.related_documents_detail.length > 0">
+                                        <div style="margin-top: 0.5rem;">
+                                            <strong style="font-size: 0.85em;">Related Documents:</strong>
+                                            <template x-for="rdoc in log.related_documents_detail" :key="rdoc.id">
+                                                <span style="display: inline-flex; align-items: center; gap: 0.25rem; margin-left: 0.5rem;">
+                                                    <i class="fas fa-file-alt" style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></i>
+                                                    <button class="pf-v5-c-button pf-m-link pf-m-inline"
+                                                            @click="viewRelatedDocument(rdoc)"
+                                                            style="font-size: inherit;"
+                                                            x-text="rdoc.name"></button>
+                                                    <span class="pf-v5-c-label pf-m-compact" style="font-size: 0.75em;" x-text="rdoc.doc_type_display"></span>
+                                                </span>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                        <template x-if="logbookHasMore">
+                            <div style="text-align: center; padding: 1rem 0;">
+                                <button class="pf-v5-c-button pf-m-secondary" @click="loadMoreLogbook()">
+                                    Load more
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </div>
+

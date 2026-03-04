@@ -1,0 +1,473 @@
+        <!-- Compliance Tab Group (ADs & Inspections) -->
+        <div x-show="activePrimaryTab === 'compliance'" class="pf-v5-c-page__main-section">
+            <div class="tab-subtab-bar">
+                <div class="pf-v5-c-toggle-group">
+                    <div class="pf-v5-c-toggle-group__item">
+                        <button class="pf-v5-c-toggle-group__button"
+                                :class="{ 'pf-m-selected': activeTab === 'ads' }"
+                                @click="activeTab = 'ads'">
+                            ADs &amp; Bulletins
+                        </button>
+                    </div>
+                    <div class="pf-v5-c-toggle-group__item">
+                        <button class="pf-v5-c-toggle-group__button"
+                                :class="{ 'pf-m-selected': activeTab === 'inspections' }"
+                                @click="activeTab = 'inspections'">
+                            Inspections
+                        </button>
+                    </div>
+                </div>
+                <button class="pf-v5-c-button pf-m-primary" x-show="isOwner && activeTab === 'ads'" @click="openAdModal()">
+                    <i class="fas fa-plus"></i> Add Bulletin
+                </button>
+                <button class="pf-v5-c-button pf-m-primary" x-show="isOwner && activeTab === 'inspections'" @click="openInspectionTypeModal()">
+                    <i class="fas fa-plus"></i> Add Inspection Type
+                </button>
+            </div>
+            <div x-show="activeTab === 'ads'">
+
+            <!-- Loading -->
+            <div x-show="!adsLoaded" class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
+                    <h2 class="pf-v5-c-title pf-m-lg">Loading bulletins...</h2>
+                </div>
+            </div>
+
+            <div x-show="adsLoaded" x-cloak>
+                <!-- Empty State -->
+                <template x-if="applicableAds.length === 0">
+                    <div class="pf-v5-c-empty-state">
+                        <div class="pf-v5-c-empty-state__content">
+                            <i class="fas fa-clipboard-check" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                            <h2 class="pf-v5-c-title pf-m-lg">No Bulletins Tracked</h2>
+                            <div class="pf-v5-c-empty-state__body">
+                                No ADs or bulletins are currently tracked for this aircraft.
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Mandatory section -->
+                <div x-show="mandatoryAds.length > 0">
+                    <h3 style="margin-bottom: 0.75rem;">Mandatory</h3>
+                    <table class="pf-v5-c-table ads-table" style="margin-bottom: 1.5rem;">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Type</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Recurring</th>
+                                <th>Status</th>
+                                <th>Last Complied</th>
+                                <th>Next Due</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <template x-for="ad in mandatoryAds" :key="ad.id">
+                            <tbody class="ad-row-group" :class="{'pf-m-expanded': expandedAdIds[ad.id]}">
+                                <tr x-data="{ overflowOpen: false }">
+                                    <td class="pf-v5-c-table__toggle">
+                                        <button class="pf-v5-c-button pf-m-plain"
+                                                @click="toggleAdExpand(ad.id)"
+                                                :aria-expanded="expandedAdIds[ad.id] ? 'true' : 'false'"
+                                                title="Toggle details">
+                                            <i class="fas fa-angle-right"
+                                               :style="expandedAdIds[ad.id] ? 'transform: rotate(90deg)' : ''"></i>
+                                        </button>
+                                    </td>
+                                    <td data-label="Type">
+                                        <span class="pf-v5-c-label" :class="getBulletinTypeClass(ad.bulletin_type)" x-text="getBulletinTypeLabel(ad.bulletin_type)"></span>
+                                    </td>
+                                    <td data-label="Name">
+                                        <span x-text="ad.name"></span>
+                                        <div class="ad-name-subtitle" x-show="ad.short_description" x-text="ad.short_description"></div>
+                                    </td>
+                                    <td data-label="Description">
+                                        <span x-text="ad.short_description"></span>
+                                        <template x-if="ad.compliance_type === 'conditional' && ad.trigger_condition">
+                                            <div style="font-size: 0.85em; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;">
+                                                Trigger: <span x-text="ad.trigger_condition"></span>
+                                            </div>
+                                        </template>
+                                    </td>
+                                    <td data-label="Recurring">
+                                        <template x-if="ad.recurring">
+                                            <span>
+                                                Yes
+                                                <template x-if="ad.recurring_hours > 0">
+                                                    <span x-text="'(' + ad.recurring_hours + ' hrs)'"></span>
+                                                </template>
+                                                <template x-if="ad.recurring_months > 0">
+                                                    <span x-text="'(' + ad.recurring_months + ' mo)'"></span>
+                                                </template>
+                                            </span>
+                                        </template>
+                                        <template x-if="!ad.recurring">
+                                            <span>No</span>
+                                        </template>
+                                    </td>
+                                    <td data-label="Status">
+                                        <span class="pf-v5-c-label" :class="getAdStatusClass(ad)" x-text="getAdStatusText(ad)"></span>
+                                    </td>
+                                    <td data-label="Last Complied" x-text="ad.latest_compliance ? formatDate(ad.latest_compliance.date_complied) : '-'"></td>
+                                    <td data-label="Next Due">
+                                        <template x-if="ad.latest_compliance && ad.latest_compliance.permanent">
+                                            <span class="ad-next-due-na">N/A</span>
+                                        </template>
+                                        <template x-if="ad.latest_compliance && !ad.latest_compliance.permanent && ad.next_due_date_display">
+                                            <span><span class="consumable-field-label">Next due: </span><span x-text="'End of ' + ad.next_due_date_display"></span></span>
+                                        </template>
+                                        <template x-if="ad.latest_compliance && !ad.latest_compliance.permanent && !ad.next_due_date_display && ad.latest_compliance.next_due_at_time > 0">
+                                            <span><span class="consumable-field-label">Next due: </span><span x-text="formatHours(ad.latest_compliance.next_due_at_time) + ' hrs'"></span></span>
+                                        </template>
+                                        <template x-if="!ad.latest_compliance || (!ad.latest_compliance.permanent && !ad.next_due_date_display && (!ad.latest_compliance.next_due_at_time || ad.latest_compliance.next_due_at_time == 0))">
+                                            <span>-</span>
+                                        </template>
+                                    </td>
+                                    <td data-label="Actions">
+                                        <div style="display: flex; gap: 0.25rem; align-items: center;">
+                                            <!-- Primary: Record Compliance -->
+                                            <button class="pf-v5-c-button pf-m-primary pf-m-small squawk-resolve-btn" x-show="isOwner"
+                                                    @click="openComplianceModal(ad)"
+                                                    title="Record Compliance">
+                                                <i class="fas fa-check"></i> Record
+                                            </button>
+                                            <!-- Secondary: History -->
+                                            <button class="pf-v5-c-button pf-m-secondary pf-m-small" x-show="isMaintenance"
+                                                    @click="openComplianceHistory(ad)"
+                                                    title="View Compliance History">
+                                                <i class="fas fa-history"></i> History
+                                            </button>
+                                            <!-- Overflow "..." — edit, remove -->
+                                            <div class="insp-overflow" x-show="isOwner"
+                                                 @click.outside="overflowOpen = false">
+                                                <button class="pf-v5-c-button pf-m-plain"
+                                                        @click.stop="overflowOpen = !overflowOpen"
+                                                        title="More actions" aria-label="More actions">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <div class="logbook-overflow-menu" x-show="overflowOpen">
+                                                    <button class="logbook-overflow-item"
+                                                            @click="editAd(ad); overflowOpen = false">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                    <button class="logbook-overflow-item logbook-overflow-danger"
+                                                            @click="removeAd(ad); overflowOpen = false">
+                                                        <i class="fas fa-times"></i> Remove
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Expandable detail row -->
+                                <tr class="pf-v5-c-table__expandable-row"
+                                    :class="{'pf-m-expanded': expandedAdIds[ad.id]}"
+                                    x-show="expandedAdIds[ad.id]">
+                                    <td colspan="9">
+                                        <div class="pf-v5-c-table__expandable-row-content">
+                                            <div class="pf-v5-l-grid pf-m-gutter">
+                                                <div class="pf-v5-l-grid__item pf-m-12-col pf-m-6-col-on-md">
+                                                    <p class="pf-v5-u-font-weight-bold pf-v5-u-mb-xs">Required Action</p>
+                                                    <p x-text="ad.required_action || 'No required action specified.'"
+                                                       style="white-space: pre-wrap; margin: 0;"></p>
+                                                </div>
+                                                <div class="pf-v5-l-grid__item pf-m-12-col pf-m-6-col-on-md">
+                                                    <p class="pf-v5-u-font-weight-bold pf-v5-u-mb-xs">Bulletin Document</p>
+                                                    <template x-if="ad.document">
+                                                        <button class="pf-v5-c-button pf-m-link pf-m-inline"
+                                                                @click="openDocumentViewer(ad.document, 'Bulletin: ' + ad.name, 0)">
+                                                            <i class="fas fa-file-alt pf-v5-u-mr-xs"></i>
+                                                            <span x-text="ad.document.name"></span>
+                                                        </button>
+                                                    </template>
+                                                    <template x-if="!ad.document">
+                                                        <span class="pf-v5-u-color-400">No document attached</span>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </template>
+                    </table>
+                </div>
+
+                <!-- Optional / Advisory section -->
+                <div x-show="nonMandatoryAds.length > 0">
+                    <hr style="margin-bottom: 1.25rem; border-color: var(--pf-v5-global--BorderColor--100);" x-show="mandatoryAds.length > 0">
+                    <h3 style="margin-bottom: 0.75rem;">Optional / Advisory</h3>
+                    <table class="pf-v5-c-table ads-table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Type</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Recurring</th>
+                                <th>Status</th>
+                                <th>Last Complied</th>
+                                <th>Next Due</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <template x-for="ad in nonMandatoryAds" :key="ad.id">
+                            <tbody class="ad-row-group" :class="{'pf-m-expanded': expandedAdIds[ad.id]}">
+                                <tr x-data="{ overflowOpen: false }">
+                                    <td class="pf-v5-c-table__toggle">
+                                        <button class="pf-v5-c-button pf-m-plain"
+                                                @click="toggleAdExpand(ad.id)"
+                                                :aria-expanded="expandedAdIds[ad.id] ? 'true' : 'false'"
+                                                title="Toggle details">
+                                            <i class="fas fa-angle-right"
+                                               :style="expandedAdIds[ad.id] ? 'transform: rotate(90deg)' : ''"></i>
+                                        </button>
+                                    </td>
+                                    <td data-label="Type">
+                                        <span class="pf-v5-c-label" :class="getBulletinTypeClass(ad.bulletin_type)" x-text="getBulletinTypeLabel(ad.bulletin_type)"></span>
+                                    </td>
+                                    <td data-label="Name">
+                                        <span x-text="ad.name"></span>
+                                        <div class="ad-name-subtitle" x-show="ad.short_description" x-text="ad.short_description"></div>
+                                    </td>
+                                    <td data-label="Description">
+                                        <span x-text="ad.short_description"></span>
+                                        <template x-if="ad.compliance_type === 'conditional' && ad.trigger_condition">
+                                            <div style="font-size: 0.85em; color: var(--pf-v5-global--Color--200); margin-top: 0.25rem;">
+                                                Trigger: <span x-text="ad.trigger_condition"></span>
+                                            </div>
+                                        </template>
+                                    </td>
+                                    <td data-label="Recurring">
+                                        <template x-if="ad.recurring">
+                                            <span>
+                                                Yes
+                                                <template x-if="ad.recurring_hours > 0">
+                                                    <span x-text="'(' + ad.recurring_hours + ' hrs)'"></span>
+                                                </template>
+                                                <template x-if="ad.recurring_months > 0">
+                                                    <span x-text="'(' + ad.recurring_months + ' mo)'"></span>
+                                                </template>
+                                            </span>
+                                        </template>
+                                        <template x-if="!ad.recurring">
+                                            <span>No</span>
+                                        </template>
+                                    </td>
+                                    <td data-label="Status">
+                                        <span class="pf-v5-c-label" :class="getAdStatusClass(ad)" x-text="getAdStatusText(ad)"></span>
+                                    </td>
+                                    <td data-label="Last Complied" x-text="ad.latest_compliance ? formatDate(ad.latest_compliance.date_complied) : '-'"></td>
+                                    <td data-label="Next Due">
+                                        <template x-if="ad.latest_compliance && ad.latest_compliance.permanent">
+                                            <span class="ad-next-due-na">N/A</span>
+                                        </template>
+                                        <template x-if="ad.latest_compliance && !ad.latest_compliance.permanent && ad.next_due_date_display">
+                                            <span><span class="consumable-field-label">Next due: </span><span x-text="'End of ' + ad.next_due_date_display"></span></span>
+                                        </template>
+                                        <template x-if="ad.latest_compliance && !ad.latest_compliance.permanent && !ad.next_due_date_display && ad.latest_compliance.next_due_at_time > 0">
+                                            <span><span class="consumable-field-label">Next due: </span><span x-text="formatHours(ad.latest_compliance.next_due_at_time) + ' hrs'"></span></span>
+                                        </template>
+                                        <template x-if="!ad.latest_compliance || (!ad.latest_compliance.permanent && !ad.next_due_date_display && (!ad.latest_compliance.next_due_at_time || ad.latest_compliance.next_due_at_time == 0))">
+                                            <span>-</span>
+                                        </template>
+                                    </td>
+                                    <td data-label="Actions">
+                                        <div style="display: flex; gap: 0.25rem; align-items: center;">
+                                            <!-- Primary: Record Compliance -->
+                                            <button class="pf-v5-c-button pf-m-primary pf-m-small squawk-resolve-btn" x-show="isOwner"
+                                                    @click="openComplianceModal(ad)"
+                                                    title="Record Compliance">
+                                                <i class="fas fa-check"></i> Record
+                                            </button>
+                                            <!-- Secondary: History -->
+                                            <button class="pf-v5-c-button pf-m-secondary pf-m-small" x-show="isMaintenance"
+                                                    @click="openComplianceHistory(ad)"
+                                                    title="View Compliance History">
+                                                <i class="fas fa-history"></i> History
+                                            </button>
+                                            <!-- Overflow "..." — edit, remove -->
+                                            <div class="insp-overflow" x-show="isOwner"
+                                                 @click.outside="overflowOpen = false">
+                                                <button class="pf-v5-c-button pf-m-plain"
+                                                        @click.stop="overflowOpen = !overflowOpen"
+                                                        title="More actions" aria-label="More actions">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <div class="logbook-overflow-menu" x-show="overflowOpen">
+                                                    <button class="logbook-overflow-item"
+                                                            @click="editAd(ad); overflowOpen = false">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                    <button class="logbook-overflow-item logbook-overflow-danger"
+                                                            @click="removeAd(ad); overflowOpen = false">
+                                                        <i class="fas fa-times"></i> Remove
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Expandable detail row -->
+                                <tr class="pf-v5-c-table__expandable-row"
+                                    :class="{'pf-m-expanded': expandedAdIds[ad.id]}"
+                                    x-show="expandedAdIds[ad.id]">
+                                    <td colspan="9">
+                                        <div class="pf-v5-c-table__expandable-row-content">
+                                            <div class="pf-v5-l-grid pf-m-gutter">
+                                                <div class="pf-v5-l-grid__item pf-m-12-col pf-m-6-col-on-md">
+                                                    <p class="pf-v5-u-font-weight-bold pf-v5-u-mb-xs">Required Action</p>
+                                                    <p x-text="ad.required_action || 'No required action specified.'"
+                                                       style="white-space: pre-wrap; margin: 0;"></p>
+                                                </div>
+                                                <div class="pf-v5-l-grid__item pf-m-12-col pf-m-6-col-on-md">
+                                                    <p class="pf-v5-u-font-weight-bold pf-v5-u-mb-xs">Bulletin Document</p>
+                                                    <template x-if="ad.document">
+                                                        <button class="pf-v5-c-button pf-m-link pf-m-inline"
+                                                                @click="openDocumentViewer(ad.document, 'Bulletin: ' + ad.name, 0)">
+                                                            <i class="fas fa-file-alt pf-v5-u-mr-xs"></i>
+                                                            <span x-text="ad.document.name"></span>
+                                                        </button>
+                                                    </template>
+                                                    <template x-if="!ad.document">
+                                                        <span class="pf-v5-u-color-400">No document attached</span>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </template>
+                    </table>
+                </div>
+            </div>
+            </div>
+            <div x-show="activeTab === 'inspections'">
+
+            <!-- Loading -->
+            <div x-show="!inspectionsLoaded" class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
+                    <h2 class="pf-v5-c-title pf-m-lg">Loading inspections...</h2>
+                </div>
+            </div>
+
+            <div x-show="inspectionsLoaded" x-cloak>
+                <!-- Empty State -->
+                <template x-if="inspectionTypes.length === 0">
+                    <div class="pf-v5-c-empty-state">
+                        <div class="pf-v5-c-empty-state__content">
+                            <i class="fas fa-clipboard-check" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                            <h2 class="pf-v5-c-title pf-m-lg">No Applicable Inspections</h2>
+                            <div class="pf-v5-c-empty-state__body">
+                                No inspection types are currently tracked for this aircraft.
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Inspection Types Table -->
+                <template x-if="inspectionTypes.length > 0">
+                    <table class="pf-v5-c-table inspections-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Recurring</th>
+                                <th>Status</th>
+                                <th>Last Completed</th>
+                                <th>Next Due</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="insp in sortedInspectionTypes" :key="insp.id">
+                                <tr x-data="{ overflowOpen: false }">
+                                    <td data-label="Name" x-text="insp.name"></td>
+                                    <td data-label="Recurring">
+                                        <template x-if="insp.recurring">
+                                            <span>
+                                                Recurring
+                                                <template x-if="insp.recurring_hours > 0">
+                                                    <span x-text="' · ' + insp.recurring_hours + ' hrs'"></span>
+                                                </template>
+                                                <template x-if="insp.recurring_months > 0">
+                                                    <span x-text="' · ' + insp.recurring_months + ' mo'"></span>
+                                                </template>
+                                                <template x-if="insp.recurring_days > 0 && insp.recurring_months === 0">
+                                                    <span x-text="' · ' + insp.recurring_days + ' days'"></span>
+                                                </template>
+                                            </span>
+                                        </template>
+                                        <template x-if="!insp.recurring">
+                                            <span>One-time</span>
+                                        </template>
+                                    </td>
+                                    <td data-label="Status">
+                                        <span class="pf-v5-c-label" :class="getInspectionStatusClass(insp)" x-text="getInspectionStatusText(insp)"></span>
+                                    </td>
+                                    <td data-label="Last Completed">
+                                        <span class="insp-mobile-label">Last</span>
+                                        <span x-text="insp.latest_record ? formatDate(insp.latest_record.date) : '—'"></span>
+                                    </td>
+                                    <td data-label="Next Due">
+                                        <span class="insp-mobile-label">Due</span>
+                                        <template x-if="!insp.recurring || !insp.latest_record">
+                                            <span>—</span>
+                                        </template>
+                                        <template x-if="insp.recurring && insp.latest_record && insp.next_due_date">
+                                            <span x-text="formatDate(insp.next_due_date)"></span>
+                                        </template>
+                                        <template x-if="insp.recurring && insp.latest_record && insp.next_due_hours && !insp.next_due_date">
+                                            <span x-text="formatHours(insp.next_due_hours) + ' hrs'"></span>
+                                        </template>
+                                    </td>
+                                    <td data-label="Actions">
+                                        <div style="display: flex; gap: 0.25rem; align-items: center;">
+                                            <!-- Primary: Record Inspection -->
+                                            <button class="pf-v5-c-button pf-m-primary pf-m-small squawk-resolve-btn" x-show="isOwner"
+                                                    @click="openInspectionModal(insp)"
+                                                    title="Record Inspection">
+                                                <i class="fas fa-check"></i> Record
+                                            </button>
+                                            <!-- Secondary: History -->
+                                            <button class="pf-v5-c-button pf-m-secondary pf-m-small" x-show="isMaintenance"
+                                                    @click="openInspectionHistory(insp)"
+                                                    title="View Inspection History">
+                                                <i class="fas fa-history"></i> History
+                                            </button>
+                                            <!-- Overflow "..." — edit, remove -->
+                                            <div class="insp-overflow" x-show="isOwner"
+                                                 @click.outside="overflowOpen = false">
+                                                <button class="pf-v5-c-button pf-m-plain"
+                                                        @click.stop="overflowOpen = !overflowOpen"
+                                                        title="More actions" aria-label="More actions">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <div class="logbook-overflow-menu" x-show="overflowOpen">
+                                                    <button class="logbook-overflow-item"
+                                                            @click="editInspectionType(insp); overflowOpen = false">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                    <button class="logbook-overflow-item logbook-overflow-danger"
+                                                            @click="removeInspectionType(insp); overflowOpen = false">
+                                                        <i class="fas fa-times"></i> Remove
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </template>
+            </div>
+            </div>
+        </div>
+

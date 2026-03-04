@@ -1,0 +1,219 @@
+        <!-- Documents Tab -->
+        <div x-show="activeTab === 'documents'" class="pf-v5-c-page__main-section">
+            <!-- Header with action buttons -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>Documents</h2>
+                <div x-show="isOwner" style="display: flex; gap: 0.5rem;">
+                    <button class="pf-v5-c-button pf-m-secondary" @click="openCollectionModal()">
+                        <i class="fas fa-folder-plus"></i> Add Collection
+                    </button>
+                    <button class="pf-v5-c-button pf-m-primary" @click="openDocumentModal()">
+                        <i class="fas fa-plus"></i> Add Document
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading State for Documents -->
+            <div x-show="documentsLoading" class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
+                    <h2 class="pf-v5-c-title pf-m-lg">Loading documents...</h2>
+                </div>
+            </div>
+
+            <!-- Documents Content -->
+            <div x-show="!documentsLoading" x-cloak>
+                <!-- Empty State -->
+                <template x-if="documentCollections.length === 0 && uncollectedDocuments.length === 0">
+                    <div class="pf-v5-c-empty-state">
+                        <div class="pf-v5-c-empty-state__content">
+                            <i class="fas fa-folder-open" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                            <h2 class="pf-v5-c-title pf-m-lg">No documents</h2>
+                            <div class="pf-v5-c-empty-state__body">
+                                No documents have been uploaded for this aircraft yet.
+                            </div>
+                            <div class="pf-v5-c-empty-state__primary" x-show="isOwner" style="margin-top: 1rem;">
+                                <button class="pf-v5-c-button pf-m-secondary" @click="openCollectionModal()">
+                                    <i class="fas fa-folder-plus"></i> Add Collection
+                                </button>
+                                <button class="pf-v5-c-button pf-m-primary" @click="openDocumentModal()" style="margin-left: 0.5rem;">
+                                    <i class="fas fa-plus"></i> Add Document
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Document Collections -->
+                <div class="pf-v5-l-stack pf-m-gutter" x-show="documentCollections.length > 0 || uncollectedDocuments.length > 0">
+                    <!-- Collections -->
+                    <template x-for="collection in [...documentCollections].sort((a, b) => { if (a.starred && !b.starred) return -1; if (!a.starred && b.starred) return 1; return (a.name || '').localeCompare(b.name || ''); })" :key="collection.id">
+                        <div class="pf-v5-c-card" x-data="{ collapsed: true, collMenuOpen: false }">
+                            <div class="pf-v5-c-card__header">
+                                <div class="pf-v5-c-card__header-main">
+                                    <div class="pf-v5-c-card__title" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;" @click="collapsed = !collapsed">
+                                        <i class="fas" :class="collapsed ? 'fa-chevron-right' : 'fa-chevron-down'" style="font-size: 0.75rem; opacity: 0.6;"></i>
+                                        <h2 x-text="collection.name"></h2>
+                                        <i x-show="collection.starred" class="fas fa-star" style="font-size: 0.7rem; color: var(--pf-v5-global--warning-color--100); opacity: 0.8;"></i>
+                                    </div>
+                                </div>
+                                <div class="pf-v5-c-card__actions" style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <!-- Visibility badge -->
+                                    <span x-show="isOwner"
+                                          class="pf-v5-c-label"
+                                          :class="collection.visibility === 'status' ? 'pf-m-green' : collection.visibility === 'maintenance' ? 'pf-m-blue' : 'pf-m-grey'"
+                                          x-text="collection.visibility === 'private' ? 'Private' : collection.visibility === 'status' ? 'Public' : 'Maintenance'">
+                                    </span>
+                                    <!-- Page count -->
+                                    <span class="pf-v5-c-label pf-m-blue">
+                                        <span x-text="collection.document_count + ' pages'"></span>
+                                    </span>
+                                    <!-- Overflow menu (owners only) -->
+                                    <div x-show="isOwner" class="doc-coll-overflow" @click.outside="collMenuOpen = false">
+                                        <button class="pf-v5-c-button pf-m-plain"
+                                                @click.stop="collMenuOpen = !collMenuOpen"
+                                                title="More actions" aria-label="More actions">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <div class="doc-coll-overflow-menu" x-show="collMenuOpen">
+                                            <button class="doc-coll-overflow-item" @click="starCollection(collection); collMenuOpen = false">
+                                                <i class="fas fa-star" :style="collection.starred ? 'color: var(--pf-v5-global--warning-color--100);' : 'opacity: 0.4;'"></i>
+                                                <span x-text="collection.starred ? 'Unpin from top' : 'Pin to top'"></span>
+                                            </button>
+                                            <div class="doc-coll-overflow-section">Visibility</div>
+                                            <button class="doc-coll-overflow-item" @click="setCollectionVisibility(collection, 'private'); collMenuOpen = false">
+                                                <i class="fas fa-lock"></i> Private
+                                                <i class="fas fa-check doc-coll-overflow-check" x-show="collection.visibility === 'private'"></i>
+                                            </button>
+                                            <button class="doc-coll-overflow-item" @click="setCollectionVisibility(collection, 'status'); collMenuOpen = false">
+                                                <i class="fas fa-globe"></i> Public
+                                                <i class="fas fa-check doc-coll-overflow-check" x-show="collection.visibility === 'status'"></i>
+                                            </button>
+                                            <button class="doc-coll-overflow-item" @click="setCollectionVisibility(collection, 'maintenance'); collMenuOpen = false">
+                                                <i class="fas fa-tools"></i> Maintenance only
+                                                <i class="fas fa-check doc-coll-overflow-check" x-show="collection.visibility === 'maintenance'"></i>
+                                            </button>
+                                            <div class="doc-coll-overflow-section">Actions</div>
+                                            <button class="doc-coll-overflow-item" @click="openDocumentModalForCollection(collection); collMenuOpen = false">
+                                                <i class="fas fa-plus"></i> Add document
+                                            </button>
+                                            <button class="doc-coll-overflow-item" @click="editCollection(collection); collMenuOpen = false">
+                                                <i class="fas fa-pencil-alt"></i> Edit
+                                            </button>
+                                            <button class="doc-coll-overflow-item doc-coll-overflow-danger" @click="deleteCollection(collection); collMenuOpen = false">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <template x-if="collection.description && !collapsed">
+                                <div class="pf-v5-c-card__body">
+                                    <p x-text="collection.description" style="color: var(--pf-v5-global--Color--200);"></p>
+                                </div>
+                            </template>
+                            <div class="pf-v5-c-card__body" x-show="!collapsed">
+                                <div class="document-grid">
+                                    <template x-for="doc in collection.documents" :key="doc.id">
+                                        <div class="document-item" style="position: relative;" @click="openDocumentViewer(doc, collection.name)">
+                                            <div class="document-item-actions" x-show="isOwner" style="position: absolute; top: 0.25rem; right: 0.25rem; display: flex; gap: 0.125rem; z-index: 2;">
+                                                <button class="pf-v5-c-button pf-m-plain" style="padding: 0.25rem; font-size: 0.75rem;" @click.stop="toggleDocumentSharing(doc)"
+                                                        :title="doc.visibility === 'status' ? 'All share links (click to cycle)' : doc.visibility === 'maintenance' ? 'Maintenance only (click to cycle)' : doc.visibility === 'private' ? 'Hidden (click to cycle)' : 'Inherits from collection (click to cycle)'"
+                                                        :style="doc.visibility === 'status' ? 'color: var(--pf-v5-global--success-color--100);' : doc.visibility === 'maintenance' ? 'color: var(--pf-v5-global--info-color--100);' : doc.visibility === 'private' ? 'color: var(--pf-v5-global--danger-color--100);' : ''">
+                                                    <i class="fas" :class="doc.visibility === 'status' ? 'fa-globe' : doc.visibility === 'maintenance' ? 'fa-tools' : doc.visibility === 'private' ? 'fa-eye-slash' : 'fa-minus-circle'"></i>
+                                                </button>
+                                                <button class="pf-v5-c-button pf-m-plain" style="padding: 0.25rem; font-size: 0.75rem;" @click="editDocument(doc, $event)" title="Edit document">
+                                                    <i class="fas fa-pencil-alt"></i>
+                                                </button>
+                                                <button class="pf-v5-c-button pf-m-plain pf-m-danger" style="padding: 0.25rem; font-size: 0.75rem;" @click="deleteDocument(doc, $event)" title="Delete document">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                            <div class="document-thumbnail">
+                                                <template x-if="doc.images && doc.images.length > 0 && getFileType(doc.images[0].image) === 'image'">
+                                                    <img :src="doc.images[0].image" :alt="doc.name">
+                                                </template>
+                                                <template x-if="doc.images && doc.images.length > 0 && getFileType(doc.images[0].image) !== 'image'">
+                                                    <div class="document-placeholder">
+                                                        <i :class="getFileIcon(doc.images[0].image)" style="color: var(--pf-v5-global--danger-color--100);"></i>
+                                                    </div>
+                                                </template>
+                                                <template x-if="!doc.images || doc.images.length === 0">
+                                                    <div class="document-placeholder">
+                                                        <i class="fas fa-file-alt"></i>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <div class="document-info">
+                                                <span class="document-name" x-text="doc.name"></span>
+                                                <span class="document-type" x-text="doc.doc_type_display"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Uncollected Documents -->
+                    <template x-if="uncollectedDocuments.length > 0">
+                        <div class="pf-v5-c-card">
+                            <div class="pf-v5-c-card__header">
+                                <div class="pf-v5-c-card__header-main">
+                                    <div class="pf-v5-c-card__title">
+                                        <h2>Other Documents</h2>
+                                    </div>
+                                </div>
+                                <div class="pf-v5-c-card__actions">
+                                    <span class="pf-v5-c-label pf-m-grey">
+                                        <span x-text="uncollectedDocuments.length + ' documents'"></span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="pf-v5-c-card__body">
+                                <div class="document-grid">
+                                    <template x-for="doc in uncollectedDocuments" :key="doc.id">
+                                        <div class="document-item" style="position: relative;" @click="openDocumentViewer(doc, 'Other Documents')">
+                                            <div class="document-item-actions" x-show="isOwner" style="position: absolute; top: 0.25rem; right: 0.25rem; display: flex; gap: 0.125rem; z-index: 2;">
+                                                <button class="pf-v5-c-button pf-m-plain" style="padding: 0.25rem; font-size: 0.75rem;" @click.stop="toggleDocumentSharing(doc)"
+                                                        :title="doc.visibility === 'status' ? 'All share links (click to cycle)' : doc.visibility === 'maintenance' ? 'Maintenance only (click to cycle)' : 'Hidden (click to share)'"
+                                                        :style="doc.visibility === 'status' ? 'color: var(--pf-v5-global--success-color--100);' : doc.visibility === 'maintenance' ? 'color: var(--pf-v5-global--info-color--100);' : ''">
+                                                    <i class="fas" :class="doc.visibility === 'status' ? 'fa-globe' : doc.visibility === 'maintenance' ? 'fa-tools' : 'fa-lock'"></i>
+                                                </button>
+                                                <button class="pf-v5-c-button pf-m-plain" style="padding: 0.25rem; font-size: 0.75rem;" @click="editDocument(doc, $event)" title="Edit document">
+                                                    <i class="fas fa-pencil-alt"></i>
+                                                </button>
+                                                <button class="pf-v5-c-button pf-m-plain pf-m-danger" style="padding: 0.25rem; font-size: 0.75rem;" @click="deleteDocument(doc, $event)" title="Delete document">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                            <div class="document-thumbnail">
+                                                <template x-if="doc.images && doc.images.length > 0 && getFileType(doc.images[0].image) === 'image'">
+                                                    <img :src="doc.images[0].image" :alt="doc.name">
+                                                </template>
+                                                <template x-if="doc.images && doc.images.length > 0 && getFileType(doc.images[0].image) !== 'image'">
+                                                    <div class="document-placeholder">
+                                                        <i :class="getFileIcon(doc.images[0].image)" style="color: var(--pf-v5-global--danger-color--100);"></i>
+                                                    </div>
+                                                </template>
+                                                <template x-if="!doc.images || doc.images.length === 0">
+                                                    <div class="document-placeholder">
+                                                        <i class="fas fa-file-alt"></i>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <div class="document-info">
+                                                <span class="document-name" x-text="doc.name"></span>
+                                                <span class="document-type" x-text="doc.doc_type_display"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+

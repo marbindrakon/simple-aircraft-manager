@@ -23,29 +23,15 @@ from django.views.generic import RedirectView
 from rest_framework import routers
 
 from core import views as core_views
-from health import views as health_views
+from core.urls import ROUTER_REGISTRATIONS as core_routes
+from health.urls import ROUTER_REGISTRATIONS as health_routes
+from health.views_public import PublicAircraftSummaryAPI, PublicLogbookEntriesAPI
 
 router = routers.DefaultRouter()
-router.register(r'aircraft', core_views.AircraftViewSet)
-router.register(r'aircraft-notes', core_views.AircraftNoteViewSet)
-router.register(r'aircraft-events', core_views.AircraftEventViewSet)
-router.register(r'component-types', health_views.ComponentTypeViewSet)
-router.register(r'components', health_views.ComponentViewSet)
-router.register(r'document-collections', health_views.DocumentCollectionViewSet)
-router.register(r'documents', health_views.DocumentViewSet)
-router.register(r'document-images', health_views.DocumentImageViewSet)
-router.register(r'logbook-entries', health_views.LogbookEntryViewSet)
-router.register(r'squawks', health_views.SquawkViewSet)
-router.register(r'inspection-types', health_views.InspectionTypeViewSet)
-router.register(r'ads', health_views.ADViewSet)
-router.register(r'major-records', health_views.MajorRepairAlterationViewSet)
-router.register(r'inspections', health_views.InspectionRecordViewSet)
-router.register(r'ad-compliances', health_views.ADComplianceViewSet)
-router.register(r'consumable-records', health_views.ConsumableRecordViewSet)
-router.register(r'oil-analysis-reports', health_views.OilAnalysisReportViewSet)
-router.register(r'flight-logs', health_views.FlightLogViewSet)
-router.register(r'invitation-codes', core_views.InvitationCodeViewSet, basename='invitation-code')
-router.register(r'invitation-code-roles', core_views.InvitationCodeAircraftRoleViewSet, basename='invitation-code-role')
+for entry in core_routes + health_routes:
+    prefix, viewset = entry[0], entry[1]
+    kwargs = entry[2] if len(entry) > 2 else {}
+    router.register(prefix, viewset, **kwargs)
 
 
 urlpatterns = [
@@ -55,8 +41,8 @@ urlpatterns = [
     path('aircraft/<uuid:pk>/', core_views.AircraftDetailView.as_view(), name='aircraft-detail'),
     path('aircraft/<uuid:pk>/squawks/history/', core_views.SquawkHistoryView.as_view(), name='squawk-history'),
     path('shared/<uuid:share_token>/', core_views.PublicAircraftView.as_view(), name='public-aircraft'),
-    path('api/shared/<uuid:share_token>/', core_views.PublicAircraftSummaryAPI.as_view(), name='public-aircraft-api'),
-    path('api/shared/<uuid:share_token>/logbook-entries/', core_views.PublicLogbookEntriesAPI.as_view(), name='public-logbook-entries'),
+    path('api/shared/<uuid:share_token>/', PublicAircraftSummaryAPI.as_view(), name='public-aircraft-api'),
+    path('api/shared/<uuid:share_token>/logbook-entries/', PublicLogbookEntriesAPI.as_view(), name='public-logbook-entries'),
     path('tools/import-logbook/', core_views.LogbookImportView.as_view(), name='logbook-import'),
     path('tools/import-logbook/<uuid:job_id>/status/', core_views.LogbookImportView.as_view(), name='logbook-import-status'),
     path('api/aircraft/<uuid:pk>/export/', core_views.ExportView.as_view(), name='aircraft-export'),

@@ -2,12 +2,7 @@ from rest_framework import serializers
 from django.urls import reverse
 
 from .models import Aircraft, AircraftNote, AircraftEvent, AircraftRole, AircraftShareToken, InvitationCode, InvitationCodeAircraftRole, InvitationCodeRedemption
-from health.services import calculate_airworthiness
-
-
-class AirworthinessMixin:
-    def get_airworthiness(self, obj):
-        return calculate_airworthiness(obj).to_dict()
+from health.serializer_mixins import AirworthinessMixin
 
 
 class UserRoleMixin:

@@ -1,0 +1,270 @@
+        <!-- Components Tab -->
+        <div x-show="activeTab === 'components'" class="pf-v5-c-page__main-section">
+            <!-- Header with Add Button -->
+            <div class="tab-section-header">
+                <h2>Components</h2>
+                <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openComponentModal()">
+                    <i class="fas fa-plus"></i> Add Component
+                </button>
+            </div>
+
+            <table class="pf-v5-c-table pf-m-striped components-table">
+                <thead>
+                    <tr>
+                        <th style="width: 2rem;"></th>
+                        <th>Type</th>
+                        <th>Manufacturer/Model</th>
+                        <th>In Service</th>
+                        <th>Since OH/SVC</th>
+                        <th>Remaining</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-if="components.length === 0">
+                        <tr>
+                            <td colspan="8" style="text-align: center;">No components found</td>
+                        </tr>
+                    </template>
+                </tbody>
+                <template x-for="component in sortedComponents" :key="component.id">
+                    <tbody class="component-row-group"
+                           :class="{'component-child': getComponentDepth(component) > 0}"
+                           :style="'--component-depth: ' + getComponentDepth(component)">
+                        <tr>
+                            <td class="pf-v5-c-table__toggle">
+                                <button class="pf-v5-c-button pf-m-plain"
+                                        @click="toggleComponentExpand(component.id)"
+                                        :aria-expanded="isComponentExpanded(component.id).toString()">
+                                    <i class="fas fa-angle-right"
+                                       :style="isComponentExpanded(component.id) ? 'transform: rotate(90deg)' : ''"></i>
+                                </button>
+                            </td>
+                            <td data-label="Type">
+                                <div style="display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap;">
+                                    <span :style="'padding-left: ' + (getComponentDepth(component) * 1.5) + 'rem'" class="component-type-indent">
+                                        <template x-if="getComponentDepth(component) > 0">
+                                            <i class="fas fa-level-up-alt fa-rotate-90" style="color: var(--pf-v5-global--Color--200); margin-right: 0.25rem; font-size: 0.75rem;"></i>
+                                        </template>
+                                        <span x-text="getComponentTypeName(component)"></span>
+                                    </span>
+                                    <template x-if="component.install_location">
+                                        <span class="pf-v5-c-label pf-m-compact pf-m-grey"
+                                              x-text="component.install_location"></span>
+                                    </template>
+                                    <template x-if="component.replacement_critical">
+                                        <span class="pf-v5-c-label pf-m-compact pf-m-purple" title="Service Interval">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </span>
+                                    </template>
+                                </div>
+                                <div class="component-parent-breadcrumb"
+                                     x-show="component.parent_component_id"
+                                     x-text="getParentBreadcrumb(component)"></div>
+                            </td>
+                            <td data-label="Manufacturer/Model" x-text="`${component.manufacturer} ${component.model}`"></td>
+                            <td data-label="In Service">
+                                <div x-text="formatHours(component.hours_in_service || 0)"></div>
+                                <div x-show="getCalendarTimeSince(component.date_in_service)"
+                                     x-text="'(' + getCalendarTimeSince(component.date_in_service) + ')'"
+                                     style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
+                            </td>
+                            <td data-label="Since OH/SVC">
+                                <div x-text="(component.hours_since_overhaul > 0) ? formatHours(component.hours_since_overhaul) : '—'"></div>
+                                <div x-show="component.overhaul_date && getCalendarTimeSince(component.overhaul_date)"
+                                     x-text="'(' + getCalendarTimeSince(component.overhaul_date) + ')'"
+                                     style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
+                            </td>
+                            <td data-label="Remaining" :class="getHoursRemainingClass(component)">
+                                <!-- Desktop: hours remaining + label -->
+                                <div class="component-remaining-desktop">
+                                    <div x-text="getHoursRemainingDisplay(component)"></div>
+                                    <div x-show="getRemainingLabel(component)"
+                                         x-text="getRemainingLabel(component)"
+                                         style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
+                                </div>
+                                <!-- Mobile: fraction + progress bar (hidden on desktop via CSS) -->
+                                <div class="component-remaining-mobile">
+                                    <template x-if="getIntervalFraction(component)">
+                                        <div>
+                                            <div class="component-fraction"
+                                                 x-text="getFractionText(component)"></div>
+                                            <div class="component-progress-track">
+                                                <div class="component-progress-fill"
+                                                     :class="getHoursRemainingClass(component)"
+                                                     :style="'width: ' + getProgressPercent(component) + '%;'"></div>
+                                            </div>
+                                            <div x-show="getRemainingLabel(component)"
+                                                 x-text="getRemainingLabel(component)"
+                                                 class="component-fraction-sublabel"></div>
+                                        </div>
+                                    </template>
+                                    <template x-if="!getIntervalFraction(component)">
+                                        <div x-text="getHoursRemainingDisplay(component)"></div>
+                                    </template>
+                                </div>
+                            </td>
+                            <td data-label="Status">
+                                <span class="pf-v5-c-label"
+                                      :class="getStatusClass(component)"
+                                      x-text="component.status"></span>
+                            </td>
+                            <td data-label="Actions">
+                                <div x-show="isOwner" style="display: flex; gap: 0.25rem;">
+                                    <button class="pf-v5-c-button pf-m-plain"
+                                            @click="editComponent(component)"
+                                            title="Edit component">
+                                        <i class="fas fa-pencil-alt"></i>
+                                    </button>
+                                    <template x-if="component.replacement_critical && component.status === 'IN-USE'">
+                                        <button class="pf-v5-c-button pf-m-plain"
+                                                @click="openServiceResetModal(component)"
+                                                :title="'Reset ' + getComponentTypeName(component) + ' service time'">
+                                            <i class="fas fa-redo"></i>
+                                        </button>
+                                    </template>
+                                    <button class="pf-v5-c-button pf-m-plain pf-m-danger"
+                                            @click="deleteComponent(component)"
+                                            title="Delete component">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr x-show="isComponentExpanded(component.id)"
+                            :class="{'pf-m-expanded': isComponentExpanded(component.id)}"
+                            class="pf-v5-c-table__expandable-row">
+                            <td></td>
+                            <td colspan="7" style="padding: 0.75rem 1rem;">
+
+                                <!-- Row 1: Serial Number | Notes -->
+                                <div class="component-detail-grid" style="display: grid; grid-template-columns: auto 1fr; gap: 1.5rem; margin-bottom: 1rem; align-items: start;">
+                                    <div>
+                                        <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.4rem;">Serial Number</div>
+                                        <div x-show="component.serial_number" x-text="component.serial_number"></div>
+                                        <div x-show="!component.serial_number" style="color: var(--pf-v5-global--Color--200);">—</div>
+                                    </div>
+                                    <div x-show="component.notes">
+                                        <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.4rem;">Notes</div>
+                                        <div x-text="component.notes" style="white-space: pre-wrap;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Row 2: In Service | Since OH/SVC | Calendar Remaining -->
+                                <div class="component-detail-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1rem;">
+                                    <div>
+                                        <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.4rem;">In Service</div>
+                                        <div style="font-size: 1.1em; font-weight: 600;" x-text="formatHours(component.hours_in_service || 0)"></div>
+                                        <div x-show="getCalendarTimeSince(component.date_in_service)"
+                                             x-text="getCalendarTimeSince(component.date_in_service)"></div>
+                                        <div x-show="component.date_in_service"
+                                             x-text="'Since ' + formatDate(component.date_in_service)"
+                                             style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.4rem;">Since OH/SVC</div>
+                                        <template x-if="component.hours_since_overhaul > 0 || component.overhaul_date">
+                                            <div>
+                                                <div style="font-size: 1.1em; font-weight: 600;" x-text="formatHours(component.hours_since_overhaul || 0)"></div>
+                                                <div x-show="component.overhaul_date && getCalendarTimeSince(component.overhaul_date)"
+                                                     x-text="getCalendarTimeSince(component.overhaul_date)"></div>
+                                                <div x-show="component.overhaul_date"
+                                                     x-text="'Since ' + formatDate(component.overhaul_date)"
+                                                     style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
+                                            </div>
+                                        </template>
+                                        <template x-if="!(component.hours_since_overhaul > 0 || component.overhaul_date)">
+                                            <div style="color: var(--pf-v5-global--Color--200);">Not recorded</div>
+                                        </template>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.4rem;">Calendar Remaining</div>
+                                        <template x-if="getCalendarDaysRemaining(component) !== null">
+                                            <div>
+                                                <div style="font-size: 1.1em; font-weight: 600;"
+                                                     :class="getCalendarRemainingClass(component)"
+                                                     x-text="formatDuration(getCalendarDaysRemaining(component))"></div>
+                                                <div x-show="getDueDate(component)"
+                                                     x-text="'Due ' + formatDate(getDueDate(component))"
+                                                     style="color: var(--pf-v5-global--Color--200); font-size: 0.85em;"></div>
+                                            </div>
+                                        </template>
+                                        <template x-if="getCalendarDaysRemaining(component) === null">
+                                            <div style="color: var(--pf-v5-global--Color--200);">—</div>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <!-- Row 3: Tracking Settings -->
+                                <div style="margin-bottom: 0;">
+                                    <div style="font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--pf-v5-global--Color--200); margin-bottom: 0.5rem;">Tracking</div>
+                                    <div class="component-detail-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+                                        <!-- TBO -->
+                                        <div>
+                                            <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+                                                <span class="pf-v5-c-label pf-m-compact"
+                                                      :class="component.tbo_critical ? 'pf-m-blue' : 'pf-m-grey'">
+                                                    TBO
+                                                </span>
+                                                <template x-if="component.tbo_critical && component.on_condition">
+                                                    <span class="pf-v5-c-label pf-m-compact pf-m-cyan" title="Reliability-Centered / On-Condition maintenance — over-TBO operation is intentional">
+                                                        On-Condition
+                                                    </span>
+                                                </template>
+                                            </div>
+                                            <template x-if="component.tbo_critical">
+                                                <div style="margin-top: 0.3rem; font-size: 0.9em;">
+                                                    <div x-show="component.tbo_hours" x-text="component.tbo_hours + ' hr'"></div>
+                                                    <div x-show="component.tbo_days" x-text="component.tbo_days + ' days'" style="color: var(--pf-v5-global--Color--200);"></div>
+                                                    <div x-show="!component.tbo_hours && !component.tbo_days" style="color: var(--pf-v5-global--Color--200);">No limit set</div>
+                                                </div>
+                                            </template>
+                                            <template x-if="!component.tbo_critical">
+                                                <div style="margin-top: 0.3rem; font-size: 0.85em; color: var(--pf-v5-global--Color--200);">Disabled</div>
+                                            </template>
+                                        </div>
+                                        <!-- Service Interval -->
+                                        <div>
+                                            <span class="pf-v5-c-label pf-m-compact"
+                                                  :class="component.replacement_critical ? 'pf-m-purple' : 'pf-m-grey'">
+                                                Service Interval
+                                            </span>
+                                            <template x-if="component.replacement_critical">
+                                                <div style="margin-top: 0.3rem; font-size: 0.9em;">
+                                                    <div x-show="component.replacement_hours" x-text="component.replacement_hours + ' hr'"></div>
+                                                    <div x-show="component.replacement_days" x-text="component.replacement_days + ' days'" style="color: var(--pf-v5-global--Color--200);"></div>
+                                                    <div x-show="!component.replacement_hours && !component.replacement_days" style="color: var(--pf-v5-global--Color--200);">No limit set</div>
+                                                </div>
+                                            </template>
+                                            <template x-if="!component.replacement_critical">
+                                                <div style="margin-top: 0.3rem; font-size: 0.85em; color: var(--pf-v5-global--Color--200);">Disabled</div>
+                                            </template>
+                                        </div>
+                                        <!-- Inspection -->
+                                        <div>
+                                            <span class="pf-v5-c-label pf-m-compact"
+                                                  :class="component.inspection_critical ? 'pf-m-green' : 'pf-m-grey'">
+                                                Inspection
+                                            </span>
+                                            <template x-if="component.inspection_critical">
+                                                <div style="margin-top: 0.3rem; font-size: 0.9em;">
+                                                    <div x-show="component.inspection_hours" x-text="component.inspection_hours + ' hr'"></div>
+                                                    <div x-show="component.inspection_days" x-text="component.inspection_days + ' days'" style="color: var(--pf-v5-global--Color--200);"></div>
+                                                    <div x-show="!component.inspection_hours && !component.inspection_days" style="color: var(--pf-v5-global--Color--200);">No limit set</div>
+                                                </div>
+                                            </template>
+                                            <template x-if="!component.inspection_critical">
+                                                <div style="margin-top: 0.3rem; font-size: 0.85em; color: var(--pf-v5-global--Color--200);">Disabled</div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </td>
+                        </tr>
+                    </tbody>
+                </template>
+            </table>
+        </div>
+

@@ -1,0 +1,379 @@
+        <!-- Consumables Tab Group (Oil & Fuel) -->
+        <div x-show="activePrimaryTab === 'consumables'" class="pf-v5-c-page__main-section">
+            <div class="tab-subtab-bar">
+                <div class="pf-v5-c-toggle-group">
+                    <div class="pf-v5-c-toggle-group__item">
+                        <button class="pf-v5-c-toggle-group__button"
+                                :class="{ 'pf-m-selected': activeTab === 'oil' }"
+                                @click="activeTab = 'oil'">
+                            Oil Usage
+                        </button>
+                    </div>
+                    <div class="pf-v5-c-toggle-group__item">
+                        <button class="pf-v5-c-toggle-group__button"
+                                :class="{ 'pf-m-selected': activeTab === 'fuel' }"
+                                @click="activeTab = 'fuel'">
+                            Fuel Usage
+                        </button>
+                    </div>
+                    <div class="pf-v5-c-toggle-group__item">
+                        <button class="pf-v5-c-toggle-group__button"
+                                :class="{ 'pf-m-selected': activeTab === 'oil-analysis' }"
+                                @click="activeTab = 'oil-analysis'">
+                            Oil Analysis
+                        </button>
+                    </div>
+                </div>
+                <button class="pf-v5-c-button pf-m-primary" x-show="canCreateConsumable && activeTab === 'oil'" @click="openOilModal()">
+                    <i class="fas fa-plus"></i> Add Oil Record
+                </button>
+                <button class="pf-v5-c-button pf-m-primary" x-show="canCreateConsumable && activeTab === 'fuel'" @click="openFuelModal()">
+                    <i class="fas fa-plus"></i> Add Fuel Record
+                </button>
+                <template x-if="activeTab === 'oil-analysis' && canWrite">
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="pf-v5-c-button pf-m-secondary" @click="openOilAnalysisAiModal()">
+                            <i class="fas fa-file-pdf"></i> Import from PDF
+                        </button>
+                        <button class="pf-v5-c-button pf-m-primary" @click="openOilAnalysisModal()">
+                            <i class="fas fa-plus"></i> Add Report
+                        </button>
+                    </div>
+                </template>
+            </div>
+            <div x-show="activeTab === 'oil'">
+
+            <!-- Loading -->
+            <div x-show="!oilLoaded" class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
+                    <h2 class="pf-v5-c-title pf-m-lg">Loading oil records...</h2>
+                </div>
+            </div>
+
+            <div x-show="oilLoaded" x-cloak>
+                <!-- Empty State -->
+                <template x-if="oilRecords.length === 0">
+                    <div class="pf-v5-c-empty-state">
+                        <div class="pf-v5-c-empty-state__content">
+                            <i class="fas fa-oil-can" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                            <h2 class="pf-v5-c-title pf-m-lg">No oil records</h2>
+                            <div class="pf-v5-c-empty-state__body">
+                                Track oil consumption by adding records each time you add oil.
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Oil Chart -->
+                <template x-if="oilRecords.length >= 2">
+                    <div class="pf-v5-c-card" style="margin-bottom: 1rem;">
+                        <div class="pf-v5-c-card__title"><h3>Oil Consumption Trend (Hours per Quart)</h3></div>
+                        <div class="pf-v5-c-card__body">
+                            <canvas id="oilChart" style="max-height: 300px;"></canvas>
+                            <p class="pf-v5-u-color-200 pf-v5-u-font-size-sm pf-v5-u-mt-sm">Average is based on the most recent 20 data points, with statistical outliers excluded. Outlier records are marked with <i class="fas fa-exclamation-triangle" style="color: #f0ab00;"></i> in the table below.</p>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Oil Records Table -->
+                <template x-if="oilRecords.length > 0">
+                    <table class="pf-v5-c-table consumable-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Hours</th>
+                                <th>Qty (qt)</th>
+                                <th>Level After</th>
+                                <th>Type</th>
+                                <th>Notes</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="record in oilRecords" :key="record.id">
+                                <tr>
+                                    <td data-label="Date">
+                                        <span x-text="formatDate(record.date)"></span>
+                                        <span x-show="isOilOutlier(record.id)" style="color: #f0ab00; margin-left: 0.3rem;" title="This record's consumption rate is a statistical outlier and was excluded from the average."><i class="fas fa-exclamation-triangle"></i></span>
+                                    </td>
+                                    <td data-label="Hours">
+                                        <span class="consumable-field-label">At </span><span x-text="formatHours(record.flight_hours)"></span>
+                                    </td>
+                                    <td data-label="Qty (qt)">
+                                        <span class="consumable-field-label">Added </span><span x-text="record.quantity_added"></span>
+                                    </td>
+                                    <td data-label="Level After" :class="{ 'consumable-empty-field': !record.level_after }">
+                                        <span class="consumable-field-label">Level </span><span x-text="record.level_after || '-'"></span>
+                                    </td>
+                                    <td data-label="Type" :class="{ 'consumable-empty-field': !record.consumable_type }" x-text="record.consumable_type || '-'"></td>
+                                    <td data-label="Notes" :class="{ 'consumable-empty-field': !record.notes }" x-text="record.notes || '-'"></td>
+                                    <td data-label="Actions">
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                                @click="toggleOilExcludeFromAverages(record)"
+                                                :title="record.excluded_from_averages ? 'Include in averages' : 'Exclude from averages'"
+                                                :style="record.excluded_from_averages ? 'color: var(--pf-v5-global--danger-color--100);' : ''">
+                                            <i class="fas fa-chart-line"></i>
+                                        </button>
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editOilRecord(record)" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="cardDeleteOilRecord(record)" title="Delete" style="color: var(--pf-v5-global--danger-color--100);">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </template>
+            </div>
+            </div>
+            <div x-show="activeTab === 'fuel'">
+
+            <!-- Loading -->
+            <div x-show="!fuelLoaded" class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
+                    <h2 class="pf-v5-c-title pf-m-lg">Loading fuel records...</h2>
+                </div>
+            </div>
+
+            <div x-show="fuelLoaded" x-cloak>
+                <!-- Empty State -->
+                <template x-if="fuelRecords.length === 0">
+                    <div class="pf-v5-c-empty-state">
+                        <div class="pf-v5-c-empty-state__content">
+                            <i class="fas fa-gas-pump" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                            <h2 class="pf-v5-c-title pf-m-lg">No fuel records</h2>
+                            <div class="pf-v5-c-empty-state__body">
+                                Track fuel consumption by adding records each time you refuel.
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Fuel Chart -->
+                <template x-if="fuelRecords.length >= 2">
+                    <div class="pf-v5-c-card" style="margin-bottom: 1rem;">
+                        <div class="pf-v5-c-card__title"><h3>Fuel Consumption Trend (Gallons per Hour)</h3></div>
+                        <div class="pf-v5-c-card__body">
+                            <canvas id="fuelChart" style="max-height: 300px;"></canvas>
+                            <p class="pf-v5-u-color-200 pf-v5-u-font-size-sm pf-v5-u-mt-sm">Average is based on the most recent 20 data points, with statistical outliers excluded. Outlier records are marked with <i class="fas fa-exclamation-triangle" style="color: #f0ab00;"></i> in the table below.</p>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Fuel Records Table -->
+                <template x-if="fuelRecords.length > 0">
+                    <table class="pf-v5-c-table consumable-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Hours</th>
+                                <th>Qty (gal)</th>
+                                <th>Level After</th>
+                                <th>Type</th>
+                                <th>Notes</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="record in fuelRecords" :key="record.id">
+                                <tr>
+                                    <td data-label="Date">
+                                        <span x-text="formatDate(record.date)"></span>
+                                        <span x-show="isFuelOutlier(record.id)" style="color: #f0ab00; margin-left: 0.3rem;" title="This record's consumption rate is a statistical outlier and was excluded from the average."><i class="fas fa-exclamation-triangle"></i></span>
+                                    </td>
+                                    <td data-label="Hours">
+                                        <span class="consumable-field-label">At </span><span x-text="formatHours(record.flight_hours)"></span>
+                                    </td>
+                                    <td data-label="Qty (gal)">
+                                        <span class="consumable-field-label">Added </span><span x-text="record.quantity_added"></span>
+                                    </td>
+                                    <td data-label="Level After" :class="{ 'consumable-empty-field': !record.level_after }">
+                                        <span class="consumable-field-label">Level </span><span x-text="record.level_after || '-'"></span>
+                                    </td>
+                                    <td data-label="Type" :class="{ 'consumable-empty-field': !record.consumable_type }" x-text="record.consumable_type || '-'"></td>
+                                    <td data-label="Notes" :class="{ 'consumable-empty-field': !record.notes }" x-text="record.notes || '-'"></td>
+                                    <td data-label="Actions">
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                                @click="toggleFuelExcludeFromAverages(record)"
+                                                :title="record.excluded_from_averages ? 'Include in averages' : 'Exclude from averages'"
+                                                :style="record.excluded_from_averages ? 'color: var(--pf-v5-global--danger-color--100);' : ''">
+                                            <i class="fas fa-chart-line"></i>
+                                        </button>
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editFuelRecord(record)" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="cardDeleteFuelRecord(record)" title="Delete" style="color: var(--pf-v5-global--danger-color--100);">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </template>
+            </div>
+            </div>
+
+            <!-- Oil Analysis Tab -->
+            <div x-show="activeTab === 'oil-analysis'">
+
+            <!-- Loading -->
+            <div x-show="!oilAnalysisLoaded" class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
+                    <h2 class="pf-v5-c-title pf-m-lg">Loading oil analysis reports...</h2>
+                </div>
+            </div>
+
+            <div x-show="oilAnalysisLoaded" x-cloak>
+
+                <!-- Component filter -->
+                <template x-if="oilAnalysisEngineComponents.length > 1">
+                    <div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <label class="pf-v5-c-form__label" for="oilAnalysisComponentFilter" style="margin: 0;">Filter by component:</label>
+                        <select id="oilAnalysisComponentFilter" class="pf-v5-c-form-control" style="max-width: 300px;"
+                                x-model="oilAnalysisFilterComponent"
+                                @change="oilAnalysisLoaded = false; loadOilAnalysis()">
+                            <option value="">All components</option>
+                            <template x-for="comp in oilAnalysisEngineComponents" :key="comp.id">
+                                <option :value="comp.id" x-text="comp.component_type_name + (comp.install_location ? ' (' + comp.install_location + ')' : '')"></option>
+                            </template>
+                        </select>
+                    </div>
+                </template>
+
+                <!-- Empty State -->
+                <template x-if="oilAnalysisFilteredReports.length === 0">
+                    <div class="pf-v5-c-empty-state">
+                        <div class="pf-v5-c-empty-state__content">
+                            <i class="fas fa-flask" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                            <h2 class="pf-v5-c-title pf-m-lg">No oil analysis reports</h2>
+                            <div class="pf-v5-c-empty-state__body">
+                                Track engine health by adding oil analysis lab reports.
+                            </div>
+                            <div class="pf-v5-c-empty-state__primary" x-show="canWrite" style="margin-top: 1rem;">
+                                <button class="pf-v5-c-button pf-m-secondary" @click="openOilAnalysisAiModal()" style="margin-right: 0.5rem;">
+                                    <i class="fas fa-file-pdf"></i> Import from PDF
+                                </button>
+                                <button class="pf-v5-c-button pf-m-primary" @click="openOilAnalysisModal()">
+                                    <i class="fas fa-plus"></i> Add Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Chart and element toggles -->
+                <template x-if="oilAnalysisFilteredReports.length >= 2">
+                    <div>
+                        <!-- Element toggle chips -->
+                        <div style="margin-bottom: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+                            <span style="font-size: 0.875rem; color: var(--pf-v5-global--Color--200); margin-right: 0.25rem;">Show elements:</span>
+                            <template x-for="el in ['iron','copper','chromium','aluminum','lead','silicon','nickel','tin','molybdenum','magnesium','potassium','boron','sodium','calcium','phosphorus','zinc','barium','silver','titanium','manganese']" :key="el">
+                                <button class="pf-v5-c-button"
+                                        :class="isOilAnalysisElementSelected(el) ? 'pf-m-primary' : 'pf-m-secondary'"
+                                        style="padding: 0.2rem 0.6rem; font-size: 0.8rem; text-transform: capitalize;"
+                                        @click="toggleOilAnalysisElement(el)"
+                                        x-text="elementSymbol(el)"></button>
+                            </template>
+                        </div>
+
+                        <div class="pf-v5-c-card" style="margin-bottom: 1rem;">
+                            <div class="pf-v5-c-card__title"><h3>Element Trend (PPM over Time)</h3></div>
+                            <div class="pf-v5-c-card__body">
+                                <canvas id="oilAnalysisChart" style="max-height: 350px;"></canvas>
+                                <p class="pf-v5-u-color-200 pf-v5-u-font-size-sm pf-v5-u-mt-sm">
+                                    Outlier values (IQR method) shown as larger <span style="color: #f0ab00;">&#9650;</span> orange points. Dashed lines show per-element averages.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Reports Table -->
+                <template x-if="oilAnalysisFilteredReports.length > 0">
+                    <table class="pf-v5-c-table consumable-table">
+                        <thead>
+                            <tr>
+                                <th>Sample Date</th>
+                                <th>Engine Hours</th>
+                                <th>Oil Hours</th>
+                                <th>Status</th>
+                                <th>Lab</th>
+                                <th>Key Elements (ppm)</th>
+                                <th>Component</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="report in oilAnalysisFilteredReports" :key="report.id">
+                                <tr>
+                                    <td data-label="Sample Date" x-text="formatDate(report.sample_date)"></td>
+                                    <td data-label="Engine Hours" :class="{ 'consumable-empty-field': !report.engine_hours }">
+                                        <span x-text="report.engine_hours != null ? formatHours(report.engine_hours) : '-'"></span>
+                                    </td>
+                                    <td data-label="Oil Hours" :class="{ 'consumable-empty-field': !report.oil_hours }">
+                                        <span x-text="report.oil_hours != null ? report.oil_hours + ' hrs' : '-'"></span>
+                                    </td>
+                                    <td data-label="Status">
+                                        <template x-if="report.status">
+                                            <span class="pf-v5-c-label" :class="oilAnalysisStatusClass(report.status)">
+                                                <span class="pf-v5-c-label__content" x-text="oilAnalysisStatusLabel(report.status)"></span>
+                                            </span>
+                                        </template>
+                                        <template x-if="!report.status">
+                                            <span class="consumable-empty-field">—</span>
+                                        </template>
+                                    </td>
+                                    <td data-label="Lab" :class="{ 'consumable-empty-field': !report.lab }" x-text="report.lab || '-'"></td>
+                                    <td data-label="Key Elements (ppm)" style="font-size: 0.82rem; white-space: nowrap;">
+                                        <template x-if="report.elements_ppm && Object.keys(report.elements_ppm).length > 0">
+                                            <span>
+                                                <template x-for="el in ['iron','copper','chromium','aluminum','lead','silicon']" :key="el">
+                                                    <span x-show="report.elements_ppm[el] != null" style="margin-right: 0.5rem;">
+                                                        <span style="font-weight: 500;" x-text="elementSymbol(el) + ':'"></span>
+                                                        <span x-text="report.elements_ppm[el]"></span>
+                                                    </span>
+                                                </template>
+                                            </span>
+                                        </template>
+                                        <template x-if="!report.elements_ppm || Object.keys(report.elements_ppm).length === 0">
+                                            <span class="consumable-empty-field">—</span>
+                                        </template>
+                                    </td>
+                                    <td data-label="Component" :class="{ 'consumable-empty-field': !report.component_display }">
+                                        <span x-text="report.component_display || '-'"></span>
+                                    </td>
+                                    <td data-label="Actions">
+                                        <button class="pf-v5-c-button pf-m-plain"
+                                                @click="toggleOilAnalysisChartVisibility(report)"
+                                                :title="oilAnalysisHiddenIds.has(report.id) ? 'Show on chart' : 'Hide from chart'"
+                                                :style="oilAnalysisHiddenIds.has(report.id) ? 'color: #8a8d90;' : ''">
+                                            <i :class="oilAnalysisHiddenIds.has(report.id) ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                                        </button>
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner"
+                                                @click="toggleOilAnalysisExcludeFromAverages(report)"
+                                                :title="report.excluded_from_averages ? 'Include in averages' : 'Exclude from averages'"
+                                                :style="report.excluded_from_averages ? 'color: var(--pf-v5-global--danger-color--100);' : ''">
+                                            <i class="fas fa-chart-line"></i>
+                                        </button>
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="editOilAnalysisReport(report)" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="pf-v5-c-button pf-m-plain" x-show="isOwner" @click="cardDeleteOilAnalysisReport(report)" title="Delete" style="color: var(--pf-v5-global--danger-color--100);">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </template>
+            </div>
+            </div>
+        </div>
+
