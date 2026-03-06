@@ -189,3 +189,22 @@ See [configuration.md](configuration.md) for required environment variables.
 - Track FAA Form 337 major repairs and alterations
 - List view on aircraft detail page
 - Visible on maintenance-level share links
+
+## Per-Aircraft Feature Flags
+
+- Owners can enable or disable individual features per aircraft from the Settings tab
+- All features are on by default
+- Available flags: Flight Tracking, Oil Consumption, Fuel Consumption, Oil Analysis, Airworthiness Enforcement, Public Sharing
+- Administrators can globally disable features for all aircraft using the `DISABLED_FEATURES` environment variable; globally disabled features cannot be re-enabled per aircraft
+
+See the [Feature Flags developer reference](feature-flags.md) and the [Settings tab user guide](user-guide/sharing-and-access) for details.
+
+## Plugin System
+
+- Out-of-tree plugins extend the UI and API without modifying core source files
+- Plugins are standalone Django apps that subclass `SAMPluginConfig`
+- Extension points: global navigation links, management views, aircraft detail tabs (standalone or sub-tabs inside existing groups), Alpine.js mixins, dashboard tiles, API endpoints, and page URL patterns
+- Discovery: directory scan (`SAM_PLUGIN_DIR`) or explicit module list (`SAM_PLUGINS`) env vars
+- Container packaging: `SAM_PLUGIN_PACKAGES` installs plugin packages from PyPI at startup
+
+See the [Plugin System developer guide](plugins.md) for full documentation.

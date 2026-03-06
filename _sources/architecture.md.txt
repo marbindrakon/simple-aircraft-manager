@@ -36,7 +36,9 @@ simple-aircraft-manager/
 │   ├── urls.py                  # URL routing
 │   └── wsgi.py
 ├── core/                        # Core aircraft management
-│   ├── models.py                # Aircraft, AircraftNote, AircraftEvent, roles, share tokens
+│   ├── models.py                # Aircraft, AircraftNote, AircraftEvent, AircraftFeature, roles, share tokens
+│   ├── features.py              # feature_available() helper — per-aircraft feature flag resolution
+│   ├── plugins.py               # SAMPluginConfig base class + PluginRegistry singleton
 │   ├── views/                   # Views package (split from core/views.py)
 │   │   ├── __init__.py          # Re-exports all public names for backwards compatibility
 │   │   ├── aircraft.py          # AircraftViewSet (uses HealthAircraftActionsMixin)
@@ -58,7 +60,9 @@ simple-aircraft-manager/
 │   ├── export.py                # Aircraft export — builds manifest + streams .sam.zip
 │   ├── import_export.py         # Aircraft import — validation, ID remapping, background runner
 │   ├── oidc.py                  # OIDC backend + logout URL builder
-│   ├── context_processors.py    # Template context (OIDC_ENABLED, AIRCRAFT_CREATE_PERMISSION)
+│   ├── context_processors.py    # Template context (OIDC_ENABLED, plugin_registry, etc.)
+│   ├── templatetags/
+│   │   └── sam_plugins.py       # {% plugin_sub_tab_buttons %} / {% plugin_sub_tab_panels %}
 │   ├── management/commands/
 │   │   ├── export_aircraft.py   # CLI export command
 │   │   └── import_aircraft.py   # CLI import command
@@ -105,10 +109,23 @@ The aircraft detail page is composed from feature mixins merged by `mergeMixins(
 | `aircraft-detail-major-records.js` | `majorRecordsMixin()` | Major repair/alteration CRUD |
 | `aircraft-detail-events.js` | `eventsMixin()` | Recent activity card, history modal |
 | `aircraft-detail-roles.js` | `rolesMixin()` | Role management, public sharing toggle |
+| `aircraft-detail-features.js` | `featuresMixin()` | Per-aircraft feature flag toggles (Settings tab) |
 
 Composer: `aircraft-detail.js`. **Never use `{...spread}` to merge mixins** — it eagerly evaluates `get` properties. `mergeMixins()` preserves getter descriptors via `Object.getOwnPropertyDescriptors()`.
 
+Plugin mixins are loaded before built-in mixins. Plugin JS files push mixin factory functions onto `window.SAMPluginMixins`; the composer merges them first so plugin state is available on `this` inside built-in mixins.
+
 Shared utilities in `utils.js` (loaded globally via `base.html`): `getCookie`, `mergeMixins`, `apiRequest`, `showNotification`, `formatDate`, `formatHours`, `getAirworthinessClass/Text/Tooltip`, `getSquawkPriorityClass`, `formatApiError`.
+
+## Plugin System
+
+SAM supports out-of-tree plugins — standalone Django apps that extend UI, API, and dashboard without patching core code. Plugins subclass `SAMPluginConfig` from `core/plugins.py`, which registers them with the `PluginRegistry` singleton during `AppConfig.ready()`.
+
+Discovery: `SAM_PLUGIN_DIR` (directory scan) and `SAM_PLUGINS` (explicit module list) env vars. In containers, `SAM_PLUGIN_PACKAGES` installs packages from PyPI before startup. See [plugins.md](plugins.md) for the full developer guide.
+
+## Per-Aircraft Feature Flags
+
+`AircraftFeature` rows in `core/models.py` store per-aircraft enable/disable state for each named feature. The `feature_available(feature_name, aircraft)` helper in `core/features.py` resolves flags in priority order: global `DISABLED_FEATURES` setting → per-aircraft row → default (enabled). See [feature-flags.md](feature-flags.md) for details.
 
 ## Airworthiness Calculation
 
@@ -194,3 +211,5 @@ All JS must be external files in `core/static/js/` — inline `<script>` blocks 
 5. Verify production settings: `DJANGO_SECRET_KEY=test DJANGO_ALLOWED_HOSTS=localhost python manage.py check --settings=simple_aircraft_manager.settings_prod`
 6. Register new models in `admin.py`
 7. For new JS features, create `aircraft-detail-<feature>.js` and add it to the composer and template
+8. For new per-aircraft feature flags, add the key to `KNOWN_FEATURES` in `core/models.py`, add a getter in `aircraft-detail.js`, and document it in `docs/feature-flags.md` and `docs/user-guide/sharing-and-access.rst`
+9. For new extension points in the plugin system, add class attributes to `SAMPluginConfig`, aggregation properties to `PluginRegistry`, and document them in `docs/plugins.md`

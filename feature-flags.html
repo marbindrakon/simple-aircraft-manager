@@ -3,10 +3,10 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Data Model" href="data-model.html"><link rel="prev" title="Per-Aircraft Feature Flags" href="feature-flags.html">
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="API Reference" href="api-reference.html"><link rel="prev" title="Plugin System" href="plugins.html">
 
     <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
-        <title>API Reference - Simple Aircraft Manager</title>
+        <title>Per-Aircraft Feature Flags - Simple Aircraft Manager</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -216,8 +216,8 @@
 <li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
 <li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugin System</a></li>
-<li class="toctree-l1"><a class="reference internal" href="feature-flags.html">Per-Aircraft Feature Flags</a></li>
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">API Reference</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Per-Aircraft Feature Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api-reference.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data Model</a></li>
 </ul>
 
@@ -239,7 +239,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="_sources/api-reference.md.txt" title="View this page">
+  <a class="muted-link" href="_sources/feature-flags.md.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -257,291 +257,189 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="api-reference">
-<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h1>
-<p>All API endpoints require authentication unless noted. Base path: <code class="docutils literal notranslate"><span class="pre">/api/</span></code>.</p>
-<section id="aircraft">
-<h2>Aircraft<a class="headerlink" href="#aircraft" title="Link to this heading">¶</a></h2>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Endpoint</p></th>
-<th class="head"><p>Methods</p></th>
-<th class="head"><p>Description</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/</span></code></p></td>
-<td><p>GET, POST</p></td>
-<td><p>List/create aircraft</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/</span></code></p></td>
-<td><p>GET, PUT, PATCH, DELETE</p></td>
-<td><p>Aircraft detail</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/summary/</span></code></p></td>
-<td><p>GET</p></td>
-<td><p>Aircraft with components, squawks, notes</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/update_hours/</span></code></p></td>
-<td><p>POST</p></td>
-<td><p>Update flight hours (syncs components)</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/squawks/</span></code></p></td>
-<td><p>GET, POST</p></td>
-<td><p>Aircraft squawks</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/notes/</span></code></p></td>
-<td><p>GET, POST</p></td>
-<td><p>Aircraft notes</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/oil_records/</span></code></p></td>
-<td><p>GET, POST</p></td>
-<td><p>Oil consumption records</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/fuel_records/</span></code></p></td>
-<td><p>GET, POST</p></td>
-<td><p>Fuel consumption records</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/components/</span></code></p></td>
-<td><p>GET, POST</p></td>
-<td><p>Aircraft components</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/ads/</span></code></p></td>
-<td><p>GET, POST</p></td>
-<td><p>Airworthiness Directives</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/compliance/</span></code></p></td>
-<td><p>GET, POST</p></td>
-<td><p>AD compliance records</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/inspections/</span></code></p></td>
-<td><p>GET, POST</p></td>
-<td><p>Inspection records</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/major_records/</span></code></p></td>
-<td><p>GET, POST</p></td>
-<td><p>Major repair/alteration records</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/documents/</span></code></p></td>
-<td><p>GET</p></td>
-<td><p>Documents organized by collection</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/events/</span></code></p></td>
-<td><p>GET</p></td>
-<td><p>Audit event log (<code class="docutils literal notranslate"><span class="pre">?limit=50&amp;category=hours</span></code>)</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/manage_roles/</span></code></p></td>
-<td><p>GET, POST, DELETE</p></td>
-<td><p>Per-aircraft role management (owner only)</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/share_tokens/</span></code></p></td>
-<td><p>GET, POST</p></td>
-<td><p>List/create share links (owner only)</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft/{id}/share_tokens/{token_id}/</span></code></p></td>
-<td><p>DELETE</p></td>
-<td><p>Revoke a share link (owner only)</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</section>
-<section id="components">
-<h2>Components<a class="headerlink" href="#components" title="Link to this heading">¶</a></h2>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Endpoint</p></th>
-<th class="head"><p>Methods</p></th>
-<th class="head"><p>Description</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/components/</span></code></p></td>
-<td><p>GET, POST</p></td>
-<td><p>List/create components</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/components/{id}/</span></code></p></td>
-<td><p>GET, PUT, PATCH, DELETE</p></td>
-<td><p>Component detail</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/components/{id}/reset_service/</span></code></p></td>
-<td><p>POST</p></td>
-<td><p>Reset service time (oil changes, etc.)</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/component-types/</span></code></p></td>
-<td><p>GET, POST</p></td>
-<td><p>Component type definitions</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/component-types/{id}/</span></code></p></td>
-<td><p>GET, PUT, PATCH, DELETE</p></td>
-<td><p>Component type detail</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</section>
-<section id="maintenance">
-<h2>Maintenance<a class="headerlink" href="#maintenance" title="Link to this heading">¶</a></h2>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Endpoint</p></th>
-<th class="head"><p>Methods</p></th>
-<th class="head"><p>Description</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/squawks/</span></code></p></td>
-<td><p>GET, PUT, PATCH, DELETE</p></td>
-<td><p>Squawk detail operations</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/aircraft-notes/{id}/</span></code></p></td>
-<td><p>GET, PATCH, DELETE</p></td>
-<td><p>Note operations</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/logbook-entries/</span></code></p></td>
-<td><p>GET, POST, PUT, PATCH, DELETE</p></td>
-<td><p>Logbook entries</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/inspection-types/</span></code></p></td>
-<td><p>CRUD</p></td>
-<td><p>Inspection type definitions</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/inspections/</span></code></p></td>
-<td><p>CRUD</p></td>
-<td><p>Inspection records</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/ads/</span></code></p></td>
-<td><p>CRUD</p></td>
-<td><p>Airworthiness Directives</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/ad-compliances/</span></code></p></td>
-<td><p>CRUD</p></td>
-<td><p>AD compliance records</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/major-records/</span></code></p></td>
-<td><p>CRUD</p></td>
-<td><p>Major repair/alteration records</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</section>
-<section id="documents">
-<h2>Documents<a class="headerlink" href="#documents" title="Link to this heading">¶</a></h2>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Endpoint</p></th>
-<th class="head"><p>Methods</p></th>
-<th class="head"><p>Description</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/document-collections/</span></code></p></td>
-<td><p>CRUD</p></td>
-<td><p>Document collections</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/documents/</span></code></p></td>
-<td><p>CRUD</p></td>
-<td><p>Documents</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/document-images/</span></code></p></td>
-<td><p>CRUD</p></td>
-<td><p>Document images (individual pages)</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</section>
-<section id="public-no-auth-required">
-<h2>Public (No Auth Required)<a class="headerlink" href="#public-no-auth-required" title="Link to this heading">¶</a></h2>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Endpoint</p></th>
-<th class="head"><p>Methods</p></th>
-<th class="head"><p>Description</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/shared/{token}/</span></code></p></td>
-<td><p>GET</p></td>
-<td><p>Public aircraft summary (filtered by privilege level)</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/shared/{token}/logbook-entries/</span></code></p></td>
-<td><p>GET</p></td>
-<td><p>Paginated logbook (maintenance privilege only)</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</section>
-<section id="web-interface">
-<h2>Web Interface<a class="headerlink" href="#web-interface" title="Link to this heading">¶</a></h2>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>URL</p></th>
-<th class="head"><p>Description</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/</span></code></p></td>
-<td><p>Redirects to dashboard</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/dashboard/</span></code></p></td>
-<td><p>Fleet dashboard</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/aircraft/{id}/</span></code></p></td>
-<td><p>Aircraft detail page</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/shared/{token}/</span></code></p></td>
-<td><p>Public read-only aircraft view (no login required)</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/admin/</span></code></p></td>
-<td><p>Django admin interface</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/accounts/login/</span></code></p></td>
-<td><p>Login page</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</section>
-<section id="event-log">
-<h2>Event Log<a class="headerlink" href="#event-log" title="Link to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/api/aircraft/{id}/events/</span></code> returns <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">events:</span> <span class="pre">[...],</span> <span class="pre">total:</span> <span class="pre">N</span> <span class="pre">}</span></code>.</p>
-<p>Query parameters:</p>
+          <section id="per-aircraft-feature-flags">
+<h1>Per-Aircraft Feature Flags<a class="headerlink" href="#per-aircraft-feature-flags" title="Link to this heading">¶</a></h1>
+<p>Simple Aircraft Manager supports per-aircraft feature flags that allow individual features to be enabled or disabled independently — either globally by an administrator or per aircraft by the aircraft owner.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p>Feature flags control which tabs, cards, and actions are visible for a given aircraft. All features are <strong>enabled by default</strong>. Disabling a feature:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">limit</span></code> — max results, up to 200 (default 50)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">category</span></code> — filter by category: <code class="docutils literal notranslate"><span class="pre">hours</span></code>, <code class="docutils literal notranslate"><span class="pre">component</span></code>, <code class="docutils literal notranslate"><span class="pre">squawk</span></code>, <code class="docutils literal notranslate"><span class="pre">note</span></code>, <code class="docutils literal notranslate"><span class="pre">oil</span></code>, <code class="docutils literal notranslate"><span class="pre">fuel</span></code>, <code class="docutils literal notranslate"><span class="pre">logbook</span></code>, <code class="docutils literal notranslate"><span class="pre">ad</span></code>, <code class="docutils literal notranslate"><span class="pre">inspection</span></code>, <code class="docutils literal notranslate"><span class="pre">document</span></code>, <code class="docutils literal notranslate"><span class="pre">aircraft</span></code>, <code class="docutils literal notranslate"><span class="pre">role</span></code>, <code class="docutils literal notranslate"><span class="pre">major_record</span></code></p></li>
+<li><p>Hides the corresponding UI section (tab, card, or button) for that aircraft</p></li>
+<li><p>Enforces the restriction at the API level — the server rejects requests for disabled features</p></li>
+<li><p>Affects all users of that aircraft (owner, pilots, share link viewers)</p></li>
 </ul>
 </section>
-<section id="logbook-import-ai">
-<h2>Logbook Import (AI)<a class="headerlink" href="#logbook-import-ai" title="Link to this heading">¶</a></h2>
+<section id="known-features">
+<h2>Known Features<a class="headerlink" href="#known-features" title="Link to this heading">¶</a></h2>
 <div class="table-wrapper colwidths-auto docutils container">
 <table class="docutils align-default">
 <thead>
-<tr class="row-odd"><th class="head"><p>Endpoint</p></th>
-<th class="head"><p>Methods</p></th>
-<th class="head"><p>Description</p></th>
+<tr class="row-odd"><th class="head"><p>Feature key</p></th>
+<th class="head"><p>Controls</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/logbook-import/models/</span></code></p></td>
-<td><p>GET</p></td>
-<td><p>Available AI models</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">flight_tracking</span></code></p></td>
+<td><p>Flights tab and the <strong>Log Flight</strong> button in the aircraft header</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/logbook-import/</span></code></p></td>
-<td><p>POST</p></td>
-<td><p>Submit scanned page image for transcription</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">oil_consumption</span></code></p></td>
+<td><p>Oil sub-tab under the Health tab (records and consumption chart)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">fuel_consumption</span></code></p></td>
+<td><p>Fuel sub-tab under the Health tab (records and burn-rate chart)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">oil_analysis</span></code></p></td>
+<td><p>Oil Analysis sub-tab (lab report tracking and trend charts)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">airworthiness_enforcement</span></code></p></td>
+<td><p>Blocks <strong>Log Flight</strong> and <strong>Update Hours</strong> when aircraft is RED/grounded</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">sharing</span></code></p></td>
+<td><p>Share Links card on the Settings tab; existing share links stop working when disabled</p></td>
 </tr>
 </tbody>
 </table>
 </div>
+</section>
+<section id="resolution-order">
+<h2>Resolution Order<a class="headerlink" href="#resolution-order" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">feature_available(feature_name,</span> <span class="pre">aircraft)</span></code> in <code class="docutils literal notranslate"><span class="pre">core/features.py</span></code> resolves flags in this order:</p>
+<ol class="arabic simple">
+<li><p><strong>Global kill switch</strong> — if <code class="docutils literal notranslate"><span class="pre">feature_name</span></code> is in the <code class="docutils literal notranslate"><span class="pre">DISABLED_FEATURES</span></code> setting, returns <code class="docutils literal notranslate"><span class="pre">False</span></code> regardless of per-aircraft settings.</p></li>
+<li><p><strong>Per-aircraft override</strong> — if an <code class="docutils literal notranslate"><span class="pre">AircraftFeature</span></code> row exists for this aircraft and feature, returns its <code class="docutils literal notranslate"><span class="pre">enabled</span></code> field.</p></li>
+<li><p><strong>Default</strong> — returns <code class="docutils literal notranslate"><span class="pre">True</span></code> (all features on).</p></li>
+</ol>
+</section>
+<section id="global-disable-administrator">
+<h2>Global Disable (Administrator)<a class="headerlink" href="#global-disable-administrator" title="Link to this heading">¶</a></h2>
+<p>Set the <code class="docutils literal notranslate"><span class="pre">DISABLED_FEATURES</span></code> environment variable to a comma-separated list of feature keys:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">DISABLED_FEATURES</span><span class="o">=</span><span class="n">oil_analysis</span><span class="p">,</span><span class="n">fuel_consumption</span>
+</pre></div>
+</div>
+<p>In <code class="docutils literal notranslate"><span class="pre">settings.py</span></code> / <code class="docutils literal notranslate"><span class="pre">settings_prod.py</span></code> this maps to a <code class="docutils literal notranslate"><span class="pre">DISABLED_FEATURES</span></code> list. Features listed here are disabled for <strong>all</strong> aircraft and cannot be re-enabled by owners.</p>
+<p>See <a class="reference internal" href="configuration.html"><span class="std std-doc">configuration.md</span></a> for the full environment variable reference.</p>
+</section>
+<section id="per-aircraft-toggle-owner">
+<h2>Per-Aircraft Toggle (Owner)<a class="headerlink" href="#per-aircraft-toggle-owner" title="Link to this heading">¶</a></h2>
+<p>Aircraft owners can toggle features from the <strong>Settings</strong> tab of the aircraft detail page. Changes take effect immediately. The UI shows a toggle switch per feature; features that are globally disabled are hidden from this list.</p>
+<section id="api">
+<h3>API<a class="headerlink" href="#api" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">GET</span>  <span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">aircraft</span><span class="o">/</span><span class="p">{</span><span class="nb">id</span><span class="p">}</span><span class="o">/</span><span class="n">features</span><span class="o">/</span>
+<span class="n">POST</span> <span class="o">/</span><span class="n">api</span><span class="o">/</span><span class="n">aircraft</span><span class="o">/</span><span class="p">{</span><span class="nb">id</span><span class="p">}</span><span class="o">/</span><span class="n">features</span><span class="o">/</span>
+</pre></div>
+</div>
+<p><strong>GET</strong> returns the current state of all known features for the aircraft (including defaults for features that have no row in the database).</p>
+<p><strong>POST</strong> body:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">&quot;feature&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;oil_analysis&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Pilots can read feature state (GET). Only owners and admins can write (POST).</p>
+</section>
+</section>
+<section id="data-model">
+<h2>Data Model<a class="headerlink" href="#data-model" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">AircraftFeature</span></code> in <code class="docutils literal notranslate"><span class="pre">core/models.py</span></code>:</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">id</span></code></p></td>
+<td><p>UUID</p></td>
+<td><p>Primary key</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">aircraft</span></code></p></td>
+<td><p>FK → Aircraft</p></td>
+<td><p>The aircraft this flag applies to</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">feature</span></code></p></td>
+<td><p>CharField(50)</p></td>
+<td><p>Feature key (see Known Features table above)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">enabled</span></code></p></td>
+<td><p>BooleanField</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">True</span></code> = on, <code class="docutils literal notranslate"><span class="pre">False</span></code> = off</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">updated_at</span></code></p></td>
+<td><p>DateTimeField</p></td>
+<td><p>Last modification timestamp (auto)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">updated_by</span></code></p></td>
+<td><p>FK → User</p></td>
+<td><p>User who last changed the flag</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">unique_together</span> <span class="pre">=</span> <span class="pre">('aircraft',</span> <span class="pre">'feature')</span></code> — one row per aircraft/feature pair. Missing rows are treated as enabled (the default).</p>
+</section>
+<section id="checking-feature-state-in-code">
+<h2>Checking Feature State in Code<a class="headerlink" href="#checking-feature-state-in-code" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">core.features</span><span class="w"> </span><span class="kn">import</span> <span class="n">feature_available</span>
+
+<span class="c1"># Check without a specific aircraft (global kill switch only)</span>
+<span class="k">if</span> <span class="n">feature_available</span><span class="p">(</span><span class="s1">&#39;oil_analysis&#39;</span><span class="p">):</span>
+    <span class="o">...</span>
+
+<span class="c1"># Check for a specific aircraft (full resolution)</span>
+<span class="k">if</span> <span class="n">feature_available</span><span class="p">(</span><span class="s1">&#39;oil_analysis&#39;</span><span class="p">,</span> <span class="n">aircraft</span><span class="o">=</span><span class="n">aircraft_instance</span><span class="p">):</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>Use this helper in views, serializers, and services. Do not query <code class="docutils literal notranslate"><span class="pre">AircraftFeature</span></code> directly — the helper handles the global override and default fallback.</p>
+</section>
+<section id="checking-feature-state-in-frontend-alpine-js">
+<h2>Checking Feature State in Frontend (Alpine.js)<a class="headerlink" href="#checking-feature-state-in-frontend-alpine-js" title="Link to this heading">¶</a></h2>
+<p>Feature state is loaded as part of the aircraft detail page data and exposed as reactive getters in <code class="docutils literal notranslate"><span class="pre">aircraft-detail.js</span></code>:</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Getter</p></th>
+<th class="head"><p>Feature key</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">featureFlightTracking</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">flight_tracking</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">featureOilConsumption</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">oil_consumption</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">featureFuelConsumption</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">fuel_consumption</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">featureOilAnalysis</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">oil_analysis</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">featureAirworthinessEnforcement</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">airworthiness_enforcement</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">featureSharing</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sharing</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Use these with <code class="docutils literal notranslate"><span class="pre">x-show</span></code> in templates:</p>
+<div class="highlight-html notranslate"><div class="highlight"><pre><span></span><span class="p">&lt;</span><span class="nt">div</span> <span class="na">x-show</span><span class="o">=</span><span class="s">&quot;featureOilAnalysis&quot;</span><span class="p">&gt;</span>...<span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+</pre></div>
+</div>
+</section>
+<section id="adding-a-new-feature-flag">
+<h2>Adding a New Feature Flag<a class="headerlink" href="#adding-a-new-feature-flag" title="Link to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Add the feature key string to <code class="docutils literal notranslate"><span class="pre">KNOWN_FEATURES</span></code> in <code class="docutils literal notranslate"><span class="pre">core/models.py</span></code>.</p></li>
+<li><p>Add a row to the Known Features table in <code class="docutils literal notranslate"><span class="pre">docs/user-guide/sharing-and-access.rst</span></code> (user docs).</p></li>
+<li><p>Add a row to the Known Features table in this file.</p></li>
+<li><p>Add a reactive getter to <code class="docutils literal notranslate"><span class="pre">aircraft-detail.js</span></code> (follow the existing pattern).</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">feature_available(key,</span> <span class="pre">aircraft)</span></code> in any API view or service that should respect the flag.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">x-show=&quot;featureXxx&quot;</span></code> in templates to conditionally show the UI.</p></li>
+<li><p>Update <code class="docutils literal notranslate"><span class="pre">docs/features.md</span></code> if the feature is end-user-visible.</p></li>
+</ol>
 </section>
 </section>
 
@@ -550,23 +448,23 @@
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="data-model.html">
+          <a class="next-page" href="api-reference.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Data Model</div>
+                <div class="title">API Reference</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="feature-flags.html">
+          <a class="prev-page" href="plugins.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Per-Aircraft Feature Flags</div>
+                <div class="title">Plugin System</div>
                 
               </div>
             </a>
@@ -600,15 +498,19 @@
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">API Reference</a><ul>
-<li><a class="reference internal" href="#aircraft">Aircraft</a></li>
-<li><a class="reference internal" href="#components">Components</a></li>
-<li><a class="reference internal" href="#maintenance">Maintenance</a></li>
-<li><a class="reference internal" href="#documents">Documents</a></li>
-<li><a class="reference internal" href="#public-no-auth-required">Public (No Auth Required)</a></li>
-<li><a class="reference internal" href="#web-interface">Web Interface</a></li>
-<li><a class="reference internal" href="#event-log">Event Log</a></li>
-<li><a class="reference internal" href="#logbook-import-ai">Logbook Import (AI)</a></li>
+<li><a class="reference internal" href="#">Per-Aircraft Feature Flags</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#known-features">Known Features</a></li>
+<li><a class="reference internal" href="#resolution-order">Resolution Order</a></li>
+<li><a class="reference internal" href="#global-disable-administrator">Global Disable (Administrator)</a></li>
+<li><a class="reference internal" href="#per-aircraft-toggle-owner">Per-Aircraft Toggle (Owner)</a><ul>
+<li><a class="reference internal" href="#api">API</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#data-model">Data Model</a></li>
+<li><a class="reference internal" href="#checking-feature-state-in-code">Checking Feature State in Code</a></li>
+<li><a class="reference internal" href="#checking-feature-state-in-frontend-alpine-js">Checking Feature State in Frontend (Alpine.js)</a></li>
+<li><a class="reference internal" href="#adding-a-new-feature-flag">Adding a New Feature Flag</a></li>
 </ul>
 </li>
 </ul>

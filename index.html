@@ -215,6 +215,8 @@
 <li class="toctree-l1"><a class="reference internal" href="features.html">Features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
 <li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugin System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature-flags.html">Per-Aircraft Feature Flags</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api-reference.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data Model</a></li>
 </ul>
@@ -413,12 +415,16 @@ and individual owners.</p>
 <li class="toctree-l2"><a class="reference internal" href="features.html#oidc-authentication">OIDC Authentication</a></li>
 <li class="toctree-l2"><a class="reference internal" href="features.html#oil-fuel-tracking">Oil &amp; Fuel Tracking</a></li>
 <li class="toctree-l2"><a class="reference internal" href="features.html#major-records">Major Records</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#per-aircraft-feature-flags">Per-Aircraft Feature Flags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#plugin-system">Plugin System</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="architecture.html#technology-stack">Technology Stack</a></li>
 <li class="toctree-l2"><a class="reference internal" href="architecture.html#project-structure">Project Structure</a></li>
 <li class="toctree-l2"><a class="reference internal" href="architecture.html#frontend-architecture-alpine-js-mixin-pattern">Frontend Architecture (Alpine.js Mixin Pattern)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#plugin-system">Plugin System</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#per-aircraft-feature-flags">Per-Aircraft Feature Flags</a></li>
 <li class="toctree-l2"><a class="reference internal" href="architecture.html#airworthiness-calculation">Airworthiness Calculation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="architecture.html#aircraft-import-export">Aircraft Import / Export</a></li>
 <li class="toctree-l2"><a class="reference internal" href="architecture.html#content-security-policy">Content Security Policy</a></li>
@@ -433,7 +439,32 @@ and individual owners.</p>
 <li class="toctree-l2"><a class="reference internal" href="configuration.html#aircraft-import-export-optional">Aircraft Import / Export (Optional)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="configuration.html#oidc-authentication-optional">OIDC Authentication (Optional)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="configuration.html#ai-logbook-import-optional">AI Logbook Import (Optional)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#plugin-system-optional">Plugin System (Optional)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#per-aircraft-feature-flags">Per-Aircraft Feature Flags</a></li>
 <li class="toctree-l2"><a class="reference internal" href="configuration.html#testing-configuration">Testing Configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugin System</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="plugins.html#how-plugins-work">How Plugins Work</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins.html#plugin-discovery">Plugin Discovery</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins.html#writing-a-plugin">Writing a Plugin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins.html#frontend-integration-alpine-js">Frontend Integration (Alpine.js)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins.html#template-integration">Template Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins.html#adding-api-endpoints">Adding API Endpoints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins.html#packaging-as-a-python-package">Packaging as a Python Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins.html#plugin-checklist">Plugin Checklist</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="feature-flags.html">Per-Aircraft Feature Flags</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="feature-flags.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature-flags.html#known-features">Known Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature-flags.html#resolution-order">Resolution Order</a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature-flags.html#global-disable-administrator">Global Disable (Administrator)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature-flags.html#per-aircraft-toggle-owner">Per-Aircraft Toggle (Owner)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature-flags.html#data-model">Data Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature-flags.html#checking-feature-state-in-code">Checking Feature State in Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature-flags.html#checking-feature-state-in-frontend-alpine-js">Checking Feature State in Frontend (Alpine.js)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature-flags.html#adding-a-new-feature-flag">Adding a New Feature Flag</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="api-reference.html">API Reference</a><ul>

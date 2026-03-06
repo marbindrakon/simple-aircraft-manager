@@ -34,5 +34,7 @@ and individual owners.
    features
    architecture
    configuration
+   plugins
+   feature-flags
    api-reference
    data-model

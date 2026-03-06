@@ -215,6 +215,8 @@
 <li class="toctree-l1"><a class="reference internal" href="features.html">Features</a></li>
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Architecture</a></li>
 <li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugin System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature-flags.html">Per-Aircraft Feature Flags</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api-reference.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data Model</a></li>
 </ul>
@@ -301,7 +303,9 @@
 │   ├── urls.py                  # URL routing
 │   └── wsgi.py
 ├── core/                        # Core aircraft management
-│   ├── models.py                # Aircraft, AircraftNote, AircraftEvent, roles, share tokens
+│   ├── models.py                # Aircraft, AircraftNote, AircraftEvent, AircraftFeature, roles, share tokens
+│   ├── features.py              # feature_available() helper — per-aircraft feature flag resolution
+│   ├── plugins.py               # SAMPluginConfig base class + PluginRegistry singleton
 │   ├── views/                   # Views package (split from core/views.py)
 │   │   ├── __init__.py          # Re-exports all public names for backwards compatibility
 │   │   ├── aircraft.py          # AircraftViewSet (uses HealthAircraftActionsMixin)
@@ -323,7 +327,9 @@
 │   ├── export.py                # Aircraft export — builds manifest + streams .sam.zip
 │   ├── import_export.py         # Aircraft import — validation, ID remapping, background runner
 │   ├── oidc.py                  # OIDC backend + logout URL builder
-│   ├── context_processors.py    # Template context (OIDC_ENABLED, AIRCRAFT_CREATE_PERMISSION)
+│   ├── context_processors.py    # Template context (OIDC_ENABLED, plugin_registry, etc.)
+│   ├── templatetags/
+│   │   └── sam_plugins.py       # {% plugin_sub_tab_buttons %} / {% plugin_sub_tab_panels %}
 │   ├── management/commands/
 │   │   ├── export_aircraft.py   # CLI export command
 │   │   └── import_aircraft.py   # CLI import command
@@ -413,11 +419,25 @@
 <td><p><code class="docutils literal notranslate"><span class="pre">rolesMixin()</span></code></p></td>
 <td><p>Role management, public sharing toggle</p></td>
 </tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">aircraft-detail-features.js</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">featuresMixin()</span></code></p></td>
+<td><p>Per-aircraft feature flag toggles (Settings tab)</p></td>
+</tr>
 </tbody>
 </table>
 </div>
 <p>Composer: <code class="docutils literal notranslate"><span class="pre">aircraft-detail.js</span></code>. <strong>Never use <code class="docutils literal notranslate"><span class="pre">{...spread}</span></code> to merge mixins</strong> — it eagerly evaluates <code class="docutils literal notranslate"><span class="pre">get</span></code> properties. <code class="docutils literal notranslate"><span class="pre">mergeMixins()</span></code> preserves getter descriptors via <code class="docutils literal notranslate"><span class="pre">Object.getOwnPropertyDescriptors()</span></code>.</p>
+<p>Plugin mixins are loaded before built-in mixins. Plugin JS files push mixin factory functions onto <code class="docutils literal notranslate"><span class="pre">window.SAMPluginMixins</span></code>; the composer merges them first so plugin state is available on <code class="docutils literal notranslate"><span class="pre">this</span></code> inside built-in mixins.</p>
 <p>Shared utilities in <code class="docutils literal notranslate"><span class="pre">utils.js</span></code> (loaded globally via <code class="docutils literal notranslate"><span class="pre">base.html</span></code>): <code class="docutils literal notranslate"><span class="pre">getCookie</span></code>, <code class="docutils literal notranslate"><span class="pre">mergeMixins</span></code>, <code class="docutils literal notranslate"><span class="pre">apiRequest</span></code>, <code class="docutils literal notranslate"><span class="pre">showNotification</span></code>, <code class="docutils literal notranslate"><span class="pre">formatDate</span></code>, <code class="docutils literal notranslate"><span class="pre">formatHours</span></code>, <code class="docutils literal notranslate"><span class="pre">getAirworthinessClass/Text/Tooltip</span></code>, <code class="docutils literal notranslate"><span class="pre">getSquawkPriorityClass</span></code>, <code class="docutils literal notranslate"><span class="pre">formatApiError</span></code>.</p>
+</section>
+<section id="plugin-system">
+<h2>Plugin System<a class="headerlink" href="#plugin-system" title="Link to this heading">¶</a></h2>
+<p>SAM supports out-of-tree plugins — standalone Django apps that extend UI, API, and dashboard without patching core code. Plugins subclass <code class="docutils literal notranslate"><span class="pre">SAMPluginConfig</span></code> from <code class="docutils literal notranslate"><span class="pre">core/plugins.py</span></code>, which registers them with the <code class="docutils literal notranslate"><span class="pre">PluginRegistry</span></code> singleton during <code class="docutils literal notranslate"><span class="pre">AppConfig.ready()</span></code>.</p>
+<p>Discovery: <code class="docutils literal notranslate"><span class="pre">SAM_PLUGIN_DIR</span></code> (directory scan) and <code class="docutils literal notranslate"><span class="pre">SAM_PLUGINS</span></code> (explicit module list) env vars. In containers, <code class="docutils literal notranslate"><span class="pre">SAM_PLUGIN_PACKAGES</span></code> installs packages from PyPI before startup. See <a class="reference internal" href="plugins.html"><span class="std std-doc">plugins.md</span></a> for the full developer guide.</p>
+</section>
+<section id="per-aircraft-feature-flags">
+<h2>Per-Aircraft Feature Flags<a class="headerlink" href="#per-aircraft-feature-flags" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">AircraftFeature</span></code> rows in <code class="docutils literal notranslate"><span class="pre">core/models.py</span></code> store per-aircraft enable/disable state for each named feature. The <code class="docutils literal notranslate"><span class="pre">feature_available(feature_name,</span> <span class="pre">aircraft)</span></code> helper in <code class="docutils literal notranslate"><span class="pre">core/features.py</span></code> resolves flags in priority order: global <code class="docutils literal notranslate"><span class="pre">DISABLED_FEATURES</span></code> setting → per-aircraft row → default (enabled). See <a class="reference internal" href="feature-flags.html"><span class="std std-doc">feature-flags.md</span></a> for details.</p>
 </section>
 <section id="airworthiness-calculation">
 <h2>Airworthiness Calculation<a class="headerlink" href="#airworthiness-calculation" title="Link to this heading">¶</a></h2>
@@ -581,6 +601,8 @@
 <li><p>Verify production settings: <code class="docutils literal notranslate"><span class="pre">DJANGO_SECRET_KEY=test</span> <span class="pre">DJANGO_ALLOWED_HOSTS=localhost</span> <span class="pre">python</span> <span class="pre">manage.py</span> <span class="pre">check</span> <span class="pre">--settings=simple_aircraft_manager.settings_prod</span></code></p></li>
 <li><p>Register new models in <code class="docutils literal notranslate"><span class="pre">admin.py</span></code></p></li>
 <li><p>For new JS features, create <code class="docutils literal notranslate"><span class="pre">aircraft-detail-&lt;feature&gt;.js</span></code> and add it to the composer and template</p></li>
+<li><p>For new per-aircraft feature flags, add the key to <code class="docutils literal notranslate"><span class="pre">KNOWN_FEATURES</span></code> in <code class="docutils literal notranslate"><span class="pre">core/models.py</span></code>, add a getter in <code class="docutils literal notranslate"><span class="pre">aircraft-detail.js</span></code>, and document it in <code class="docutils literal notranslate"><span class="pre">docs/feature-flags.md</span></code> and <code class="docutils literal notranslate"><span class="pre">docs/user-guide/sharing-and-access.rst</span></code></p></li>
+<li><p>For new extension points in the plugin system, add class attributes to <code class="docutils literal notranslate"><span class="pre">SAMPluginConfig</span></code>, aggregation properties to <code class="docutils literal notranslate"><span class="pre">PluginRegistry</span></code>, and document them in <code class="docutils literal notranslate"><span class="pre">docs/plugins.md</span></code></p></li>
 </ol>
 </section>
 </section>
@@ -649,6 +671,8 @@
 </li>
 <li><a class="reference internal" href="#project-structure">Project Structure</a></li>
 <li><a class="reference internal" href="#frontend-architecture-alpine-js-mixin-pattern">Frontend Architecture (Alpine.js Mixin Pattern)</a></li>
+<li><a class="reference internal" href="#plugin-system">Plugin System</a></li>
+<li><a class="reference internal" href="#per-aircraft-feature-flags">Per-Aircraft Feature Flags</a></li>
 <li><a class="reference internal" href="#airworthiness-calculation">Airworthiness Calculation</a></li>
 <li><a class="reference internal" href="#aircraft-import-export">Aircraft Import / Export</a><ul>
 <li><a class="reference internal" href="#archive-format-sam-zip">Archive format (<code class="docutils literal notranslate"><span class="pre">.sam.zip</span></code>)</a></li>

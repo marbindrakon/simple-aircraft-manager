@@ -215,6 +215,8 @@
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
 <li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugin System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature-flags.html">Per-Aircraft Feature Flags</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api-reference.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data Model</a></li>
 </ul>
@@ -528,6 +530,27 @@ python<span class="w"> </span>manage.py<span class="w"> </span>import_aircraft<s
 <li><p>Visible on maintenance-level share links</p></li>
 </ul>
 </section>
+<section id="per-aircraft-feature-flags">
+<h2>Per-Aircraft Feature Flags<a class="headerlink" href="#per-aircraft-feature-flags" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Owners can enable or disable individual features per aircraft from the Settings tab</p></li>
+<li><p>All features are on by default</p></li>
+<li><p>Available flags: Flight Tracking, Oil Consumption, Fuel Consumption, Oil Analysis, Airworthiness Enforcement, Public Sharing</p></li>
+<li><p>Administrators can globally disable features for all aircraft using the <code class="docutils literal notranslate"><span class="pre">DISABLED_FEATURES</span></code> environment variable; globally disabled features cannot be re-enabled per aircraft</p></li>
+</ul>
+<p>See the <a class="reference internal" href="feature-flags.html"><span class="std std-doc">Feature Flags developer reference</span></a> and the <a class="reference internal" href="user-guide/sharing-and-access.html"><span class="doc std std-doc">Settings tab user guide</span></a> for details.</p>
+</section>
+<section id="plugin-system">
+<h2>Plugin System<a class="headerlink" href="#plugin-system" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Out-of-tree plugins extend the UI and API without modifying core source files</p></li>
+<li><p>Plugins are standalone Django apps that subclass <code class="docutils literal notranslate"><span class="pre">SAMPluginConfig</span></code></p></li>
+<li><p>Extension points: global navigation links, management views, aircraft detail tabs (standalone or sub-tabs inside existing groups), Alpine.js mixins, dashboard tiles, API endpoints, and page URL patterns</p></li>
+<li><p>Discovery: directory scan (<code class="docutils literal notranslate"><span class="pre">SAM_PLUGIN_DIR</span></code>) or explicit module list (<code class="docutils literal notranslate"><span class="pre">SAM_PLUGINS</span></code>) env vars</p></li>
+<li><p>Container packaging: <code class="docutils literal notranslate"><span class="pre">SAM_PLUGIN_PACKAGES</span></code> installs plugin packages from PyPI at startup</p></li>
+</ul>
+<p>See the <a class="reference internal" href="plugins.html"><span class="std std-doc">Plugin System developer guide</span></a> for full documentation.</p>
+</section>
 </section>
 
         </article>
@@ -608,6 +631,8 @@ python<span class="w"> </span>manage.py<span class="w"> </span>import_aircraft<s
 <li><a class="reference internal" href="#oidc-authentication">OIDC Authentication</a></li>
 <li><a class="reference internal" href="#oil-fuel-tracking">Oil &amp; Fuel Tracking</a></li>
 <li><a class="reference internal" href="#major-records">Major Records</a></li>
+<li><a class="reference internal" href="#per-aircraft-feature-flags">Per-Aircraft Feature Flags</a></li>
+<li><a class="reference internal" href="#plugin-system">Plugin System</a></li>
 </ul>
 </li>
 </ul>

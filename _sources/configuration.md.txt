@@ -86,6 +86,30 @@ Enables AI-assisted transcription of scanned maintenance logbook pages.
 
 If neither `ANTHROPIC_API_KEY` nor `OLLAMA_BASE_URL` is set, the logbook import feature is inactive.
 
+## Plugin System (Optional)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SAM_PLUGIN_DIR` | `/plugins` | Directory scanned for plugin packages at startup. Any subdirectory containing `__init__.py` is treated as a plugin module and added to `INSTALLED_APPS`. |
+| `SAM_PLUGINS` | — | Comma-separated Python module names to add directly to `INSTALLED_APPS` (useful when the plugin is installed as a package and you only need to name the module). |
+| `SAM_PLUGIN_PACKAGES` | — | Comma-separated pip requirement specifiers installed at container startup before migrations run (e.g. `my-sam-plugin==1.2.0,other-plugin>=0.5`). Triggers `collectstatic` automatically. |
+
+See [plugins.md](plugins.md) for the complete plugin development guide.
+
+## Per-Aircraft Feature Flags
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DISABLED_FEATURES` | — | Comma-separated feature keys to disable globally for all aircraft. Disabled features cannot be re-enabled per aircraft by owners. Valid keys: `flight_tracking`, `oil_consumption`, `fuel_consumption`, `oil_analysis`, `airworthiness_enforcement`, `sharing`. |
+
+Example — disable oil analysis and fuel tracking instance-wide:
+
+```
+DISABLED_FEATURES=oil_analysis,fuel_consumption
+```
+
+See [feature-flags.md](feature-flags.md) for the full feature flag reference.
+
 ## Testing Configuration
 
 Verify production settings without a live database:
