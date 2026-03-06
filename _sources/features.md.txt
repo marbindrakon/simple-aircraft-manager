@@ -194,10 +194,11 @@ See [configuration.md](configuration.md) for required environment variables.
 
 - Owners can enable or disable individual features per aircraft from the Settings tab
 - All features are on by default
-- Available flags: Flight Tracking, Oil Consumption, Fuel Consumption, Oil Analysis, Airworthiness Enforcement, Public Sharing
+- Built-in flags: Flight Tracking, Oil Consumption, Fuel Consumption, Oil Analysis, Airworthiness Enforcement, Public Sharing
+- Plugins may register additional feature flags via `aircraft_features` on their `SAMPluginConfig`; plugin features appear in the Settings tab alongside built-in ones
 - Administrators can globally disable features for all aircraft using the `DISABLED_FEATURES` environment variable; globally disabled features cannot be re-enabled per aircraft
 
-See the [Feature Flags developer reference](feature-flags.md) and the [Settings tab user guide](user-guide/sharing-and-access) for details.
+See the [Plugin System guide](plugins.md) for the `aircraft_features` API and the [Settings tab user guide](user-guide/sharing-and-access) for details.
 
 ## Plugin System
 

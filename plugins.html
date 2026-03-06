@@ -355,6 +355,16 @@
 
     <span class="n">aircraft_js_files</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;js/my-plugin-mixin.js&#39;</span><span class="p">]</span>
 
+    <span class="n">aircraft_features</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="c1"># Prefix slugs with your plugin name to avoid collisions with</span>
+            <span class="c1"># other plugins. Convention: &lt;plugin_name&gt;_&lt;feature&gt;.</span>
+            <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;engine_monitor_alerts&#39;</span><span class="p">,</span>   <span class="c1"># slug used in DB, API, and JS</span>
+            <span class="s1">&#39;label&#39;</span><span class="p">:</span> <span class="s1">&#39;Engine Monitor Alerts&#39;</span><span class="p">,</span>  <span class="c1"># shown in the Settings tab</span>
+            <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="s1">&#39;EGT/CHT threshold alerts and notifications&#39;</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">]</span>
+
     <span class="n">global_dashboard_tiles</span> <span class="o">=</span> <span class="p">[</span>
         <span class="p">{</span><span class="s1">&#39;template&#39;</span><span class="p">:</span> <span class="s1">&#39;my_plugin/includes/dashboard_fleet_summary.html&#39;</span><span class="p">},</span>
     <span class="p">]</span>
@@ -473,6 +483,49 @@
 </tbody>
 </table>
 </div>
+</section>
+<section id="aircraft-features">
+<h4><code class="docutils literal notranslate"><span class="pre">aircraft_features</span></code><a class="headerlink" href="#aircraft-features" title="Link to this heading">¶</a></h4>
+<p>Per-aircraft feature flags contributed by the plugin. Each entry is a dict with:</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Key</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Required</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+<td><p>str</p></td>
+<td><p>Yes</p></td>
+<td><p>Unique slug. Must be globally unique across builtins and all plugins. Used in the DB, API, and JS (<code class="docutils literal notranslate"><span class="pre">this.features['name']</span></code>). <strong>Strongly recommended: prefix with your plugin name</strong> (e.g. <code class="docutils literal notranslate"><span class="pre">engine_monitor_limits</span></code> not <code class="docutils literal notranslate"><span class="pre">limits</span></code>) — see note below.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">label</span></code></p></td>
+<td><p>str</p></td>
+<td><p>Yes</p></td>
+<td><p>Human-readable name shown in the Settings tab toggle list.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">description</span></code></p></td>
+<td><p>str</p></td>
+<td><p>Yes</p></td>
+<td><p>One-line description shown below the label in the Settings tab.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<blockquote>
+<div><p><strong>Namespace your slugs.</strong> Feature names share a single global namespace across all installed plugins and built-in features. A generic name like <code class="docutils literal notranslate"><span class="pre">limits</span></code> or <code class="docutils literal notranslate"><span class="pre">alerts</span></code> will collide silently with another plugin that chose the same name, causing one plugin to control the other’s toggle. Always prefix with your plugin identifier: <code class="docutils literal notranslate"><span class="pre">engine_monitor_limits</span></code>, <code class="docutils literal notranslate"><span class="pre">engine_monitor_alerts</span></code>, etc. The convention is <code class="docutils literal notranslate"><span class="pre">&lt;plugin_name&gt;_&lt;feature&gt;</span></code> using the same snake_case name as your Django app.</p>
+</div></blockquote>
+<p>Registered features behave identically to built-in features:</p>
+<ul class="simple">
+<li><p>All features default to <strong>enabled</strong>. Owners can toggle them on the aircraft Settings tab.</p></li>
+<li><p>Admins can globally disable a feature via the <code class="docutils literal notranslate"><span class="pre">DISABLED_FEATURES</span></code> environment variable.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">feature_available('engine_monitor_alerts',</span> <span class="pre">aircraft)</span></code> in Python for server-side checks.</p></li>
+<li><p>Access the boolean state in Alpine.js via <code class="docutils literal notranslate"><span class="pre">this.features['engine_monitor_alerts']</span></code> (returns <code class="docutils literal notranslate"><span class="pre">undefined</span></code> — truthy — until features are loaded, so <code class="docutils literal notranslate"><span class="pre">!==</span> <span class="pre">false</span></code> is the safe guard).</p></li>
+<li><p>Plugin tab <code class="docutils literal notranslate"><span class="pre">visibility</span></code> expressions can reference feature state: <code class="docutils literal notranslate"><span class="pre">'features[&quot;engine_monitor_alerts&quot;]</span> <span class="pre">!==</span> <span class="pre">false'</span></code>.</p></li>
+</ul>
 </section>
 <section id="aircraft-js-files">
 <h4><code class="docutils literal notranslate"><span class="pre">aircraft_js_files</span></code><a class="headerlink" href="#aircraft-js-files" title="Link to this heading">¶</a></h4>
@@ -608,6 +661,14 @@
 <td><p>bool</p></td>
 <td><p>Viewed via share link (no auth)</p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">features</span></code></p></td>
+<td><p>object</p></td>
+<td><p>Dict of <code class="docutils literal notranslate"><span class="pre">{slug:</span> <span class="pre">bool}</span></code> for all registered features (builtin + plugin). Safe guard: <code class="docutils literal notranslate"><span class="pre">features['my_slug']</span> <span class="pre">!==</span> <span class="pre">false</span></code> (undefined = enabled).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">featureCatalog</span></code></p></td>
+<td><p>array</p></td>
+<td><p>Ordered list of <code class="docutils literal notranslate"><span class="pre">{name,</span> <span class="pre">label,</span> <span class="pre">description}</span></code> for all registered features. Populated from the API; iterate this to render feature UI.</p></td>
+</tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">featureFlightTracking</span></code></p></td>
 <td><p>bool</p></td>
 <td><p>Flight Tracking feature enabled</p></td>
@@ -634,6 +695,25 @@
 </tr>
 </tbody>
 </table>
+</div>
+<p>For <strong>plugin-defined features</strong>, read the boolean from <code class="docutils literal notranslate"><span class="pre">this.features</span></code>:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="c1">// In a plugin mixin or x-show expression:</span>
+<span class="nx">get</span><span class="w"> </span><span class="nx">engineMonitorEnabled</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">features</span><span class="p">[</span><span class="s1">&#39;engine_monitor_alerts&#39;</span><span class="p">]</span><span class="w"> </span><span class="o">!==</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<span class="p">},</span>
+</pre></div>
+</div>
+<p>Or in a template <code class="docutils literal notranslate"><span class="pre">aircraft_tabs</span></code> entry:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">aircraft_tabs</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span>
+        <span class="s1">&#39;key&#39;</span><span class="p">:</span> <span class="s1">&#39;engine-monitor&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;label&#39;</span><span class="p">:</span> <span class="s1">&#39;Engine Monitor&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;primary_group&#39;</span><span class="p">:</span> <span class="s1">&#39;engine-monitor&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;template&#39;</span><span class="p">:</span> <span class="s1">&#39;my_plugin/includes/detail_engine_monitor.html&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;visibility&#39;</span><span class="p">:</span> <span class="s1">&#39;features[&quot;engine_monitor_alerts&quot;] !== false&#39;</span><span class="p">,</span>
+    <span class="p">},</span>
+<span class="p">]</span>
+</pre></div>
 </div>
 <p>Use these to conditionally show/hide content via <code class="docutils literal notranslate"><span class="pre">x-show</span></code> in your templates.</p>
 </section>
@@ -710,6 +790,7 @@
 <li><p>[ ] Subclass <code class="docutils literal notranslate"><span class="pre">SAMPluginConfig</span></code> (not <code class="docutils literal notranslate"><span class="pre">AppConfig</span></code>)</p></li>
 <li><p>[ ] Set <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">verbose_name</span></code>, <code class="docutils literal notranslate"><span class="pre">default_auto_field</span></code></p></li>
 <li><p>[ ] Declare extension points as class attributes (only what you need)</p></li>
+<li><p>[ ] <code class="docutils literal notranslate"><span class="pre">aircraft_features</span></code> entries have unique slugs and include <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">label</span></code>, and <code class="docutils literal notranslate"><span class="pre">description</span></code></p></li>
 <li><p>[ ] JS mixin pushed to <code class="docutils literal notranslate"><span class="pre">window.SAMPluginMixins</span></code>; sub-tab keys registered in <code class="docutils literal notranslate"><span class="pre">window.SAMPluginTabMappings</span></code></p></li>
 <li><p>[ ] Static files in <code class="docutils literal notranslate"><span class="pre">&lt;app&gt;/static/</span></code>; template files in <code class="docutils literal notranslate"><span class="pre">&lt;app&gt;/templates/&lt;app&gt;/</span></code></p></li>
 <li><p>[ ] API viewsets use <code class="docutils literal notranslate"><span class="pre">AircraftScopedMixin</span></code> + <code class="docutils literal notranslate"><span class="pre">EventLoggingMixin</span></code></p></li>
@@ -785,6 +866,7 @@
 <li><a class="reference internal" href="#nav-items"><code class="docutils literal notranslate"><span class="pre">nav_items</span></code></a></li>
 <li><a class="reference internal" href="#management-views"><code class="docutils literal notranslate"><span class="pre">management_views</span></code></a></li>
 <li><a class="reference internal" href="#aircraft-tabs"><code class="docutils literal notranslate"><span class="pre">aircraft_tabs</span></code></a></li>
+<li><a class="reference internal" href="#aircraft-features"><code class="docutils literal notranslate"><span class="pre">aircraft_features</span></code></a></li>
 <li><a class="reference internal" href="#aircraft-js-files"><code class="docutils literal notranslate"><span class="pre">aircraft_js_files</span></code></a></li>
 <li><a class="reference internal" href="#aircraft-dashboard-tiles"><code class="docutils literal notranslate"><span class="pre">aircraft_dashboard_tiles</span></code></a></li>
 <li><a class="reference internal" href="#global-dashboard-tiles"><code class="docutils literal notranslate"><span class="pre">global_dashboard_tiles</span></code></a></li>

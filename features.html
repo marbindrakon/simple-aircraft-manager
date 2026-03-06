@@ -535,10 +535,11 @@ python<span class="w"> </span>manage.py<span class="w"> </span>import_aircraft<s
 <ul class="simple">
 <li><p>Owners can enable or disable individual features per aircraft from the Settings tab</p></li>
 <li><p>All features are on by default</p></li>
-<li><p>Available flags: Flight Tracking, Oil Consumption, Fuel Consumption, Oil Analysis, Airworthiness Enforcement, Public Sharing</p></li>
+<li><p>Built-in flags: Flight Tracking, Oil Consumption, Fuel Consumption, Oil Analysis, Airworthiness Enforcement, Public Sharing</p></li>
+<li><p>Plugins may register additional feature flags via <code class="docutils literal notranslate"><span class="pre">aircraft_features</span></code> on their <code class="docutils literal notranslate"><span class="pre">SAMPluginConfig</span></code>; plugin features appear in the Settings tab alongside built-in ones</p></li>
 <li><p>Administrators can globally disable features for all aircraft using the <code class="docutils literal notranslate"><span class="pre">DISABLED_FEATURES</span></code> environment variable; globally disabled features cannot be re-enabled per aircraft</p></li>
 </ul>
-<p>See the <a class="reference internal" href="feature-flags.html"><span class="std std-doc">Feature Flags developer reference</span></a> and the <a class="reference internal" href="user-guide/sharing-and-access.html"><span class="doc std std-doc">Settings tab user guide</span></a> for details.</p>
+<p>See the <a class="reference internal" href="plugins.html"><span class="std std-doc">Plugin System guide</span></a> for the <code class="docutils literal notranslate"><span class="pre">aircraft_features</span></code> API and the <a class="reference internal" href="user-guide/sharing-and-access.html"><span class="doc std std-doc">Settings tab user guide</span></a> for details.</p>
 </section>
 <section id="plugin-system">
 <h2>Plugin System<a class="headerlink" href="#plugin-system" title="Link to this heading">¶</a></h2>

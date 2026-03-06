@@ -35,6 +35,9 @@ this aircraft. All features are enabled by default.
      - The Share Links card below. When disabled, existing share links stop
        working and new links cannot be created.
 
+If plugins are installed, additional feature toggles may appear in this list.
+Each plugin-defined feature includes its own label and description.
+
 Toggle any feature on or off with the switch on the right side of each row.
 Changes take effect immediately for all users of that aircraft.
 
