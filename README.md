@@ -2,6 +2,8 @@
 
 > **Note**: This codebase was generated with [Claude](https://claude.ai), Anthropic's AI assistant, using [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
+> **Warning**: This application is under heavy development and breaking changes should be expected. In particular, database schema migrations will be squashed prior to the initial release. A tagged pre-release checkpoint will be provided to allow existing deployments to migrate cleanly before the squash lands.
+
 ## Overview
 
 Simple Aircraft Manager is an open-source, self-hosted solution for managing records and status for small fleets of aircraft. The goal of Simple Aircraft Manager is to create a streamlined experience to track aircraft records and status for individual owners and small-medium sized flying clubs with an emphasis on making it easy to share information with outsiders (mechanics, prospective buyers, etc).
