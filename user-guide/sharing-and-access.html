@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Logbook Import" href="logbook-import.html"><link rel="prev" title="Repairs &amp; Alterations" href="major-records.html">
 
     <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
-        <title>Sharing &amp; Access - Simple Aircraft Manager</title>
+        <title>Settings - Simple Aircraft Manager</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -205,7 +205,7 @@
 <li class="toctree-l1"><a class="reference internal" href="flights.html">Flight Log</a></li>
 <li class="toctree-l1"><a class="reference internal" href="documents.html">Documents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="major-records.html">Repairs &amp; Alterations</a></li>
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Sharing &amp; Access</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Settings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="logbook-import.html">Logbook Import</a></li>
 <li class="toctree-l1"><a class="reference internal" href="airworthiness.html">Airworthiness Status</a></li>
 <li class="toctree-l1"><a class="reference internal" href="management.html">Management Portal</a></li>
@@ -255,12 +255,73 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="sharing-access">
-<h1>Sharing &amp; Access<a class="headerlink" href="#sharing-access" title="Link to this heading">¶</a></h1>
-<p>The Sharing &amp; Access tab (visible only to aircraft owners) lets you manage who
-can access the aircraft and create public share links for read-only viewing.</p>
+          <section id="settings">
+<h1>Settings<a class="headerlink" href="#settings" title="Link to this heading">¶</a></h1>
+<p>The <strong>Settings</strong> tab (visible only to aircraft owners) lets you manage feature
+flags, share links, user roles, and data export for an aircraft.</p>
+<section id="feature-settings">
+<h2>Feature Settings<a class="headerlink" href="#feature-settings" title="Link to this heading">¶</a></h2>
+<p>The Feature Settings card lets you enable or disable individual features for
+this aircraft. All features are enabled by default.</p>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 70.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Feature</p></th>
+<th class="head"><p>What it controls</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Flight Tracking</p></td>
+<td><p>The Flights tab and the <strong>Log Flight</strong> button in the header.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Oil Consumption</p></td>
+<td><p>The Oil sub-tab under the Health tab (oil records and consumption chart).</p></td>
+</tr>
+<tr class="row-even"><td><p>Fuel Consumption</p></td>
+<td><p>The Fuel sub-tab under the Health tab (fuel records and burn rate chart).</p></td>
+</tr>
+<tr class="row-odd"><td><p>Oil Analysis</p></td>
+<td><p>The Oil Analysis sub-tab (lab report tracking and trend charts).</p></td>
+</tr>
+<tr class="row-even"><td><p>Airworthiness Enforcement</p></td>
+<td><p>When enabled, the <strong>Log Flight</strong> and <strong>Update Hours</strong> actions are blocked
+while the aircraft’s airworthiness status is RED (grounded). Disable this
+if you want to record hours for ground operations or training devices
+where the airworthiness status is not relevant.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Public Sharing</p></td>
+<td><p>The Share Links card below. When disabled, existing share links stop
+working and new links cannot be created.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Toggle any feature on or off with the switch on the right side of each row.
+Changes take effect immediately for all users of that aircraft.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>An administrator can globally disable features for all aircraft at once
+by setting the <code class="docutils literal notranslate"><span class="pre">DISABLED_FEATURES</span></code> environment variable. Features that
+are disabled globally cannot be re-enabled per aircraft.</p>
+</div>
+</section>
 <section id="share-links">
 <h2>Share Links<a class="headerlink" href="#share-links" title="Link to this heading">¶</a></h2>
+<p>Share links allow anyone with the URL to view aircraft data without logging in.
+This is useful for sharing status with mechanics, insurance companies, or
+prospective buyers.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The Share Links card is only visible when the <strong>Public Sharing</strong> feature
+is enabled for this aircraft.</p>
+</div>
+</section>
+<section id="id1">
+<h2>Share Links<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
 <p>Share links allow anyone with the URL to view aircraft data without logging in.
 This is useful for sharing status with mechanics, insurance companies, or
 prospective buyers.</p>
@@ -465,8 +526,10 @@ owner).</p></li>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">Sharing &amp; Access</a><ul>
-<li><a class="reference internal" href="#share-links">Share Links</a><ul>
+<li><a class="reference internal" href="#">Settings</a><ul>
+<li><a class="reference internal" href="#feature-settings">Feature Settings</a></li>
+<li><a class="reference internal" href="#share-links">Share Links</a></li>
+<li><a class="reference internal" href="#id1">Share Links</a><ul>
 <li><a class="reference internal" href="#creating-a-share-link">Creating a Share Link</a></li>
 <li><a class="reference internal" href="#managing-share-links">Managing Share Links</a></li>
 <li><a class="reference internal" href="#what-viewers-see">What Viewers See</a></li>

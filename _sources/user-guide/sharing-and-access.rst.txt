@@ -1,8 +1,60 @@
-Sharing & Access
-================
+Settings
+========
 
-The Sharing & Access tab (visible only to aircraft owners) lets you manage who
-can access the aircraft and create public share links for read-only viewing.
+The **Settings** tab (visible only to aircraft owners) lets you manage feature
+flags, share links, user roles, and data export for an aircraft.
+
+.. TODO: Screenshot of the Settings tab showing Feature Settings, Share Links, and User Roles sections
+
+Feature Settings
+----------------
+
+The Feature Settings card lets you enable or disable individual features for
+this aircraft. All features are enabled by default.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Feature
+     - What it controls
+   * - Flight Tracking
+     - The Flights tab and the **Log Flight** button in the header.
+   * - Oil Consumption
+     - The Oil sub-tab under the Health tab (oil records and consumption chart).
+   * - Fuel Consumption
+     - The Fuel sub-tab under the Health tab (fuel records and burn rate chart).
+   * - Oil Analysis
+     - The Oil Analysis sub-tab (lab report tracking and trend charts).
+   * - Airworthiness Enforcement
+     - When enabled, the **Log Flight** and **Update Hours** actions are blocked
+       while the aircraft's airworthiness status is RED (grounded). Disable this
+       if you want to record hours for ground operations or training devices
+       where the airworthiness status is not relevant.
+   * - Public Sharing
+     - The Share Links card below. When disabled, existing share links stop
+       working and new links cannot be created.
+
+Toggle any feature on or off with the switch on the right side of each row.
+Changes take effect immediately for all users of that aircraft.
+
+.. note::
+   An administrator can globally disable features for all aircraft at once
+   by setting the ``DISABLED_FEATURES`` environment variable. Features that
+   are disabled globally cannot be re-enabled per aircraft.
+
+.. TODO: Screenshot of the Feature Settings card with toggle switches
+
+Share Links
+-----------
+
+Share links allow anyone with the URL to view aircraft data without logging in.
+This is useful for sharing status with mechanics, insurance companies, or
+prospective buyers.
+
+.. note::
+   The Share Links card is only visible when the **Public Sharing** feature
+   is enabled for this aircraft.
 
 .. TODO: Screenshot of the Sharing & Access tab showing share links and user roles sections
 
