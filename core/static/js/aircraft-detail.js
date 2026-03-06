@@ -1,5 +1,10 @@
 function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
+    // Collect plugin mixins registered via window.SAMPluginMixins.push(fn)
+    const _pluginMixinObjects = (window.SAMPluginMixins || []).map(fn => fn());
+
     return mergeMixins(
+        // Plugin mixins (before built-ins so built-ins win on key collision)
+        ..._pluginMixinObjects,
         // Feature mixins (order doesn't matter — all end up on one object)
         aircraftSwitcherMixin(),
         componentsMixin(),
@@ -36,8 +41,9 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
             activeTab: 'overview',
             features: {},
 
-            // Tab consolidation: map activeTab values to primary tab groups
-            _primaryTabMap: {
+            // Tab consolidation: map activeTab values to primary tab groups.
+            // Plugin sub-tabs registered via window.SAMPluginTabMappings are merged in.
+            _primaryTabMap: Object.assign({
                 'overview': 'overview',
                 'components': 'components',
                 'squawks': 'squawks',
@@ -51,7 +57,7 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
                 'documents': 'documents',
                 'roles': 'roles',
                 'flights': 'flights',
-            },
+            }, window.SAMPluginTabMappings || {}),
             _primaryTabDefaults: {
                 'overview': 'overview',
                 'components': 'components',

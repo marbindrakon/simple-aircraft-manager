@@ -14,6 +14,8 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import importlib
+
 from django.contrib import admin
 from django.conf.urls.static import static
 from django.conf import settings
@@ -32,6 +34,28 @@ for entry in core_routes + health_routes:
     prefix, viewset = entry[0], entry[1]
     kwargs = entry[2] if len(entry) > 2 else {}
     router.register(prefix, viewset, **kwargs)
+
+# Auto-register API routes from SAM plugins.
+# Plugins may provide ROUTER_REGISTRATIONS in their api_urls.py (preferred)
+# or urls.py (following the same pattern as core/health).
+# Plugins with api_url_prefix set on their AppConfig are scanned automatically.
+from django.apps import apps as _django_apps
+for _app_config in _django_apps.get_app_configs():
+    if not getattr(_app_config, 'sam_plugin', False):
+        continue
+    # Try api_urls.py first, then fall back to urls.py
+    _registered = False
+    for _urls_mod_name in (f'{_app_config.name}.api_urls', f'{_app_config.name}.urls'):
+        try:
+            _plugin_urls = importlib.import_module(_urls_mod_name)
+            for _entry in getattr(_plugin_urls, 'ROUTER_REGISTRATIONS', []):
+                _prefix, _viewset = _entry[0], _entry[1]
+                _kwargs = _entry[2] if len(_entry) > 2 else {}
+                router.register(_prefix, _viewset, **_kwargs)
+            _registered = True
+            break
+        except ImportError:
+            continue
 
 
 urlpatterns = [
@@ -62,4 +86,16 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls')),
     # Conditionally include OIDC URLs if OIDC is enabled
     *([path('oidc/', include('mozilla_django_oidc.urls'))] if getattr(settings, 'OIDC_ENABLED', False) else []),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
+# Auto-include page URLs from SAM plugins that declare a url_prefix.
+for _app_config in _django_apps.get_app_configs():
+    if getattr(_app_config, 'sam_plugin', False) and getattr(_app_config, 'url_prefix', None):
+        try:
+            urlpatterns.append(
+                path(f'{_app_config.url_prefix}/', include(f'{_app_config.name}.urls'))
+            )
+        except Exception:
+            pass  # Don't crash startup if a plugin's page URLs fail to load
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

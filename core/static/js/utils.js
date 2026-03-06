@@ -1,3 +1,13 @@
+// Plugin mixin registry — plugins push factory functions before aircraft-detail.js loads.
+// Usage in a plugin's JS file:
+//   window.SAMPluginMixins.push(function myPluginMixin() { return { ... }; });
+window.SAMPluginMixins = window.SAMPluginMixins || [];
+
+// Plugin tab mappings — plugins register sub-tab→primary-group mappings.
+// Usage in a plugin's JS file:
+//   window.SAMPluginTabMappings['my-sub-tab'] = 'my-primary-group';
+window.SAMPluginTabMappings = window.SAMPluginTabMappings || {};
+
 // Merge multiple objects preserving getter/setter descriptors.
 // The spread operator (...) evaluates getters eagerly, which breaks
 // cross-mixin references. This copies property descriptors intact so

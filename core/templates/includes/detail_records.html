@@ -1,3 +1,4 @@
+        {% load sam_plugins %}
         <!-- Repairs & Alterations Tab (Records group) -->
         <div x-show="activeTab === 'major-records'" class="pf-v5-c-page__main-section">
             <div class="tab-subtab-bar">
@@ -8,6 +9,7 @@
                     <div class="pf-v5-c-toggle-group__item">
                         <button class="pf-v5-c-toggle-group__button pf-m-selected">Repairs &amp; Alterations</button>
                     </div>
+                    {% plugin_sub_tab_buttons "records" %}
                 </div>
                 <div x-show="isOwner" style="display: flex; gap: 0.5rem;">
                     <button class="pf-v5-c-button pf-m-primary" @click="openMajorRecordModal('repair')">
@@ -571,4 +573,5 @@
                 </footer>
             </div>
         </div>
+        {% plugin_sub_tab_panels "records" %}
 

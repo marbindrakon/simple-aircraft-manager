@@ -212,6 +212,15 @@
                         <span class="pf-v5-c-tabs__item-text">Settings</span>
                     </button>
                 </li>
+                {% for plugin_tab in plugin_registry.standalone_aircraft_tabs %}
+                <li class="pf-v5-c-tabs__item"
+                    {% if plugin_tab.visibility %}x-show="{{ plugin_tab.visibility }}"{% endif %}
+                    :class="{ 'pf-m-current': activePrimaryTab === '{{ plugin_tab.key }}' }">
+                    <button class="pf-v5-c-tabs__link" @click="switchPrimaryTab('{{ plugin_tab.key }}')">
+                        <span class="pf-v5-c-tabs__item-text">{{ plugin_tab.label }}</span>
+                    </button>
+                </li>
+                {% endfor %}
             </ul>
             <button class="pf-v5-c-tabs__scroll-button" aria-label="Scroll tabs right"
                     :disabled="!canScrollRight" @click="scrollTabsRight()">
@@ -231,6 +240,9 @@
         {% include "includes/detail_roles.html" %}
         {% include "includes/detail_flights.html" %}
 
+        {% for plugin_tab in plugin_registry.standalone_aircraft_tabs %}
+        {% include plugin_tab.template %}
+        {% endfor %}
 
     <!-- Aircraft Modal -->
     {% include 'includes/aircraft_modal.html' %}
@@ -258,6 +270,9 @@
 <script src="{% static 'js/aircraft-detail-flights.js' %}"></script>
 <script src="{% static 'js/aircraft-detail-features.js' %}"></script>
 <script src="{% static 'js/aircraft-switcher.js' %}"></script>
+{% for plugin_js in plugin_registry.aircraft_js_files %}
+<script src="{% static plugin_js %}"></script>
+{% endfor %}
 <script src="{% static 'js/aircraft-detail.js' %}"></script>
 <script src="{% static 'js/aircraft-modal.js' %}"></script>
 {% endblock %}

@@ -1,3 +1,4 @@
+        {% load sam_plugins %}
         <!-- Consumables Tab Group (Oil & Fuel) -->
         <div x-show="activePrimaryTab === 'consumables'" class="pf-v5-c-page__main-section">
             <div class="tab-subtab-bar">
@@ -23,6 +24,7 @@
                             Oil Analysis
                         </button>
                     </div>
+                    {% plugin_sub_tab_buttons "consumables" %}
                 </div>
                 <button class="pf-v5-c-button pf-m-primary" x-show="canCreateConsumable && activeTab === 'oil' && featureOilConsumption" @click="openOilModal()">
                     <i class="fas fa-plus"></i> Add Oil Record
@@ -375,5 +377,6 @@
                 </template>
             </div>
             </div>
+            {% plugin_sub_tab_panels "consumables" %}
         </div>
 

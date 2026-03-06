@@ -156,6 +156,11 @@
 
     <!-- Import Modal -->
     {% include 'includes/import_modal.html' %}
+
+    <!-- Plugin global dashboard tiles -->
+    {% for tile in plugin_registry.global_dashboard_tiles %}
+    {% include tile.template %}
+    {% endfor %}
 </div>
 {% endblock %}
 

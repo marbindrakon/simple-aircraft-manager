@@ -81,6 +81,7 @@ TEMPLATES = [
                 'core.context_processors.oidc_settings',
                 'core.context_processors.user_role_context',
                 'core.context_processors.theme_context',
+                'core.context_processors.plugin_registry_context',
             ],
         },
     },
@@ -197,6 +198,28 @@ OLLAMA_TIMEOUT = int(os.environ.get('OLLAMA_TIMEOUT', '1200'))
 # OIDC Configuration for Development
 # Set OIDC_ENABLED=false by default in dev - enable with environment variable for local testing
 OIDC_ENABLED = os.environ.get('OIDC_ENABLED', 'False').lower() in ('true', '1', 'yes')
+
+# Plugin discovery — must run after INSTALLED_APPS is defined
+# Env vars: SAM_PLUGIN_DIR (default /plugins), SAM_PLUGINS (comma-sep module names)
+import sys as _sys
+
+SAM_PLUGIN_DIR = os.environ.get('SAM_PLUGIN_DIR', '/plugins')
+
+def _discover_sam_plugins():
+    plugin_dir = SAM_PLUGIN_DIR
+    plugins = [p.strip() for p in os.environ.get('SAM_PLUGINS', '').split(',') if p.strip()]
+    if os.path.isdir(plugin_dir):
+        if plugin_dir not in _sys.path:
+            _sys.path.insert(0, plugin_dir)
+        for _entry in os.listdir(plugin_dir):
+            _path = os.path.join(plugin_dir, _entry)
+            if os.path.isdir(_path) and os.path.isfile(os.path.join(_path, '__init__.py')):
+                plugins.append(_entry)
+    return plugins
+
+for _plugin in _discover_sam_plugins():
+    if _plugin not in INSTALLED_APPS:
+        INSTALLED_APPS.append(_plugin)
 
 if OIDC_ENABLED:
     # Add mozilla-django-oidc to installed apps

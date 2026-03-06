@@ -1,3 +1,4 @@
+        {% load sam_plugins %}
         <!-- Logbook Tab (Records group) -->
         <div x-show="activeTab === 'logbook'" class="pf-v5-c-page__main-section">
             <div class="tab-subtab-bar">
@@ -8,6 +9,7 @@
                     <div class="pf-v5-c-toggle-group__item">
                         <button class="pf-v5-c-toggle-group__button" @click="activeTab = 'major-records'">Repairs &amp; Alterations</button>
                     </div>
+                    {% plugin_sub_tab_buttons "records" %}
                 </div>
                 <button class="pf-v5-c-button pf-m-primary" x-show="isOwner" @click="openLogbookModal()">
                     <i class="fas fa-plus"></i> New Entry

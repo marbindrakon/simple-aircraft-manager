@@ -1,3 +1,4 @@
+        {% load sam_plugins %}
         <!-- Compliance Tab Group (ADs & Inspections) -->
         <div x-show="activePrimaryTab === 'compliance'" class="pf-v5-c-page__main-section">
             <div class="tab-subtab-bar">
@@ -16,6 +17,7 @@
                             Inspections
                         </button>
                     </div>
+                    {% plugin_sub_tab_buttons "compliance" %}
                 </div>
                 <button class="pf-v5-c-button pf-m-primary" x-show="isOwner && activeTab === 'ads'" @click="openAdModal()">
                     <i class="fas fa-plus"></i> Add Bulletin
@@ -469,5 +471,6 @@
                 </template>
             </div>
             </div>
+            {% plugin_sub_tab_panels "compliance" %}
         </div>
 

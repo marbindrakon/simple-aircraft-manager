@@ -51,3 +51,9 @@ def theme_context(request):
         'theme_pref': pref,
         'html_theme_class': 'pf-v5-theme-dark' if pref == 'dark' else '',
     }
+
+
+def plugin_registry_context(request):
+    """Make the plugin registry available in all templates."""
+    from core.plugins import registry
+    return {'plugin_registry': registry}

@@ -26,6 +26,16 @@
                     </a>
                 </li>
                 {% endif %}
+                {% for nav_item in plugin_registry.nav_items %}
+                {% if not nav_item.staff_only or user.is_staff %}
+                <li class="pf-v5-c-nav__item">
+                    <a href="{{ nav_item.url }}"
+                       class="pf-v5-c-nav__link">
+                        {% if nav_item.icon %}<i class="{{ nav_item.icon }}"></i> {% endif %}{{ nav_item.label }}
+                    </a>
+                </li>
+                {% endif %}
+                {% endfor %}
             </ul>
         </nav>
     </div>
@@ -60,6 +70,14 @@
                     <li>
                         <a class="pf-v5-c-dropdown__menu-item" href="/admin/">Admin</a>
                     </li>
+                    {% endif %}
+                    {% if user.is_staff and plugin_registry.management_views %}
+                    <li class="pf-v5-c-dropdown__separator" role="separator"></li>
+                    {% for mgmt_item in plugin_registry.management_views %}
+                    <li>
+                        <a class="pf-v5-c-dropdown__menu-item" href="{{ mgmt_item.url }}">{{ mgmt_item.label }}</a>
+                    </li>
+                    {% endfor %}
                     {% endif %}
                     <li class="pf-v5-c-dropdown__separator" role="separator"></li>
                     <li role="none">

@@ -22,6 +22,28 @@ if [ "${DATABASE_ENGINE}" = "postgresql" ]; then
     echo "PostgreSQL is available"
 fi
 
+# Install plugin packages if SAM_PLUGIN_PACKAGES is set.
+# Format: comma-separated pip install specifiers, e.g.
+#   SAM_PLUGIN_PACKAGES="my-sam-plugin==1.2.0,another-plugin>=0.5"
+# Packages are installed at startup so plugin static files and migrations
+# are available before collectstatic and migrate run.
+if [ -n "${SAM_PLUGIN_PACKAGES}" ]; then
+    echo "Installing plugin packages: ${SAM_PLUGIN_PACKAGES}"
+    # Convert comma-separated list to space-separated for pip
+    PLUGIN_PKGS=$(echo "${SAM_PLUGIN_PACKAGES}" | tr ',' ' ')
+    pip install --no-cache-dir ${PLUGIN_PKGS}
+fi
+
+# Collect static files at startup to pick up plugin static assets.
+# Plugins loaded at runtime (via SAM_PLUGIN_DIR or SAM_PLUGIN_PACKAGES) were
+# not present at image-build time, so we must re-run collectstatic here.
+# The build-time collectstatic in the Containerfile handles the base app;
+# this handles runtime-added plugins.
+if [ -n "${SAM_PLUGIN_DIR}" ] || [ -n "${SAM_PLUGIN_PACKAGES}" ]; then
+    echo "Running collectstatic for plugins..."
+    python manage.py collectstatic --noinput
+fi
+
 # Run database migrations
 echo "Running database migrations..."
 python manage.py migrate --noinput

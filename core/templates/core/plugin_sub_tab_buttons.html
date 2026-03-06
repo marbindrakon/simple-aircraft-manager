@@ -1,0 +1,9 @@
+{% for tab in tabs %}
+<div class="pf-v5-c-toggle-group__item"{% if tab.visibility %} x-show="{{ tab.visibility }}"{% endif %}>
+    <button class="pf-v5-c-toggle-group__button"
+            :class="{ 'pf-m-selected': activeTab === '{{ tab.key }}' }"
+            @click="activeTab = '{{ tab.key }}'">
+        {{ tab.label }}
+    </button>
+</div>
+{% endfor %}
