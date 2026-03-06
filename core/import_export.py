@@ -144,8 +144,8 @@ def validate_archive_quick(zip_path, tail_number_override=None):
 
     try:
         zf = zipfile.ZipFile(zip_path, 'r')
-    except zipfile.BadZipFile as exc:
-        return None, None, f"Invalid ZIP file: {exc}"
+    except zipfile.BadZipFile:
+        return None, None, "Invalid ZIP file."
 
     with zf:
         # 2. Zip bomb: check total uncompressed size and ratio
@@ -394,8 +394,8 @@ def _run_import(job, zip_path, owner_user, tail_number_override, ev):
     # -----------------------------------------------------------------------
     try:
         zf = zipfile.ZipFile(zip_path, 'r')
-    except zipfile.BadZipFile as exc:
-        ev('error', f"Could not open archive: {exc}")
+    except zipfile.BadZipFile:
+        ev('error', "Could not open archive: Invalid ZIP file.")
         job.status = 'failed'
         job.save(update_fields=['status', 'updated_at'])
         return

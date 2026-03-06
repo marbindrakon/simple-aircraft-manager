@@ -84,7 +84,13 @@ class ImportView(LoginRequiredMixin, View):
                 uuid.UUID(staged_id)
             except ValueError:
                 return JsonResponse({'error': 'Invalid staged_id.'}, status=400)
-            zip_path = os.path.join(staging_dir, f"{staged_id}.zip")
+            
+            # Normalize and verify zip_path
+            raw_zip_path = os.path.join(staging_dir, f"{staged_id}.zip")
+            zip_path = os.path.normpath(raw_zip_path)
+            if not zip_path.startswith(os.path.abspath(staging_dir)):
+                return JsonResponse({'error': 'Invalid staged archive path.'}, status=400)
+                
             if not os.path.exists(zip_path):
                 return JsonResponse({'error': 'Staged archive not found. Please re-upload the file.'}, status=400)
         else:
@@ -111,7 +117,12 @@ class ImportView(LoginRequiredMixin, View):
                 pass  # Can't check; proceed anyway
 
             new_staged_id = str(uuid.uuid4())
-            zip_path = os.path.join(staging_dir, f"{new_staged_id}.zip")
+            raw_zip_path = os.path.join(staging_dir, f"{new_staged_id}.zip")
+            zip_path = os.path.normpath(raw_zip_path)
+            if not zip_path.startswith(os.path.abspath(staging_dir)):
+                # This should not happen since new_staged_id is a UUID
+                return JsonResponse({'error': 'Failed to determine a safe stage path.'}, status=500)
+                
             try:
                 with open(zip_path, 'wb') as fh:
                     for chunk in archive_file.chunks():

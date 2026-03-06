@@ -817,10 +817,18 @@ class HealthAircraftActionsMixin:
                 {'error': 'PDF file size exceeds the 50 MB limit for oil analysis.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        from rest_framework.exceptions import ValidationError
         try:
             validate_uploaded_file(uploaded_file)
-        except Exception as exc:
-            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except ValidationError as exc:
+            # Serializer/Validation errors are safe to show the user
+            return Response({'error': exc.detail if hasattr(exc, 'detail') else str(exc)}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            # Unexpected system errors should not leak details
+            logger.exception("Unexpected error during file validation")
+            return Response({'error': 'An internal error occurred during file validation.'}, 
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         model = request.data.get('model', '')
         provider = request.data.get('provider', 'parser')
