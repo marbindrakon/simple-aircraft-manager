@@ -1,4 +1,6 @@
 # Simple Aircraft Manager
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmarbindrakon%2Fsimple-aircraft-manager.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fmarbindrakon%2Fsimple-aircraft-manager?ref=badge_shield)
+
 
 > **Note**: This codebase was generated with [Claude](https://claude.ai), Anthropic's AI assistant, using [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
@@ -73,3 +75,6 @@ Full documentation is available at **[docs.simple-aircraft.app](https://docs.sim
 ## License
 
 This project is dedicated to the public domain. You may use, copy, modify, and distribute it for any purpose without restriction. See [The Unlicense](https://unlicense.org) for details.
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmarbindrakon%2Fsimple-aircraft-manager.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fmarbindrakon%2Fsimple-aircraft-manager?ref=badge_large)
