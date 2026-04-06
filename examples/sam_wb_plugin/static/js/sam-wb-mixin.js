@@ -20,6 +20,9 @@
  */
 
 window.SAMPluginMixins = window.SAMPluginMixins || [];
+window.SAMPluginTabMappings = window.SAMPluginTabMappings || {};
+window.SAMPluginTabMappings['wb-calculator'] = 'wb-calculator';
+
 window.SAMPluginMixins.push(function wbMixin() {
     return {
 

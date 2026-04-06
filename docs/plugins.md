@@ -219,14 +219,25 @@ window.SAMPluginMixins.push(function myPluginMixin() {
 
 The composer (`aircraft-detail.js`) merges all plugin mixins via `mergeMixins()` before the built-in mixins. Plugin state, getters, and methods are available on `this` inside any other mixin.
 
-### Registering sub-tab mappings
+### Registering tab mappings
 
-For sub-tabs inside an existing primary group, register the mapping so the tab navigation can resolve `activeTab` back to the correct primary group:
+All plugin tabs — both standalone and sub-tabs — must register in `window.SAMPluginTabMappings`. This allows the aircraft detail page to resolve `activeTab` back to the correct primary group, and enables hash-based deep-linking (e.g. `/aircraft/42/#my-tab-key`).
+
+**Standalone tab** (`primary_group` equals `key`): map the key to itself.
+
+```javascript
+window.SAMPluginTabMappings = window.SAMPluginTabMappings || {};
+window.SAMPluginTabMappings['engine-monitor'] = 'engine-monitor';
+```
+
+**Sub-tab** inside an existing primary group: map the key to the group name.
 
 ```javascript
 window.SAMPluginTabMappings = window.SAMPluginTabMappings || {};
 window.SAMPluginTabMappings['my-sub-tab-key'] = 'consumables';
 ```
+
+Without this registration, the tab will render correctly when clicked, but hash-based navigation (e.g. links that include `#tab-key` in the URL) will silently fail.
 
 ### Accessing core state
 
@@ -368,7 +379,7 @@ The entrypoint script pip-installs the packages, runs `collectstatic` to pick up
 - [ ] Set `name`, `verbose_name`, `default_auto_field`
 - [ ] Declare extension points as class attributes (only what you need)
 - [ ] `aircraft_features` entries have unique slugs and include `name`, `label`, and `description`
-- [ ] JS mixin pushed to `window.SAMPluginMixins`; sub-tab keys registered in `window.SAMPluginTabMappings`
+- [ ] JS mixin pushed to `window.SAMPluginMixins`; all tab keys (standalone and sub-tab) registered in `window.SAMPluginTabMappings`
 - [ ] Static files in `<app>/static/`; template files in `<app>/templates/<app>/`
 - [ ] API viewsets use `AircraftScopedMixin` + `EventLoggingMixin`
 - [ ] Models use UUID primary keys

@@ -117,6 +117,16 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
             async init() {
                 await this.loadData();
 
+                // Sync URL hash with active tab (works for both public and private views).
+                // Clear the hash when on the default tab to keep the URL clean.
+                this.$watch('activeTab', (tab) => {
+                    if (tab === 'overview') {
+                        history.replaceState(null, '', window.location.pathname + window.location.search);
+                    } else {
+                        history.replaceState(null, '', '#' + tab);
+                    }
+                });
+
                 if (this.isPublicView) {
                     // Public mode: lazy-load logbook tab and render charts on tab activation
                     this.$watch('activeTab', (tab) => {
@@ -133,6 +143,16 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
                             this.$nextTick(() => this.renderOilAnalysisChart());
                         }
                     });
+
+                    // Navigate to tab from URL hash on load or same-page hash change
+                    const applyHashTab = () => {
+                        const hashTab = window.location.hash.slice(1);
+                        if (hashTab && this._primaryTabMap[hashTab]) {
+                            this.activeTab = hashTab;
+                        }
+                    };
+                    applyHashTab();
+                    window.addEventListener('hashchange', applyHashTab);
                     return;
                 }
 
@@ -173,6 +193,16 @@ function aircraftDetail(aircraftId, shareToken, privilegeLevel) {
                         this.loadFlightLogs();
                     }
                 });
+
+                // Navigate to tab from URL hash on load or same-page hash change
+                const applyHashTab = () => {
+                    const hashTab = window.location.hash.slice(1);
+                    if (hashTab && hashTab !== 'log-flight' && this._primaryTabMap[hashTab]) {
+                        this.activeTab = hashTab;
+                    }
+                };
+                applyHashTab();
+                window.addEventListener('hashchange', applyHashTab);
 
                 // Open flight log modal when navigated here with #log-flight
                 if (window.location.hash === '#log-flight' && this.canCreateConsumable && this.featureFlightTracking) {
