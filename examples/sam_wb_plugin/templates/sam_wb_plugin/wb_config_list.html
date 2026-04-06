@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Weight &amp; Balance Configurations — Simple Aircraft Manager{% endblock %}
+
+{% block content %}
+<div>
+    <!-- Page Header -->
+    <div class="pf-v5-c-page__main-section pf-m-light">
+        <div class="pf-v5-c-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h1><i class="fas fa-balance-scale" style="margin-right: 0.5rem;"></i> Weight &amp; Balance</h1>
+                    <p>
+                        {{ configured_count }} of {{ total_count }} aircraft configured
+                        {% if total_count > 0 %}&mdash;
+                        open an aircraft's W&amp;B tab to set up or edit its envelope.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="pf-v5-c-page__main-section">
+
+        {% if total_count == 0 %}
+        <!-- Empty state -->
+        <div class="pf-v5-c-empty-state">
+            <div class="pf-v5-c-empty-state__content">
+                <i class="fas fa-plane" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                <h2 class="pf-v5-c-title pf-m-lg">No aircraft found</h2>
+                <div class="pf-v5-c-empty-state__body">
+                    Add an aircraft first, then set up its weight &amp; balance configuration
+                    from the aircraft's W&amp;B tab.
+                </div>
+                <a href="/" class="pf-v5-c-button pf-m-primary">Go to Dashboard</a>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- Aircraft table -->
+        <table class="pf-v5-c-table pf-m-grid-md">
+            <thead>
+                <tr>
+                    <th>Aircraft</th>
+                    <th>Make / Model</th>
+                    <th>W&amp;B Status</th>
+                    <th>Empty Weight</th>
+                    <th>Envelope</th>
+                    <th>Saved Scenarios</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in aircraft_rows %}
+                <tr>
+                    <td data-label="Aircraft">
+                        <a href="/aircraft/{{ row.aircraft.id }}/"
+                           style="font-weight: 600;">{{ row.aircraft.tail_number }}</a>
+                    </td>
+                    <td data-label="Make / Model">
+                        {{ row.aircraft.make }} {{ row.aircraft.model }}
+                    </td>
+                    <td data-label="W&amp;B Status">
+                        {% if row.config %}
+                        <span class="pf-v5-c-label pf-m-green">
+                            <span class="pf-v5-c-label__content">
+                                <i class="fas fa-check" style="margin-right: 0.3rem;"></i>
+                                Configured
+                            </span>
+                        </span>
+                        {% else %}
+                        <span class="pf-v5-c-label pf-m-grey">
+                            <span class="pf-v5-c-label__content">
+                                <i class="fas fa-minus" style="margin-right: 0.3rem;"></i>
+                                Not configured
+                            </span>
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Empty Weight">
+                        {% if row.config %}
+                            {{ row.config.empty_weight }} lbs
+                            <span style="color: var(--pf-v5-global--Color--200); font-size: 0.875rem;">
+                                @ {{ row.config.empty_cg }}&Prime;
+                            </span>
+                        {% else %}
+                            <span style="color: var(--pf-v5-global--Color--200);">—</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Envelope">
+                        {% if row.config %}
+                            Max {{ row.config.max_gross_weight }} lbs
+                            <span style="color: var(--pf-v5-global--Color--200); font-size: 0.875rem;">
+                                CG {{ row.config.fwd_cg_limit }}&Prime; – {{ row.config.aft_cg_limit }}&Prime;
+                            </span>
+                        {% else %}
+                            <span style="color: var(--pf-v5-global--Color--200);">—</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Saved Scenarios">
+                        {% if row.calc_count > 0 %}
+                            {{ row.calc_count }}
+                        {% else %}
+                            <span style="color: var(--pf-v5-global--Color--200);">0</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Actions">
+                        <a href="/aircraft/{{ row.aircraft.id }}/"
+                           class="pf-v5-c-button pf-m-link pf-m-small">
+                            {% if row.config %}View W&amp;B{% else %}Configure{% endif %}
+                            <i class="fas fa-arrow-right" style="margin-left: 0.25rem;"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

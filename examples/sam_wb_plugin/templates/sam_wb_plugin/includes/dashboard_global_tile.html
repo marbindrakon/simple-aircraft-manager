@@ -1,0 +1,55 @@
+{% comment %}
+Global dashboard tile — rendered at the bottom of the fleet dashboard via
+plugin_registry.global_dashboard_tiles (wired in by dashboard.html).
+
+Shows a fleet-level W&B summary: how many aircraft are configured, total saved
+scenarios, and a list of aircraft still missing a configuration.  Purely
+server-side — no Alpine.js needed.
+{% endcomment %}
+{% load sam_wb_tags %}
+{% wb_fleet_summary request.user as wb %}
+
+<div class="pf-v5-c-page__main-section" style="padding-top: 0;">
+    <div class="pf-v5-c-card">
+        <div class="pf-v5-c-card__header">
+            <div class="pf-v5-c-card__header-main">
+                <div class="pf-v5-c-card__title">
+                    <h2>
+                        <i class="fas fa-balance-scale" style="margin-right: 0.5rem;"></i>
+                        Weight &amp; Balance
+                    </h2>
+                </div>
+            </div>
+            <div class="pf-v5-c-card__actions">
+                <a href="/wb/" class="pf-v5-c-button pf-m-link pf-m-small">
+                    Manage configurations <i class="fas fa-arrow-right" style="margin-left: 0.25rem;"></i>
+                </a>
+            </div>
+        </div>
+        <div class="pf-v5-c-card__body">
+            <dl style="display: flex; gap: 2rem; flex-wrap: wrap; margin: 0 0 0.75rem;">
+                <div>
+                    <dt style="font-size: 0.875rem; color: var(--pf-v5-global--Color--200);">Configured</dt>
+                    <dd style="font-size: 1.5rem; font-weight: 600; margin: 0;">
+                        {{ wb.configured_count }} / {{ wb.total_count }}
+                    </dd>
+                </div>
+                <div>
+                    <dt style="font-size: 0.875rem; color: var(--pf-v5-global--Color--200);">Saved Scenarios</dt>
+                    <dd style="font-size: 1.5rem; font-weight: 600; margin: 0;">
+                        {{ wb.calc_count }}
+                    </dd>
+                </div>
+            </dl>
+
+            {% if wb.unconfigured %}
+            <p style="font-size: 0.875rem; color: var(--pf-v5-global--Color--200); margin: 0;">
+                No W&amp;B configuration:
+                {% for aircraft in wb.unconfigured %}
+                    <a href="/aircraft/{{ aircraft.id }}/">{{ aircraft.tail_number }}</a>{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</div>

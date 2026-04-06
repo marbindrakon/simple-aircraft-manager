@@ -313,7 +313,7 @@ from rest_framework.routers import DefaultRouter
 from .views import EngineDataViewSet
 
 ROUTER_REGISTRATIONS = [
-    ('engine-data', EngineDataViewSet, 'engine-data'),
+    ('engine-data', EngineDataViewSet, {'basename': 'engine-data'}),
 ]
 ```
 
@@ -335,6 +335,19 @@ class EngineDataViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelVi
             aircraft__in=self.get_accessible_aircraft()
         )
 ```
+
+> **Serializer `url` field gotcha.** When using `HyperlinkedModelSerializer`, DRF derives the `url` field's view name from the model name (e.g. `enginereading-detail` for `EngineReading`). This will not match the view name the router actually registered, which is derived from your basename (e.g. `engine-data-detail`). Attempting to create or update a record will raise `NoReverseMatch`. Fix: declare `extra_kwargs` in the serializer's `Meta`:
+>
+> ```python
+> class Meta:
+>     model = EngineReading
+>     fields = ['url', 'id', ...]
+>     extra_kwargs = {
+>         'url': {'view_name': 'engine-data-detail'},
+>     }
+> ```
+>
+> Always include `id` explicitly too — see the main CLAUDE.md gotcha #2.
 
 ## Packaging as a Python Package
 

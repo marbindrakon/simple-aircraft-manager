@@ -1,0 +1,453 @@
+{% comment %}
+Weight & Balance tab — standalone primary tab on the aircraft detail page.
+
+Mounted via plugin_registry.standalone_aircraft_tabs in aircraft_detail.html.
+All Alpine.js state and methods come from wbMixin() (sam-wb-mixin.js), merged
+into the aircraftDetail() component.
+
+Lazy initialisation: x-effect fires initWb() the first time the user switches
+to this tab, and never again (wbConfigLoaded guards the second call).
+{% endcomment %}
+
+<div x-show="activePrimaryTab === 'wb-calculator'"
+     class="pf-v5-c-page__main-section"
+     x-effect="if (activePrimaryTab === 'wb-calculator' && !wbConfigLoaded) initWb()">
+
+    <!-- Loading -->
+    <div x-show="!wbConfigLoaded" class="pf-v5-c-empty-state">
+        <div class="pf-v5-c-empty-state__content">
+            <div class="loading-spinner" style="width: 2rem; height: 2rem;"></div>
+            <h2 class="pf-v5-c-title pf-m-lg">Loading W&amp;B data…</h2>
+        </div>
+    </div>
+
+    <div x-show="wbConfigLoaded" x-cloak>
+
+        <!-- ============================================================
+             No configuration yet
+             ============================================================ -->
+        <template x-if="wbConfigLoaded && !wbConfig">
+            <div class="pf-v5-c-empty-state">
+                <div class="pf-v5-c-empty-state__content">
+                    <i class="fas fa-balance-scale" style="font-size: 3rem; color: var(--pf-v5-global--disabled-color--100);"></i>
+                    <h2 class="pf-v5-c-title pf-m-lg">No W&amp;B configuration</h2>
+                    <div class="pf-v5-c-empty-state__body">
+                        Set up the aircraft's certified CG envelope once, then use the
+                        calculator to check any loading scenario in seconds.
+                    </div>
+                    <div class="pf-v5-c-empty-state__primary" x-show="isOwner" style="margin-top: 1rem;">
+                        <button class="pf-v5-c-button pf-m-primary" @click="openWbConfigModal()">
+                            <i class="fas fa-cog"></i> Configure W&amp;B
+                        </button>
+                    </div>
+                    <div class="pf-v5-c-empty-state__body" x-show="!isOwner" style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--pf-v5-global--Color--200);">
+                        Ask an aircraft owner to configure the W&amp;B envelope.
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- ============================================================
+             Configuration present — calculator + saved scenarios
+             ============================================================ -->
+        <template x-if="wbConfig">
+            <div>
+
+                <!-- Config summary header -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <h2 style="margin: 0 0 0.25rem;">Weight &amp; Balance Calculator</h2>
+                        <p style="margin: 0; color: var(--pf-v5-global--Color--200); font-size: 0.875rem;">
+                            Empty weight <strong x-text="wbFmt(wbConfig.empty_weight) + ' lbs'"></strong>
+                            · Empty CG <strong x-text="wbFmt(wbConfig.empty_cg, 2) + '"'"></strong>
+                            · Max gross <strong x-text="wbFmt(wbConfig.max_gross_weight) + ' lbs'"></strong>
+                            · CG envelope <strong x-text="wbFmt(wbConfig.fwd_cg_limit, 2) + '″ – ' + wbFmt(wbConfig.aft_cg_limit, 2) + '″'"></strong>
+                        </p>
+                    </div>
+                    <button class="pf-v5-c-button pf-m-secondary" x-show="isOwner" @click="openWbConfigModal()">
+                        <i class="fas fa-cog"></i> Edit Configuration
+                    </button>
+                </div>
+
+                <!-- ------------------------------------------------
+                     Live calculator
+                     ------------------------------------------------ -->
+                <div class="pf-v5-c-card" style="margin-bottom: 1.5rem;">
+                    <div class="pf-v5-c-card__title">
+                        <h3>Loading Calculator</h3>
+                    </div>
+                    <div class="pf-v5-c-card__body">
+
+                        <!-- Station weight inputs -->
+                        <table class="pf-v5-c-table" style="margin-bottom: 1rem;">
+                            <thead>
+                                <tr>
+                                    <th>Station</th>
+                                    <th style="text-align: right;">Arm (in)</th>
+                                    <th style="text-align: right;">Weight (lbs)</th>
+                                    <th style="text-align: right;">Moment (in·lbs)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Empty weight row (read-only) -->
+                                <tr style="color: var(--pf-v5-global--Color--200);">
+                                    <td>Basic Empty Weight</td>
+                                    <td style="text-align: right;" x-text="wbFmt(wbConfig.empty_cg, 2)"></td>
+                                    <td style="text-align: right;" x-text="wbFmt(wbConfig.empty_weight)"></td>
+                                    <td style="text-align: right;" x-text="wbFmt(wbEmptyMoment, 1)"></td>
+                                </tr>
+                                <!-- One editable row per station -->
+                                <template x-for="(item, idx) in wbItems" :key="idx">
+                                    <tr>
+                                        <td x-text="item.station_name"></td>
+                                        <td style="text-align: right;" x-text="wbFmt(item.arm, 2)"></td>
+                                        <td style="text-align: right;">
+                                            <input type="number"
+                                                   class="pf-v5-c-form-control"
+                                                   style="width: 90px; text-align: right;"
+                                                   min="0"
+                                                   step="0.1"
+                                                   x-model="item.weight"
+                                                   :aria-label="'Weight for ' + item.station_name">
+                                        </td>
+                                        <td style="text-align: right;"
+                                            x-text="wbFmt((parseFloat(item.weight) || 0) * item.arm, 1)">
+                                        </td>
+                                    </tr>
+                                </template>
+                                <!-- Totals row -->
+                                <tr style="font-weight: 600; border-top: 2px solid var(--pf-v5-global--BorderColor--100);">
+                                    <td>Gross Weight / CG</td>
+                                    <td style="text-align: right;" x-text="wbGrossWeight > 0 ? wbFmt(wbGrossCG, 2) + '″' : '—'"></td>
+                                    <td style="text-align: right;" x-text="wbFmt(wbGrossWeight)"></td>
+                                    <td style="text-align: right;" x-text="wbFmt(wbGrossMoment, 1)"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- Result banner -->
+                        <template x-if="wbWithinLimits !== null">
+                            <div class="pf-v5-c-alert"
+                                 :class="wbWithinLimits ? 'pf-m-success' : 'pf-m-danger'"
+                                 style="margin-bottom: 1rem;">
+                                <div class="pf-v5-c-alert__icon">
+                                    <i :class="wbWithinLimits ? 'fas fa-check-circle' : 'fas fa-times-circle'"></i>
+                                </div>
+                                <p class="pf-v5-c-alert__title">
+                                    <template x-if="wbWithinLimits">
+                                        <span>
+                                            Within limits —
+                                            <strong x-text="wbFmt(wbGrossWeight) + ' lbs'"></strong>
+                                            at CG <strong x-text="wbFmt(wbGrossCG, 2) + '″'"></strong>
+                                            (<span x-text="wbFmt(wbWeightMargin) + ' lbs under max gross'"></span>)
+                                        </span>
+                                    </template>
+                                    <template x-if="!wbWithinLimits">
+                                        <span>
+                                            Out of limits —
+                                            <strong x-text="wbFmt(wbGrossWeight) + ' lbs'"></strong>
+                                            at CG <strong x-text="wbFmt(wbGrossCG, 2) + '″'"></strong>
+                                            <template x-if="wbGrossWeight > parseFloat(wbConfig.max_gross_weight)">
+                                                <span> · <strong x-text="wbFmt(wbGrossWeight - parseFloat(wbConfig.max_gross_weight)) + ' lbs over max gross'"></strong></span>
+                                            </template>
+                                            <template x-if="wbGrossCG < parseFloat(wbConfig.fwd_cg_limit)">
+                                                <span> · CG forward of limit</span>
+                                            </template>
+                                            <template x-if="wbGrossCG > parseFloat(wbConfig.aft_cg_limit)">
+                                                <span> · CG aft of limit</span>
+                                            </template>
+                                        </span>
+                                    </template>
+                                </p>
+                            </div>
+                        </template>
+
+                        <!-- Save form (owner only) -->
+                        <div x-show="isOwner && wbGrossWeight > 0" style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end;">
+                            <div style="flex: 1; min-width: 180px;">
+                                <label class="pf-v5-c-form__label" for="wbCalcLabel">
+                                    <span class="pf-v5-c-form__label-text">Scenario label</span>
+                                </label>
+                                <input id="wbCalcLabel"
+                                       type="text"
+                                       class="pf-v5-c-form-control"
+                                       placeholder="e.g. Solo cross-country, full tanks"
+                                       x-model="wbCalcLabel"
+                                       maxlength="200">
+                            </div>
+                            <div style="flex: 2; min-width: 180px;">
+                                <label class="pf-v5-c-form__label" for="wbCalcNotes">
+                                    <span class="pf-v5-c-form__label-text">Notes (optional)</span>
+                                </label>
+                                <input id="wbCalcNotes"
+                                       type="text"
+                                       class="pf-v5-c-form-control"
+                                       placeholder="Any relevant notes"
+                                       x-model="wbCalcNotes">
+                            </div>
+                            <button class="pf-v5-c-button pf-m-primary"
+                                    :disabled="wbSaving"
+                                    @click="saveWbCalculation()">
+                                <i class="fas fa-save"></i>
+                                <span x-text="wbSaving ? 'Saving…' : 'Save Scenario'"></span>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ------------------------------------------------
+                     Saved scenarios
+                     ------------------------------------------------ -->
+                <div class="pf-v5-c-card">
+                    <div class="pf-v5-c-card__title">
+                        <h3>Saved Scenarios</h3>
+                    </div>
+                    <div class="pf-v5-c-card__body">
+
+                        <!-- Loading -->
+                        <template x-if="!wbCalcsLoaded">
+                            <div class="pf-v5-c-empty-state">
+                                <div class="pf-v5-c-empty-state__content">
+                                    <div class="loading-spinner" style="width: 1.5rem; height: 1.5rem;"></div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Empty -->
+                        <template x-if="wbCalcsLoaded && wbCalculations.length === 0">
+                            <p style="color: var(--pf-v5-global--Color--200); text-align: center; padding: 1rem 0;">
+                                No saved scenarios yet. Run the calculator above and save a scenario to record it.
+                            </p>
+                        </template>
+
+                        <!-- Table -->
+                        <template x-if="wbCalcsLoaded && wbCalculations.length > 0">
+                            <table class="pf-v5-c-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Label</th>
+                                        <th style="text-align: right;">Gross Weight</th>
+                                        <th style="text-align: right;">CG</th>
+                                        <th>Result</th>
+                                        <th>Notes</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="calc in wbCalculations" :key="calc.id">
+                                        <tr>
+                                            <td data-label="Date" x-text="formatDate(calc.calculated_at)"></td>
+                                            <td data-label="Label" x-text="calc.label"></td>
+                                            <td data-label="Gross Weight" style="text-align: right;" x-text="wbFmt(calc.gross_weight) + ' lbs'"></td>
+                                            <td data-label="CG" style="text-align: right;" x-text="wbFmt(calc.gross_cg, 2) + '″'"></td>
+                                            <td data-label="Result">
+                                                <span class="pf-v5-c-label"
+                                                      :class="calc.within_limits ? 'pf-m-green' : 'pf-m-red'">
+                                                    <span class="pf-v5-c-label__content"
+                                                          x-text="calc.within_limits ? 'Within Limits' : 'Out of Limits'">
+                                                    </span>
+                                                </span>
+                                            </td>
+                                            <td data-label="Notes"
+                                                :class="{ 'consumable-empty-field': !calc.notes }"
+                                                x-text="calc.notes || '—'">
+                                            </td>
+                                            <td data-label="Actions">
+                                                <!-- Load into calculator -->
+                                                <button class="pf-v5-c-button pf-m-plain"
+                                                        title="Load into calculator"
+                                                        @click="wbLoadIntoCalculator(calc)">
+                                                    <i class="fas fa-upload"></i>
+                                                </button>
+                                                <!-- Delete (owner only, with inline confirm) -->
+                                                <template x-if="isOwner && wbDeleteConfirmId !== calc.id">
+                                                    <button class="pf-v5-c-button pf-m-plain"
+                                                            title="Delete"
+                                                            style="color: var(--pf-v5-global--danger-color--100);"
+                                                            @click="wbDeleteConfirmId = calc.id">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </template>
+                                                <template x-if="isOwner && wbDeleteConfirmId === calc.id">
+                                                    <span style="display: inline-flex; gap: 0.25rem; align-items: center; font-size: 0.875rem;">
+                                                        <span style="color: var(--pf-v5-global--danger-color--100);">Delete?</span>
+                                                        <button class="pf-v5-c-button pf-m-plain pf-m-danger"
+                                                                @click="deleteWbCalculation(calc.id)">Yes</button>
+                                                        <button class="pf-v5-c-button pf-m-plain"
+                                                                @click="wbDeleteConfirmId = null">No</button>
+                                                    </span>
+                                                </template>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </template>
+                    </div>
+                </div>
+
+            </div>
+        </template>
+
+    </div><!-- /x-show wbConfigLoaded -->
+
+    <!-- ================================================================
+         W&B Configuration Modal
+         ================================================================ -->
+    <template x-if="wbConfigModalOpen">
+        <div class="pf-v5-c-backdrop">
+            <div class="pf-v5-c-modal-box pf-m-lg" role="dialog" aria-modal="true"
+                 aria-labelledby="wbConfigModalTitle">
+                <div class="pf-v5-c-modal-box__close">
+                    <button class="pf-v5-c-button pf-m-plain"
+                            @click="closeWbConfigModal()"
+                            aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <header class="pf-v5-c-modal-box__header">
+                    <h1 id="wbConfigModalTitle" class="pf-v5-c-modal-box__title">
+                        <span x-text="wbConfig ? 'Edit W&amp;B Configuration' : 'Configure Weight &amp; Balance'"></span>
+                    </h1>
+                </header>
+                <div class="pf-v5-c-modal-box__body" style="max-height: 65vh; overflow-y: auto;">
+                    <p style="margin-bottom: 1rem; color: var(--pf-v5-global--Color--200); font-size: 0.875rem;">
+                        Enter values from the aircraft's Weight &amp; Balance data sheet in the Pilot's Operating Handbook.
+                        Arms are measured in inches aft of the datum.
+                    </p>
+
+                    <!-- Empty weight & CG -->
+                    <div class="pf-v5-c-form" style="margin-bottom: 1.5rem;">
+                        <h3 style="margin-bottom: 0.75rem;">Basic Empty Weight</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="wbCfgEmptyWeight">
+                                    <span class="pf-v5-c-form__label-text">Empty Weight (lbs)</span>
+                                    <span class="pf-v5-c-form__label-required" aria-hidden="true"> *</span>
+                                </label>
+                                <input id="wbCfgEmptyWeight" type="number" class="pf-v5-c-form-control"
+                                       step="0.1" min="0" required x-model="wbConfigForm.empty_weight">
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="wbCfgEmptyCG">
+                                    <span class="pf-v5-c-form__label-text">Empty CG (inches aft of datum)</span>
+                                    <span class="pf-v5-c-form__label-required" aria-hidden="true"> *</span>
+                                </label>
+                                <input id="wbCfgEmptyCG" type="number" class="pf-v5-c-form-control"
+                                       step="0.01" required x-model="wbConfigForm.empty_cg">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CG envelope -->
+                    <div class="pf-v5-c-form" style="margin-bottom: 1.5rem;">
+                        <h3 style="margin-bottom: 0.75rem;">CG Envelope</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="wbCfgMaxGross">
+                                    <span class="pf-v5-c-form__label-text">Max Gross Weight (lbs)</span>
+                                    <span class="pf-v5-c-form__label-required" aria-hidden="true"> *</span>
+                                </label>
+                                <input id="wbCfgMaxGross" type="number" class="pf-v5-c-form-control"
+                                       step="0.1" min="0" required x-model="wbConfigForm.max_gross_weight">
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="wbCfgFwdCG">
+                                    <span class="pf-v5-c-form__label-text">Forward CG Limit (in)</span>
+                                    <span class="pf-v5-c-form__label-required" aria-hidden="true"> *</span>
+                                </label>
+                                <input id="wbCfgFwdCG" type="number" class="pf-v5-c-form-control"
+                                       step="0.01" required x-model="wbConfigForm.fwd_cg_limit">
+                            </div>
+                            <div class="pf-v5-c-form__group">
+                                <label class="pf-v5-c-form__label" for="wbCfgAftCG">
+                                    <span class="pf-v5-c-form__label-text">Aft CG Limit (in)</span>
+                                    <span class="pf-v5-c-form__label-required" aria-hidden="true"> *</span>
+                                </label>
+                                <input id="wbCfgAftCG" type="number" class="pf-v5-c-form-control"
+                                       step="0.01" required x-model="wbConfigForm.aft_cg_limit">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Loading stations -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <h3 style="margin: 0;">Loading Stations</h3>
+                            <button class="pf-v5-c-button pf-m-secondary pf-m-small" @click="wbAddStation()">
+                                <i class="fas fa-plus"></i> Add Station
+                            </button>
+                        </div>
+                        <p style="margin-bottom: 0.75rem; color: var(--pf-v5-global--Color--200); font-size: 0.875rem;">
+                            List every variable weight station from the W&amp;B table.
+                            Arms are in inches aft of datum.
+                            Tip: for fuel, name the station "Fuel (gal)" and multiply gallons × 6.0 lbs when entering a scenario.
+                        </p>
+                        <table class="pf-v5-c-table">
+                            <thead>
+                                <tr>
+                                    <th>Station Name</th>
+                                    <th>Arm (in)</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(station, idx) in wbConfigForm.stations" :key="idx">
+                                    <tr>
+                                        <td>
+                                            <input type="text" class="pf-v5-c-form-control"
+                                                   placeholder="e.g. Front Seats"
+                                                   x-model="station.name"
+                                                   :aria-label="'Station name ' + (idx + 1)">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="pf-v5-c-form-control"
+                                                   style="width: 100px;"
+                                                   step="0.01"
+                                                   placeholder="e.g. 37.00"
+                                                   x-model="station.arm"
+                                                   :aria-label="'Arm for station ' + (idx + 1)">
+                                        </td>
+                                        <td>
+                                            <button class="pf-v5-c-button pf-m-plain"
+                                                    style="color: var(--pf-v5-global--danger-color--100);"
+                                                    title="Remove station"
+                                                    @click="wbRemoveStation(idx)">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="pf-v5-c-form">
+                        <div class="pf-v5-c-form__group">
+                            <label class="pf-v5-c-form__label" for="wbCfgNotes">
+                                <span class="pf-v5-c-form__label-text">Notes (optional)</span>
+                            </label>
+                            <textarea id="wbCfgNotes" class="pf-v5-c-form-control"
+                                      rows="2"
+                                      placeholder="e.g. 'From latest W&amp;B check dated …'"
+                                      x-model="wbConfigForm.notes"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <footer class="pf-v5-c-modal-box__footer">
+                    <button class="pf-v5-c-button pf-m-primary"
+                            :disabled="wbConfigSaving"
+                            @click="saveWbConfig()">
+                        <span x-text="wbConfigSaving ? 'Saving…' : 'Save Configuration'"></span>
+                    </button>
+                    <button class="pf-v5-c-button pf-m-link"
+                            @click="closeWbConfigModal()">Cancel</button>
+                </footer>
+            </div>
+        </div>
+    </template>
+
+</div><!-- /activePrimaryTab === wb-calculator -->
