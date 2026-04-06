@@ -7,6 +7,7 @@ Usage in templates:
 """
 
 from django import template
+from django.core.cache import cache
 
 register = template.Library()
 
@@ -20,7 +21,15 @@ def wb_fleet_summary(user):
         total_count       — total accessible aircraft
         calc_count        — total saved WBCalculation records
         unconfigured      — list of Aircraft objects without a WBConfig
+
+    Results are cached per-user for 60 seconds to avoid running 3 DB queries
+    on every dashboard page load.
     """
+    cache_key = f'wb_fleet_summary_{user.id}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     from sam_wb_plugin.models import WBConfig, WBCalculation
     from core.models import Aircraft, AircraftRole
 
@@ -45,9 +54,11 @@ def wb_fleet_summary(user):
     )
     calc_count = WBCalculation.objects.filter(aircraft_id__in=aircraft_ids).count()
 
-    return {
+    result = {
         'configured_count': len(configured_ids),
         'total_count': len(aircraft_list),
         'calc_count': calc_count,
         'unconfigured': [a for a in aircraft_list if a.id not in configured_ids],
     }
+    cache.set(cache_key, result, 60)
+    return result

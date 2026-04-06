@@ -6,6 +6,11 @@ from rest_framework import serializers
 
 from .models import WBConfig, WBCalculation
 
+_ARM_MIN = -500
+_ARM_MAX = 500
+_WEIGHT_MAX = 50000
+_MAX_STATIONS = 50
+
 
 class WBConfigSerializer(serializers.HyperlinkedModelSerializer):
     # HyperlinkedModelSerializer omits `id` from __all__ — include it explicitly
@@ -26,6 +31,33 @@ class WBConfigSerializer(serializers.HyperlinkedModelSerializer):
         extra_kwargs = {
             'url': {'view_name': 'wb-config-detail'},
         }
+
+    def validate_stations(self, value):
+        if not isinstance(value, list):
+            raise serializers.ValidationError("stations must be a list.")
+        if len(value) > _MAX_STATIONS:
+            raise serializers.ValidationError(
+                f"stations may not contain more than {_MAX_STATIONS} entries."
+            )
+        for i, station in enumerate(value):
+            if not isinstance(station, dict):
+                raise serializers.ValidationError(
+                    f"stations[{i}] must be an object."
+                )
+            if not isinstance(station.get('name'), str) or not station['name'].strip():
+                raise serializers.ValidationError(
+                    f"stations[{i}].name must be a non-empty string."
+                )
+            arm = station.get('arm')
+            if not isinstance(arm, (int, float)) or isinstance(arm, bool):
+                raise serializers.ValidationError(
+                    f"stations[{i}].arm must be a number."
+                )
+            if not (_ARM_MIN <= arm <= _ARM_MAX):
+                raise serializers.ValidationError(
+                    f"stations[{i}].arm must be between {_ARM_MIN} and {_ARM_MAX}."
+                )
+        return value
 
 
 class WBCalculationSerializer(serializers.HyperlinkedModelSerializer):
@@ -53,6 +85,42 @@ class WBCalculationSerializer(serializers.HyperlinkedModelSerializer):
         extra_kwargs = {
             'url': {'view_name': 'wb-calculation-detail'},
         }
+
+    def validate_items(self, value):
+        if not isinstance(value, list):
+            raise serializers.ValidationError("items must be a list.")
+        if len(value) > _MAX_STATIONS:
+            raise serializers.ValidationError(
+                f"items may not contain more than {_MAX_STATIONS} entries."
+            )
+        for i, item in enumerate(value):
+            if not isinstance(item, dict):
+                raise serializers.ValidationError(
+                    f"items[{i}] must be an object."
+                )
+            if not isinstance(item.get('station_name'), str) or not item['station_name'].strip():
+                raise serializers.ValidationError(
+                    f"items[{i}].station_name must be a non-empty string."
+                )
+            arm = item.get('arm')
+            if not isinstance(arm, (int, float)) or isinstance(arm, bool):
+                raise serializers.ValidationError(
+                    f"items[{i}].arm must be a number."
+                )
+            if not (_ARM_MIN <= arm <= _ARM_MAX):
+                raise serializers.ValidationError(
+                    f"items[{i}].arm must be between {_ARM_MIN} and {_ARM_MAX}."
+                )
+            weight = item.get('weight')
+            if not isinstance(weight, (int, float)) or isinstance(weight, bool):
+                raise serializers.ValidationError(
+                    f"items[{i}].weight must be a number."
+                )
+            if not (0 <= weight <= _WEIGHT_MAX):
+                raise serializers.ValidationError(
+                    f"items[{i}].weight must be between 0 and {_WEIGHT_MAX}."
+                )
+        return value
 
     def _compute_totals(self, validated_data):
         """Return computed gross weight, moment, CG, and within_limits.
@@ -100,5 +168,14 @@ class WBCalculationSerializer(serializers.HyperlinkedModelSerializer):
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        validated_data.update(self._compute_totals(validated_data))
+        # PATCH requests may omit fields — fall back to instance values so
+        # _compute_totals always has aircraft, empty_weight, and empty_cg.
+        merged = {
+            'aircraft': instance.aircraft,
+            'empty_weight': instance.empty_weight,
+            'empty_cg': instance.empty_cg,
+            'items': instance.items,
+        }
+        merged.update(validated_data)
+        validated_data.update(self._compute_totals(merged))
         return super().update(instance, validated_data)

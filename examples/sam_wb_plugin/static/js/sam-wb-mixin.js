@@ -132,19 +132,13 @@ window.SAMPluginMixins.push(function wbMixin() {
          * Returns null when there is no config or no weight entered yet.
          */
         get wbWithinLimits() {
-            if (!this.wbConfig || this.wbGrossWeight <= 0) return null;
+            if (!this.wbConfig || this.wbPayloadWeight <= 0) return null;
             const cfg = this.wbConfig;
             return (
                 this.wbGrossWeight <= parseFloat(cfg.max_gross_weight) &&
                 this.wbGrossCG >= parseFloat(cfg.fwd_cg_limit) &&
                 this.wbGrossCG <= parseFloat(cfg.aft_cg_limit)
             );
-        },
-
-        /** CSS class for the result banner (green / red / neutral). */
-        get wbResultClass() {
-            if (this.wbWithinLimits === null) return '';
-            return this.wbWithinLimits ? 'pf-m-success' : 'pf-m-danger';
         },
 
         /** How many pounds remain before max gross weight. */

@@ -5,6 +5,7 @@ Page view: WBConfigListView (management page at /wb/)
 """
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count
 from django.views.generic import TemplateView
 from rest_framework import viewsets
 
@@ -90,9 +91,15 @@ class WBConfigListView(LoginRequiredMixin, TemplateView):
             cfg.aircraft_id: cfg
             for cfg in WBConfig.objects.filter(aircraft_id__in=aircraft_ids)
         }
-        calc_count_map = {}
-        for calc in WBCalculation.objects.filter(aircraft_id__in=aircraft_ids).values('aircraft_id'):
-            calc_count_map[calc['aircraft_id']] = calc_count_map.get(calc['aircraft_id'], 0) + 1
+        calc_count_map = {
+            row['aircraft_id']: row['count']
+            for row in (
+                WBCalculation.objects
+                .filter(aircraft_id__in=aircraft_ids)
+                .values('aircraft_id')
+                .annotate(count=Count('id'))
+            )
+        }
 
         context['aircraft_rows'] = [
             {
