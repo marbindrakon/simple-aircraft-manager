@@ -613,13 +613,20 @@
 </div>
 <p>The composer (<code class="docutils literal notranslate"><span class="pre">aircraft-detail.js</span></code>) merges all plugin mixins via <code class="docutils literal notranslate"><span class="pre">mergeMixins()</span></code> before the built-in mixins. Plugin state, getters, and methods are available on <code class="docutils literal notranslate"><span class="pre">this</span></code> inside any other mixin.</p>
 </section>
-<section id="registering-sub-tab-mappings">
-<h3>Registering sub-tab mappings<a class="headerlink" href="#registering-sub-tab-mappings" title="Link to this heading">¶</a></h3>
-<p>For sub-tabs inside an existing primary group, register the mapping so the tab navigation can resolve <code class="docutils literal notranslate"><span class="pre">activeTab</span></code> back to the correct primary group:</p>
+<section id="registering-tab-mappings">
+<h3>Registering tab mappings<a class="headerlink" href="#registering-tab-mappings" title="Link to this heading">¶</a></h3>
+<p>All plugin tabs — both standalone and sub-tabs — must register in <code class="docutils literal notranslate"><span class="pre">window.SAMPluginTabMappings</span></code>. This allows the aircraft detail page to resolve <code class="docutils literal notranslate"><span class="pre">activeTab</span></code> back to the correct primary group, and enables hash-based deep-linking (e.g. <code class="docutils literal notranslate"><span class="pre">/aircraft/42/#my-tab-key</span></code>).</p>
+<p><strong>Standalone tab</strong> (<code class="docutils literal notranslate"><span class="pre">primary_group</span></code> equals <code class="docutils literal notranslate"><span class="pre">key</span></code>): map the key to itself.</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="nb">window</span><span class="p">.</span><span class="nx">SAMPluginTabMappings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">window</span><span class="p">.</span><span class="nx">SAMPluginTabMappings</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="p">{};</span>
+<span class="nb">window</span><span class="p">.</span><span class="nx">SAMPluginTabMappings</span><span class="p">[</span><span class="s1">&#39;engine-monitor&#39;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;engine-monitor&#39;</span><span class="p">;</span>
+</pre></div>
+</div>
+<p><strong>Sub-tab</strong> inside an existing primary group: map the key to the group name.</p>
 <div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="nb">window</span><span class="p">.</span><span class="nx">SAMPluginTabMappings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">window</span><span class="p">.</span><span class="nx">SAMPluginTabMappings</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="p">{};</span>
 <span class="nb">window</span><span class="p">.</span><span class="nx">SAMPluginTabMappings</span><span class="p">[</span><span class="s1">&#39;my-sub-tab-key&#39;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;consumables&#39;</span><span class="p">;</span>
 </pre></div>
 </div>
+<p>Without this registration, the tab will render correctly when clicked, but hash-based navigation (e.g. links that include <code class="docutils literal notranslate"><span class="pre">#tab-key</span></code> in the URL) will silently fail.</p>
 </section>
 <section id="accessing-core-state">
 <h3>Accessing core state<a class="headerlink" href="#accessing-core-state" title="Link to this heading">¶</a></h3>
@@ -752,7 +759,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.views</span><span class="w"> </span><span class="kn">import</span> <span class="n">EngineDataViewSet</span>
 
 <span class="n">ROUTER_REGISTRATIONS</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="p">(</span><span class="s1">&#39;engine-data&#39;</span><span class="p">,</span> <span class="n">EngineDataViewSet</span><span class="p">,</span> <span class="s1">&#39;engine-data&#39;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s1">&#39;engine-data&#39;</span><span class="p">,</span> <span class="n">EngineDataViewSet</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;basename&#39;</span><span class="p">:</span> <span class="s1">&#39;engine-data&#39;</span><span class="p">}),</span>
 <span class="p">]</span>
 </pre></div>
 </div>
@@ -773,6 +780,18 @@
         <span class="p">)</span>
 </pre></div>
 </div>
+<blockquote>
+<div><p><strong>Serializer <code class="docutils literal notranslate"><span class="pre">url</span></code> field gotcha.</strong> When using <code class="docutils literal notranslate"><span class="pre">HyperlinkedModelSerializer</span></code>, DRF derives the <code class="docutils literal notranslate"><span class="pre">url</span></code> field’s view name from the model name (e.g. <code class="docutils literal notranslate"><span class="pre">enginereading-detail</span></code> for <code class="docutils literal notranslate"><span class="pre">EngineReading</span></code>). This will not match the view name the router actually registered, which is derived from your basename (e.g. <code class="docutils literal notranslate"><span class="pre">engine-data-detail</span></code>). Attempting to create or update a record will raise <code class="docutils literal notranslate"><span class="pre">NoReverseMatch</span></code>. Fix: declare <code class="docutils literal notranslate"><span class="pre">extra_kwargs</span></code> in the serializer’s <code class="docutils literal notranslate"><span class="pre">Meta</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">EngineReading</span>
+    <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;url&#39;</span><span class="p">,</span> <span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">extra_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;url&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;view_name&#39;</span><span class="p">:</span> <span class="s1">&#39;engine-data-detail&#39;</span><span class="p">},</span>
+    <span class="p">}</span>
+</pre></div>
+</div>
+<p>Always include <code class="docutils literal notranslate"><span class="pre">id</span></code> explicitly too — see the main CLAUDE.md gotcha #2.</p>
+</div></blockquote>
 </section>
 <section id="packaging-as-a-python-package">
 <h2>Packaging as a Python Package<a class="headerlink" href="#packaging-as-a-python-package" title="Link to this heading">¶</a></h2>
@@ -791,7 +810,7 @@
 <li><p>[ ] Set <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">verbose_name</span></code>, <code class="docutils literal notranslate"><span class="pre">default_auto_field</span></code></p></li>
 <li><p>[ ] Declare extension points as class attributes (only what you need)</p></li>
 <li><p>[ ] <code class="docutils literal notranslate"><span class="pre">aircraft_features</span></code> entries have unique slugs and include <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">label</span></code>, and <code class="docutils literal notranslate"><span class="pre">description</span></code></p></li>
-<li><p>[ ] JS mixin pushed to <code class="docutils literal notranslate"><span class="pre">window.SAMPluginMixins</span></code>; sub-tab keys registered in <code class="docutils literal notranslate"><span class="pre">window.SAMPluginTabMappings</span></code></p></li>
+<li><p>[ ] JS mixin pushed to <code class="docutils literal notranslate"><span class="pre">window.SAMPluginMixins</span></code>; all tab keys (standalone and sub-tab) registered in <code class="docutils literal notranslate"><span class="pre">window.SAMPluginTabMappings</span></code></p></li>
 <li><p>[ ] Static files in <code class="docutils literal notranslate"><span class="pre">&lt;app&gt;/static/</span></code>; template files in <code class="docutils literal notranslate"><span class="pre">&lt;app&gt;/templates/&lt;app&gt;/</span></code></p></li>
 <li><p>[ ] API viewsets use <code class="docutils literal notranslate"><span class="pre">AircraftScopedMixin</span></code> + <code class="docutils literal notranslate"><span class="pre">EventLoggingMixin</span></code></p></li>
 <li><p>[ ] Models use UUID primary keys</p></li>
@@ -878,7 +897,7 @@
 </li>
 <li><a class="reference internal" href="#frontend-integration-alpine-js">Frontend Integration (Alpine.js)</a><ul>
 <li><a class="reference internal" href="#registering-a-mixin">Registering a mixin</a></li>
-<li><a class="reference internal" href="#registering-sub-tab-mappings">Registering sub-tab mappings</a></li>
+<li><a class="reference internal" href="#registering-tab-mappings">Registering tab mappings</a></li>
 <li><a class="reference internal" href="#accessing-core-state">Accessing core state</a></li>
 </ul>
 </li>
