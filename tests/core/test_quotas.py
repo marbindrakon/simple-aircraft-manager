@@ -1,4 +1,6 @@
 import pytest
+from unittest.mock import patch
+
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from rest_framework import status
@@ -57,10 +59,8 @@ class TestAircraftQuota:
 
 @pytest.mark.django_db
 class TestStorageQuota:
-    def test_upload_within_quota(self, owner_client, aircraft, owner_user):
+    def test_upload_within_quota(self, owner_client, aircraft):
         """File upload within storage quota should succeed."""
-        from unittest.mock import patch
-
         collection = DocumentCollection.objects.create(aircraft=aircraft, name="Test Collection")
         document = Document.objects.create(
             aircraft=aircraft,
@@ -73,7 +73,7 @@ class TestStorageQuota:
         )
         # Simulate 0 bytes used so even the smallest quota passes
         with override_settings(SAM_STORAGE_QUOTA_GB=1):
-            with patch("health.serializers._dir_size", return_value=0):
+            with patch("health.serializers.dir_size", return_value=0):
                 resp = owner_client.post(
                     "/api/document-images/",
                     {
@@ -93,21 +93,16 @@ class TestStorageQuota:
             doc_type="OTHER",
             collection=collection,
         )
-        # Create a file that is 2 bytes — use a quota of 0 GB so that
-        # any non-zero file will exceed the quota (used_bytes + file_size > 0).
-        # We mock _dir_size to return a large value so the quota is breached.
         image_file = SimpleUploadedFile(
             "big.jpg", b"\xff\xd8\xff\xe0" + b"B" * 100, content_type="image/jpeg"
         )
-        from unittest.mock import patch
 
-        # Simulate that 0.9 GB is already used; quota is 1 GB; file is ~100 bytes
-        # — should pass. Instead simulate 1 GB already used.
+        # Simulate that 1 GB is already used against a 1 GB quota — any upload will exceed it.
         used_bytes = 1 * 1024 * 1024 * 1024  # 1 GB already used
         quota_gb = 1  # 1 GB quota
 
         with override_settings(SAM_STORAGE_QUOTA_GB=quota_gb):
-            with patch("health.serializers._dir_size", return_value=used_bytes):
+            with patch("health.serializers.dir_size", return_value=used_bytes):
                 resp = owner_client.post(
                     "/api/document-images/",
                     {

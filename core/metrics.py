@@ -26,7 +26,7 @@ sam_storage_quota_bytes = Gauge(
 )
 
 
-def _dir_size(path):
+def dir_size(path):
     """Calculate total size of a directory in bytes."""
     total = 0
     if not os.path.isdir(path):
@@ -49,7 +49,7 @@ def collect_metrics():
     )
 
     media_root = getattr(settings, "MEDIA_ROOT", "")
-    sam_storage_used_bytes.set(_dir_size(str(media_root)))
+    sam_storage_used_bytes.set(dir_size(str(media_root)))
     sam_storage_quota_bytes.set(
         settings.SAM_STORAGE_QUOTA_GB * 1024 * 1024 * 1024
         if settings.SAM_STORAGE_QUOTA_GB is not None

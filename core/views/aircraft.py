@@ -65,6 +65,7 @@ class AircraftViewSet(HealthAircraftActionsMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         max_aircraft = settings.SAM_MAX_AIRCRAFT
         if max_aircraft is not None:
+            # Count is intentionally system-wide (not per-user): each hosted instance is single-tenant.
             current_count = Aircraft.objects.count()
             if current_count >= max_aircraft:
                 raise PermissionDenied(
