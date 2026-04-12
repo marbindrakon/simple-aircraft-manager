@@ -22,14 +22,14 @@ from django.conf import settings
 from django.urls import path, include
 from django.views.generic import RedirectView
 
+from django_prometheus import exports as prometheus_exports
 from rest_framework import routers
 
 from core import views as core_views
-from core.urls import ROUTER_REGISTRATIONS as core_routes
 from core.metrics import collect_metrics
+from core.urls import ROUTER_REGISTRATIONS as core_routes
 from health.urls import ROUTER_REGISTRATIONS as health_routes
 from health.views_public import PublicAircraftSummaryAPI, PublicLogbookEntriesAPI
-from django_prometheus import exports as prometheus_exports
 
 
 def metrics_view(request):

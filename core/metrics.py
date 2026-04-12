@@ -34,7 +34,7 @@ def _dir_size(path):
     for dirpath, _dirnames, filenames in os.walk(path):
         for f in filenames:
             fp = os.path.join(dirpath, f)
-            if os.path.isfile(fp):
+            if os.path.isfile(fp) and not os.path.islink(fp):
                 total += os.path.getsize(fp)
     return total
 
