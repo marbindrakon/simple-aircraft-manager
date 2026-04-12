@@ -1,4 +1,5 @@
 import pytest
+from decimal import Decimal
 from health.models import Squawk, DocumentImage, FlightLog
 
 
@@ -24,5 +25,5 @@ def test_document_image_has_file_size_field(aircraft):
 @pytest.mark.django_db
 def test_flight_log_has_file_size_field(aircraft):
     from django.utils import timezone
-    log = FlightLog.objects.create(aircraft=aircraft, date=timezone.now().date(), tach_time=100.5)
+    log = FlightLog.objects.create(aircraft=aircraft, date=timezone.now().date(), tach_time=Decimal('100.5'))
     assert log.file_size == 0
