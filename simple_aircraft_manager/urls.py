@@ -26,8 +26,15 @@ from rest_framework import routers
 
 from core import views as core_views
 from core.urls import ROUTER_REGISTRATIONS as core_routes
+from core.metrics import collect_metrics
 from health.urls import ROUTER_REGISTRATIONS as health_routes
 from health.views_public import PublicAircraftSummaryAPI, PublicLogbookEntriesAPI
+from django_prometheus import exports as prometheus_exports
+
+
+def metrics_view(request):
+    collect_metrics()
+    return prometheus_exports.ExportToDjangoView(request)
 
 router = routers.DefaultRouter()
 for entry in core_routes + health_routes:
@@ -60,6 +67,7 @@ for _app_config in _django_apps.get_app_configs():
 
 urlpatterns = [
     path('healthz/', core_views.healthz, name='healthz'),
+    path('metrics/', metrics_view, name='prometheus-metrics'),
     path('', RedirectView.as_view(url='/dashboard/', permanent=False), name='home'),
     path('dashboard/', core_views.DashboardView.as_view(), name='dashboard'),
     path('aircraft/<uuid:pk>/', core_views.AircraftDetailView.as_view(), name='aircraft-detail'),

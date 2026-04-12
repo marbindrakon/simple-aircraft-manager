@@ -53,9 +53,11 @@ INSTALLED_APPS = [
     'core',
     'health',
     'django.contrib.admin',
+    'django_prometheus',
 ]
 
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -63,6 +65,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 ROOT_URLCONF = 'simple_aircraft_manager.urls'
@@ -149,6 +152,10 @@ AIRCRAFT_CREATE_PERMISSION = os.environ.get('AIRCRAFT_CREATE_PERMISSION', 'any')
 
 # Per-aircraft feature flags — list feature names to disable globally
 DISABLED_FEATURES = []  # e.g. ['flight_tracking', 'oil_analysis']
+
+# Quota settings (hosting manager sets these; unlimited when unset)
+SAM_MAX_AIRCRAFT = int(os.environ['SAM_MAX_AIRCRAFT']) if os.environ.get('SAM_MAX_AIRCRAFT') else None
+SAM_STORAGE_QUOTA_GB = int(os.environ['SAM_STORAGE_QUOTA_GB']) if os.environ.get('SAM_STORAGE_QUOTA_GB') else None
 
 # Aircraft import/export settings
 IMPORT_STAGING_DIR = os.environ.get(

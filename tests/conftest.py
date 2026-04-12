@@ -15,6 +15,34 @@ User = get_user_model()
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
+def user(db):
+    return User.objects.create_user(username='testuser', password='pw', email='testuser@test.com')
+
+
+@pytest.fixture
+def aircraft_factory(db):
+    """Factory fixture for creating Aircraft instances with an optional owner."""
+    counter = {'n': 0}
+
+    def _make(owner=None, **kwargs):
+        counter['n'] += 1
+        defaults = {
+            'tail_number': f'N{counter["n"]:05d}',
+            'make': 'Cessna',
+            'model': '172',
+            'tach_time': 0.0,
+            'hobbs_time': 0.0,
+        }
+        defaults.update(kwargs)
+        ac = Aircraft.objects.create(**defaults)
+        if owner is not None:
+            AircraftRole.objects.create(aircraft=ac, user=owner, role='owner')
+        return ac
+
+    return _make
+
+
+@pytest.fixture
 def admin_user(db):
     return User.objects.create_superuser(
         username='admin', password='pw', email='admin@test.com'
