@@ -3,7 +3,7 @@ import os
 from django.conf import settings as django_settings
 from rest_framework import serializers
 
-from core.metrics import dir_size
+from core.metrics import get_storage_used_bytes
 
 from .models import ComponentType, Component, DocumentCollection, Document, DocumentImage, LogbookEntry, Squawk, InspectionType, AD, MajorRepairAlteration, InspectionRecord, ADCompliance, ConsumableRecord, OilAnalysisReport, FlightLog
 
@@ -32,8 +32,7 @@ def validate_uploaded_file(value):
     # Storage quota check
     quota_gb = django_settings.SAM_STORAGE_QUOTA_GB
     if quota_gb is not None:
-        media_root = str(django_settings.MEDIA_ROOT)
-        used_bytes = dir_size(media_root)
+        used_bytes = get_storage_used_bytes()
         quota_bytes = quota_gb * 1024 * 1024 * 1024
         file_size = value.size
         if used_bytes + file_size > quota_bytes:

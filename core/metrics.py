@@ -39,6 +39,21 @@ def dir_size(path):
     return total
 
 
+def get_storage_used_bytes():
+    """
+    Return total uploaded file bytes by summing file_size across all models with
+    file upload fields. Replaces dir_size() in hot paths — three DB aggregates,
+    no filesystem scan.
+    """
+    from health.models import DocumentImage, FlightLog, Squawk
+    from django.db.models import Sum
+    return (
+        (Squawk.objects.aggregate(t=Sum('file_size'))['t'] or 0)
+        + (DocumentImage.objects.aggregate(t=Sum('file_size'))['t'] or 0)
+        + (FlightLog.objects.aggregate(t=Sum('file_size'))['t'] or 0)
+    )
+
+
 def collect_metrics():
     """Update all custom gauges. Called by the metrics view."""
     from core.models import Aircraft

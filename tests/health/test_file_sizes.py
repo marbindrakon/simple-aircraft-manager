@@ -80,3 +80,28 @@ def test_flight_log_file_size_set_on_save(aircraft):
     log = FlightLog.objects.create(aircraft=aircraft, date=timezone.now().date(), tach_time=Decimal('100.5'), track_log=kml)
     log.refresh_from_db()
     assert log.file_size > 0
+
+
+@pytest.mark.django_db
+def test_get_storage_used_bytes_sums_all_models(aircraft):
+    from django.utils import timezone
+    from core.metrics import get_storage_used_bytes
+
+    # Start at zero
+    assert get_storage_used_bytes() == 0
+
+    # Add a squawk with attachment
+    Squawk.objects.create(
+        aircraft=aircraft, priority=3, issue_reported="s",
+        attachment=SimpleUploadedFile("a.jpg", b"\xff\xd8\xff\xe0" + b"Y" * 50, content_type="image/jpeg"),
+    )
+    used = get_storage_used_bytes()
+    assert used > 0
+
+    prev = used
+    # Add a flight log with track_log
+    FlightLog.objects.create(
+        aircraft=aircraft, date=timezone.now().date(), tach_time=Decimal('100.5'),
+        track_log=SimpleUploadedFile("t.kml", b"<kml/>", content_type="application/vnd.google-earth.kml+xml"),
+    )
+    assert get_storage_used_bytes() > prev

@@ -73,7 +73,7 @@ class TestStorageQuota:
         )
         # Simulate 0 bytes used so even the smallest quota passes
         with override_settings(SAM_STORAGE_QUOTA_GB=1):
-            with patch("health.serializers.dir_size", return_value=0):
+            with patch("health.serializers.get_storage_used_bytes", return_value=0):
                 resp = owner_client.post(
                     "/api/document-images/",
                     {
@@ -102,7 +102,7 @@ class TestStorageQuota:
         quota_gb = 1  # 1 GB quota
 
         with override_settings(SAM_STORAGE_QUOTA_GB=quota_gb):
-            with patch("health.serializers.dir_size", return_value=used_bytes):
+            with patch("health.serializers.get_storage_used_bytes", return_value=used_bytes):
                 resp = owner_client.post(
                     "/api/document-images/",
                     {
