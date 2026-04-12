@@ -19,16 +19,16 @@ def _file_size(field_file):
         return 0
 
 
-@receiver(post_save, sender=Squawk)
+@receiver(post_save, sender=Squawk, dispatch_uid='health.signals.update_squawk_file_size')
 def update_squawk_file_size(sender, instance, **kwargs):
     sender.objects.filter(pk=instance.pk).update(file_size=_file_size(instance.attachment))
 
 
-@receiver(post_save, sender=DocumentImage)
+@receiver(post_save, sender=DocumentImage, dispatch_uid='health.signals.update_document_image_file_size')
 def update_document_image_file_size(sender, instance, **kwargs):
     sender.objects.filter(pk=instance.pk).update(file_size=_file_size(instance.image))
 
 
-@receiver(post_save, sender=FlightLog)
+@receiver(post_save, sender=FlightLog, dispatch_uid='health.signals.update_flight_log_file_size')
 def update_flight_log_file_size(sender, instance, **kwargs):
     sender.objects.filter(pk=instance.pk).update(file_size=_file_size(instance.track_log))
