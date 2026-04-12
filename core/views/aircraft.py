@@ -64,15 +64,16 @@ class AircraftViewSet(HealthAircraftActionsMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         max_aircraft = settings.SAM_MAX_AIRCRAFT
-        if max_aircraft is not None:
-            # Count is intentionally system-wide (not per-user): each hosted instance is single-tenant.
-            current_count = Aircraft.objects.count()
-            if current_count >= max_aircraft:
-                raise PermissionDenied(
-                    detail=f"Aircraft limit reached ({current_count}/{max_aircraft}). "
-                    "Contact your administrator to increase your quota."
-                )
         with transaction.atomic():
+            if max_aircraft is not None:
+                # select_for_update() serialises concurrent creates on PostgreSQL,
+                # preventing the TOCTOU window between the count read and the insert.
+                current_count = Aircraft.objects.select_for_update().count()
+                if current_count >= max_aircraft:
+                    raise PermissionDenied(
+                        detail=f"Aircraft limit reached ({current_count}/{max_aircraft}). "
+                        "Contact your administrator to increase your quota."
+                    )
             aircraft = serializer.save()
             AircraftRole.objects.create(aircraft=aircraft, user=self.request.user, role='owner')
         log_event(aircraft, 'aircraft', 'Aircraft created', user=self.request.user)
