@@ -153,6 +153,7 @@ class DocumentImage(models.Model):
             allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'pdf', 'txt']
         )],
     )
+    file_size = models.PositiveBigIntegerField(default=0)
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -215,6 +216,7 @@ class Squawk(models.Model):
     priority = models.IntegerField(choices=SQUAWK_PRIORITIES, default=0)
     issue_reported = models.TextField(blank=True)
     attachment = models.FileField(upload_to=random_squawk_filename, blank=True, null=True)
+    file_size = models.PositiveBigIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     reported_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='reported_squawks', blank=True, null=True, on_delete=models.SET_NULL)
     resolved = models.BooleanField(default=False)
@@ -483,6 +485,7 @@ class FlightLog(models.Model):
     fuel_level_after = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="Total fuel level (gal) after addition")
     # Track log
     track_log = models.FileField(upload_to=random_track_log_filename, null=True, blank=True)
+    file_size = models.PositiveBigIntegerField(default=0)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
