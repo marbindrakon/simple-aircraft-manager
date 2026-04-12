@@ -1,6 +1,9 @@
 import os
 
+from django.conf import settings as django_settings
 from rest_framework import serializers
+
+from core.metrics import _dir_size
 
 from .models import ComponentType, Component, DocumentCollection, Document, DocumentImage, LogbookEntry, Squawk, InspectionType, AD, MajorRepairAlteration, InspectionRecord, ADCompliance, ConsumableRecord, OilAnalysisReport, FlightLog
 
@@ -25,6 +28,20 @@ def validate_uploaded_file(value):
         raise serializers.ValidationError(
             f"Content type '{value.content_type}' is not allowed."
         )
+
+    # Storage quota check
+    quota_gb = django_settings.SAM_STORAGE_QUOTA_GB
+    if quota_gb is not None:
+        media_root = str(django_settings.MEDIA_ROOT)
+        used_bytes = _dir_size(media_root)
+        quota_bytes = quota_gb * 1024 * 1024 * 1024
+        file_size = value.size
+        if used_bytes + file_size > quota_bytes:
+            used_gb = used_bytes / (1024 * 1024 * 1024)
+            raise serializers.ValidationError(
+                f"Storage quota exceeded ({used_gb:.1f} GB / {quota_gb} GB)."
+            )
+
     return value
 
 class ComponentTypeSerializer(serializers.HyperlinkedModelSerializer):

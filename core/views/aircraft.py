@@ -1,11 +1,13 @@
 import logging
 from datetime import timedelta as td
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -61,6 +63,14 @@ class AircraftViewSet(HealthAircraftActionsMixin, viewsets.ModelViewSet):
         return AircraftSerializer
 
     def perform_create(self, serializer):
+        max_aircraft = settings.SAM_MAX_AIRCRAFT
+        if max_aircraft is not None:
+            current_count = Aircraft.objects.count()
+            if current_count >= max_aircraft:
+                raise PermissionDenied(
+                    detail=f"Aircraft limit reached ({current_count}/{max_aircraft}). "
+                    "Contact your administrator to increase your quota."
+                )
         with transaction.atomic():
             aircraft = serializer.save()
             AircraftRole.objects.create(aircraft=aircraft, user=self.request.user, role='owner')
