@@ -1,33 +1,15 @@
 import os
 
-from prometheus_client import Gauge
-
 from django.conf import settings
-
-
-sam_aircraft_count = Gauge(
-    "sam_aircraft_count",
-    "Current number of aircraft records",
-)
-
-sam_aircraft_quota = Gauge(
-    "sam_aircraft_quota",
-    "Configured aircraft quota (-1 if unlimited)",
-)
-
-sam_storage_used_bytes = Gauge(
-    "sam_storage_used_bytes",
-    "Total media storage used in bytes",
-)
-
-sam_storage_quota_bytes = Gauge(
-    "sam_storage_quota_bytes",
-    "Configured storage quota in bytes (-1 if unlimited)",
-)
+from prometheus_client.metrics_core import GaugeMetricFamily
+from prometheus_client.registry import Collector
 
 
 def dir_size(path):
-    """Calculate total size of a directory in bytes."""
+    """
+    Calculate total size of a directory in bytes.
+    Not used in hot paths — kept for ad-hoc debugging only.
+    """
     total = 0
     if not os.path.isdir(path):
         return 0
@@ -54,19 +36,36 @@ def get_storage_used_bytes():
     )
 
 
-def collect_metrics():
-    """Update all custom gauges. Called by the metrics view."""
-    from core.models import Aircraft
+class SAMCollector(Collector):
+    """
+    Prometheus collector that queries the DB on demand when scraped.
+    Registered once in gunicorn.conf.py's on_starting hook and served on port 8087.
+    """
 
-    sam_aircraft_count.set(Aircraft.objects.count())
-    sam_aircraft_quota.set(
-        settings.SAM_MAX_AIRCRAFT if settings.SAM_MAX_AIRCRAFT is not None else -1
-    )
+    def collect(self):
+        from core.models import Aircraft
 
-    media_root = getattr(settings, "MEDIA_ROOT", "")
-    sam_storage_used_bytes.set(dir_size(str(media_root)))
-    sam_storage_quota_bytes.set(
-        settings.SAM_STORAGE_QUOTA_GB * 1024 * 1024 * 1024
-        if settings.SAM_STORAGE_QUOTA_GB is not None
-        else -1
-    )
+        yield GaugeMetricFamily(
+            "sam_aircraft_count",
+            "Current number of aircraft records",
+            value=Aircraft.objects.count(),
+        )
+        yield GaugeMetricFamily(
+            "sam_aircraft_quota",
+            "Configured aircraft quota (-1 if unlimited)",
+            value=settings.SAM_MAX_AIRCRAFT if settings.SAM_MAX_AIRCRAFT is not None else -1,
+        )
+        yield GaugeMetricFamily(
+            "sam_storage_used_bytes",
+            "Total media storage used in bytes",
+            value=get_storage_used_bytes(),
+        )
+        yield GaugeMetricFamily(
+            "sam_storage_quota_bytes",
+            "Configured storage quota in bytes (-1 if unlimited)",
+            value=(
+                settings.SAM_STORAGE_QUOTA_GB * 1024 * 1024 * 1024
+                if settings.SAM_STORAGE_QUOTA_GB is not None
+                else -1
+            ),
+        )
