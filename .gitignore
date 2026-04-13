@@ -1,3 +1,6 @@
+# Superpowers planning docs (local only)
+docs/superpowers/
+
 # Python
 __pycache__/
 *.py[cod]
