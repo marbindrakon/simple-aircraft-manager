@@ -64,8 +64,9 @@ RUN DJANGO_SECRET_KEY=build-only DJANGO_ALLOWED_HOSTS=localhost \
 COPY --chown=1001:0 docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Expose port 8000 (gunicorn; nginx sidecar handles 8080)
+# Expose port 8000 (gunicorn; nginx sidecar handles 8080) and 8087 (Prometheus metrics)
 EXPOSE 8000
+EXPOSE 8087
 
 # Set entrypoint and default command
 ENTRYPOINT ["docker-entrypoint.sh"]
