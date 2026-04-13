@@ -29,7 +29,11 @@ def validate_uploaded_file(value):
             f"Content type '{value.content_type}' is not allowed."
         )
 
-    # Storage quota check
+    # Storage quota check.
+    # Note: the read of get_storage_used_bytes() and the subsequent file save are not
+    # atomic, so two concurrent uploads near the quota limit can both pass this check
+    # and cause a minor overage. This is a soft limit — the quota is not a hard security
+    # boundary, and the overage is bounded to a single upload's size.
     quota_gb = django_settings.SAM_STORAGE_QUOTA_GB
     if quota_gb is not None:
         used_bytes = get_storage_used_bytes()

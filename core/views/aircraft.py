@@ -68,6 +68,8 @@ class AircraftViewSet(HealthAircraftActionsMixin, viewsets.ModelViewSet):
             if max_aircraft is not None:
                 # select_for_update() serialises concurrent creates on PostgreSQL,
                 # preventing the TOCTOU window between the count read and the insert.
+                # Note: SQLite (dev/test) ignores FOR UPDATE, so the race is not
+                # prevented there — this is acceptable since production uses PostgreSQL.
                 current_count = Aircraft.objects.select_for_update().count()
                 if current_count >= max_aircraft:
                     raise PermissionDenied(
