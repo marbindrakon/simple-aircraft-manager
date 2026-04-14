@@ -1,10 +1,10 @@
 asgiref==3.11.1
-Django==5.2.12
+Django==5.2.13
 django-filter==25.2
 djangorestframework==3.16.1
 Markdown==3.10.2
 sqlparse==0.5.5
-Pillow==12.1.1
+Pillow==12.2.0
 mozilla-django-oidc==5.0.2
 anthropic==0.80.0
 pymupdf==1.27.1
