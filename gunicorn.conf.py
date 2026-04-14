@@ -10,6 +10,9 @@ def on_starting(server):
     """Register SAMCollector and start the Prometheus metrics HTTP server on port 8087."""
     import django
     django.setup()
+    from django.conf import settings
+    if not settings.PROMETHEUS_METRICS_ENABLED:
+        return
     from prometheus_client import REGISTRY, start_http_server
     from core.metrics import SAMCollector
     REGISTRY.register(SAMCollector())

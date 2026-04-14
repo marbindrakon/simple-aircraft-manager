@@ -40,6 +40,8 @@ REST_FRAMEWORK = {
 }
 
 # Application definition
+PROMETHEUS_METRICS_ENABLED = os.environ.get('PROMETHEUS_METRICS_ENABLED', 'True').lower() in ('true', '1', 'yes')
+
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -51,8 +53,10 @@ INSTALLED_APPS = [
     'core',
     'health',
     'django.contrib.admin',
-    'django_prometheus',
 ]
+
+if PROMETHEUS_METRICS_ENABLED:
+    INSTALLED_APPS.append('django_prometheus')
 
 # Plugin discovery — must run after INSTALLED_APPS is defined
 # Env vars: SAM_PLUGIN_DIR (default /plugins), SAM_PLUGINS (comma-sep module names)
@@ -130,7 +134,6 @@ if OIDC_ENABLED:
         ]
 
 MIDDLEWARE = [
-    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -138,8 +141,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
+
+if PROMETHEUS_METRICS_ENABLED:
+    MIDDLEWARE.insert(0, 'django_prometheus.middleware.PrometheusBeforeMiddleware')
+    MIDDLEWARE.append('django_prometheus.middleware.PrometheusAfterMiddleware')
 
 ROOT_URLCONF = 'simple_aircraft_manager.urls'
 
