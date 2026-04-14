@@ -9,8 +9,8 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        # Depend on the core app's latest migration so Aircraft exists.
-        ('core', '0014_aircraftfeature'),
+        # Depend on the core app's initial migration so Aircraft exists.
+        ('core', '0001_initial'),
     ]
 
     operations = [
