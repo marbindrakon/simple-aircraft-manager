@@ -38,3 +38,4 @@ and individual owners.
    feature-flags
    api-reference
    data-model
+   upgrading

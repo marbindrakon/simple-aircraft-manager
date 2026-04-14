@@ -12,11 +12,20 @@ AIRCRAFT_STATUSES = (
         ('UNAVAILABLE', 'Unavailable'),
 )
 
-def make_upload_path(subdir):
-    def upload_to(instance, filename):
+class UploadToSubdir:
+    """Callable upload_to with deconstruct() so Django's migration serializer can handle it."""
+    def __init__(self, subdir):
+        self.subdir = subdir
+
+    def __call__(self, instance, filename):
         ext = filename.rsplit('.', 1)[-1]
-        return f"{subdir}/{uuid.uuid4().hex}.{ext}"
-    return upload_to
+        return f"{self.subdir}/{uuid.uuid4().hex}.{ext}"
+
+    def deconstruct(self):
+        return ("core.models.UploadToSubdir", [self.subdir], {})
+
+def make_upload_path(subdir):
+    return UploadToSubdir(subdir)
 
 random_picture_filename = make_upload_path("aircraft_pictures")
 
