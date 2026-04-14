@@ -4,59 +4,102 @@
 
 v1.0 replaces the incremental migration history with a single consolidated
 initial migration per app. The database schema is **unchanged** — only the
-migration files on disk are different.
+migration files on disk are different. Because the schema does not change,
+rolling back to v0.9 is safe if something goes wrong.
 
-### Prerequisites
+> **If you are running a pre-v0.9 development build, you must upgrade to v0.9
+> first and confirm all migrations are applied before proceeding to v1.0.**
+> Jumping directly from an older dev build to v1.0 will likely fail because
+> the consolidated `0001_initial` migrations assume the full v0.9 schema is
+> already present.
 
-**You must be fully migrated on v0.9 before upgrading.** If your deployment
-was behind on migrations (e.g., applied through `health.0020` but not later),
-apply all pending migrations with the v0.9 image first:
+**Back up your database before upgrading.** The steps below are low-risk, but
+a backup is always good practice before any release upgrade.
+
+### Running management commands
+
+The `manage.py` commands below must be run inside the application. How you do
+that depends on your deployment:
+
+- **Local / venv:** run the commands directly in your activated virtualenv.
+- **Docker / Podman:** `docker exec -it <container-name> python manage.py <command>`
+- **OpenShift / Kubernetes:** `oc exec deploy/sam -n sam -- python manage.py <command>`
+
+### Step 1 — Verify you are fully migrated on v0.9
+
+While still running v0.9, confirm every migration has been applied:
+
+```bash
+python manage.py showmigrations core health
+```
+
+All entries should show `[X]`. Example of expected output:
+
+```
+core
+ [X] 0001_initial
+ [X] 0002_...
+ ...
+ [X] 0014_aircraftfeature
+health
+ [X] 0001_initial
+ [X] 0002_...
+ ...
+ [X] 0031_...
+```
+
+If any entry shows `[ ]`, run `python manage.py migrate` with the v0.9 image
+to apply the outstanding migrations before proceeding. Skipping this will
+cause the v1.0 application to fail with schema errors on every request.
+
+### Step 2 — Upgrade to v1.0
+
+Pull and start the v1.0 image as you normally would, then run:
 
 ```bash
 python manage.py migrate
 ```
 
-Then upgrade to v1.0. If you skip this, the running application will see
-a schema that does not match its models.
+Because the schema is unchanged, this produces no work to do. Expected output:
 
-### Standard upgrade
-
-For most deployments, upgrading is no different from any other release:
-
-```bash
-# Pull and start the new image as normal, then:
-python manage.py migrate
+```
+No migrations to apply.
 ```
 
-`migrate` will produce an empty plan and do nothing — it finds
-`('core', '0001_initial')` and `('health', '0001_initial')` already in the
-`django_migrations` table from the old chain and skips them. **No special
-flags are required.**
-
-### Edge case: empty `django_migrations` table
-
-If you are restoring a database from a schema-only dump (tables exist but
-`django_migrations` is empty), use `--fake-initial`:
+### Step 3 — Confirm the new migration state
 
 ```bash
-python manage.py migrate --fake-initial
+python manage.py showmigrations core health
 ```
 
-This marks the initial migrations as applied without re-running DDL.
+Expected output after the upgrade:
+
+```
+core
+ [X] 0001_initial
+health
+ [X] 0001_initial
+```
+
+Only the single consolidated initial migration should appear per app. If you
+see this, the upgrade is complete.
 
 ### Cleaning up orphan migration entries (optional)
 
-After upgrading, the `django_migrations` table will still contain the old
-entries (`core.0002` through `core.0014`, `health.0002` through
-`health.0031`). Django ignores them — they don't appear in `showmigrations`
-output — but they can be confusing when querying the table directly. To
-remove them:
+The `django_migrations` table still contains the old numbered entries from
+v0.9. Django ignores them entirely — they do not appear in `showmigrations`
+output — so leaving them in place causes no problems. If you prefer a clean
+table, you can remove them:
 
-```sql
-DELETE FROM django_migrations
-WHERE app IN ('core', 'health')
-  AND name != '0001_initial';
+```bash
+python manage.py migrate core --prune
+python manage.py migrate health --prune
 ```
+
+`--prune` removes rows that no longer correspond to a migration file on disk.
+It operates on one app at a time, so both apps must be run separately.
+
+---
 
 ### Plugin authors
 

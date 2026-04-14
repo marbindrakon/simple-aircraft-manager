@@ -2,7 +2,7 @@
 
 > **Note**: This codebase was generated with [Claude](https://claude.ai), Anthropic's AI assistant, using [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
-> **Warning**: This application is under heavy development and breaking changes should be expected. In particular, database schema migrations will be squashed prior to the initial release. A tagged pre-release checkpoint will be provided to allow existing deployments to migrate cleanly before the squash lands.
+> **Warning**: If you are upgrading to v1.0 from an earlier version, read [docs/upgrading.md](docs/upgrading.md) before updating.
 
 ## Overview
 
