@@ -3,10 +3,10 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Upgrading Simple Aircraft Manager" href="upgrading.html"><link rel="prev" title="API Reference" href="api-reference.html">
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="prev" title="Data Model" href="data-model.html">
 
     <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
-        <title>Data Model - Simple Aircraft Manager</title>
+        <title>Upgrading Simple Aircraft Manager - Simple Aircraft Manager</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -218,8 +218,8 @@
 <li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugin System</a></li>
 <li class="toctree-l1"><a class="reference internal" href="feature-flags.html">Per-Aircraft Feature Flags</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api-reference.html">API Reference</a></li>
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Data Model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="upgrading.html">Upgrading Simple Aircraft Manager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data Model</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Upgrading Simple Aircraft Manager</a></li>
 </ul>
 
 </div>
@@ -240,7 +240,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="_sources/data-model.md.txt" title="View this page">
+  <a class="muted-link" href="_sources/upgrading.md.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -258,216 +258,119 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="data-model">
-<h1>Data Model<a class="headerlink" href="#data-model" title="Link to this heading">¶</a></h1>
-<section id="core-app">
-<h2>Core App<a class="headerlink" href="#core-app" title="Link to this heading">¶</a></h2>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Model</p></th>
-<th class="head"><p>Description</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Aircraft</span></code></p></td>
-<td><p>Central fleet inventory (UUID primary key)</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">AircraftNote</span></code></p></td>
-<td><p>Notes attached to aircraft with timestamps; <code class="docutils literal notranslate"><span class="pre">public</span></code> flag controls share-link visibility</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AircraftEvent</span></code></p></td>
-<td><p>Audit trail of all changes to aircraft data</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">AircraftRole</span></code></p></td>
-<td><p>Per-aircraft user roles (<code class="docutils literal notranslate"><span class="pre">owner</span></code> or <code class="docutils literal notranslate"><span class="pre">pilot</span></code>)</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AircraftShareToken</span></code></p></td>
-<td><p>Share link tokens with privilege level (<code class="docutils literal notranslate"><span class="pre">status</span></code> or <code class="docutils literal notranslate"><span class="pre">maintenance</span></code>), optional expiry, and optional label</p></td>
-</tr>
-</tbody>
-</table>
-</div>
+          <section id="upgrading-simple-aircraft-manager">
+<h1>Upgrading Simple Aircraft Manager<a class="headerlink" href="#upgrading-simple-aircraft-manager" title="Link to this heading">¶</a></h1>
+<section id="v0-9-v1-0">
+<h2>v0.9 → v1.0<a class="headerlink" href="#v0-9-v1-0" title="Link to this heading">¶</a></h2>
+<p>v1.0 replaces the incremental migration history with a single consolidated
+initial migration per app. The database schema is <strong>unchanged</strong> — only the
+migration files on disk are different. Because the schema does not change,
+rolling back to v0.9 is safe if something goes wrong.</p>
+<blockquote>
+<div><p><strong>If you are running a pre-v0.9 development build, you must upgrade to v0.9
+first and confirm all migrations are applied before proceeding to v1.0.</strong>
+Jumping directly from an older dev build to v1.0 will likely fail because
+the consolidated <code class="docutils literal notranslate"><span class="pre">0001_initial</span></code> migrations assume the full v0.9 schema is
+already present.</p>
+</div></blockquote>
+<p><strong>Back up your database before upgrading.</strong> The steps below are low-risk, but
+a backup is always good practice before any release upgrade.</p>
+<section id="running-management-commands">
+<h3>Running management commands<a class="headerlink" href="#running-management-commands" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">manage.py</span></code> commands below must be run inside the application. How you do
+that depends on your deployment:</p>
+<ul class="simple">
+<li><p><strong>Local / venv:</strong> run the commands directly in your activated virtualenv.</p></li>
+<li><p><strong>Docker / Podman:</strong> <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">exec</span> <span class="pre">-it</span> <span class="pre">&lt;container-name&gt;</span> <span class="pre">python</span> <span class="pre">manage.py</span> <span class="pre">&lt;command&gt;</span></code></p></li>
+<li><p><strong>OpenShift / Kubernetes:</strong> <code class="docutils literal notranslate"><span class="pre">oc</span> <span class="pre">exec</span> <span class="pre">deploy/sam</span> <span class="pre">-n</span> <span class="pre">sam</span> <span class="pre">--</span> <span class="pre">python</span> <span class="pre">manage.py</span> <span class="pre">&lt;command&gt;</span></code></p></li>
+</ul>
 </section>
-<section id="health-app">
-<h2>Health App<a class="headerlink" href="#health-app" title="Link to this heading">¶</a></h2>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Model</p></th>
-<th class="head"><p>Description</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ComponentType</span></code></p></td>
-<td><p>Component categories (consumable flag)</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Component</span></code></p></td>
-<td><p>Parts with TBO, inspection, and replacement tracking; supports parent-child hierarchy</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">DocumentCollection</span></code></p></td>
-<td><p>Logical document groupings</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Document</span></code></p></td>
-<td><p>Maintenance documentation by type</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">DocumentImage</span></code></p></td>
-<td><p>Individual pages/images within documents</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">LogbookEntry</span></code></p></td>
-<td><p>Maintenance log entries with hours, dates, and file attachments</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Squawk</span></code></p></td>
-<td><p>Maintenance defects with priority levels and optional component link</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">InspectionType</span></code></p></td>
-<td><p>Recurring inspection requirements with hour/day intervals</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">InspectionRecord</span></code></p></td>
-<td><p>Inspection completion records</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">AD</span></code></p></td>
-<td><p>Airworthiness Directives with recurrence settings</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ADCompliance</span></code></p></td>
-<td><p>AD compliance records</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">MajorRecord</span></code></p></td>
-<td><p>Major repair and alteration records</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ConsumeableRecord</span></code></p></td>
-<td><p>Oil/fuel consumption records</p></td>
-</tr>
-</tbody>
-</table>
+<section id="step-1-verify-you-are-fully-migrated-on-v0-9">
+<h3>Step 1 — Verify you are fully migrated on v0.9<a class="headerlink" href="#step-1-verify-you-are-fully-migrated-on-v0-9" title="Link to this heading">¶</a></h3>
+<p>While still running v0.9, confirm every migration has been applied:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>manage.py<span class="w"> </span>showmigrations<span class="w"> </span>core<span class="w"> </span>health
+</pre></div>
 </div>
+<p>All entries should show <code class="docutils literal notranslate"><span class="pre">[X]</span></code>. Example of expected output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">core</span>
+ <span class="p">[</span><span class="n">X</span><span class="p">]</span> <span class="mi">0001</span><span class="n">_initial</span>
+ <span class="p">[</span><span class="n">X</span><span class="p">]</span> <span class="mi">0002</span><span class="n">_</span><span class="o">...</span>
+ <span class="o">...</span>
+ <span class="p">[</span><span class="n">X</span><span class="p">]</span> <span class="mi">0014</span><span class="n">_aircraftfeature</span>
+<span class="n">health</span>
+ <span class="p">[</span><span class="n">X</span><span class="p">]</span> <span class="mi">0001</span><span class="n">_initial</span>
+ <span class="p">[</span><span class="n">X</span><span class="p">]</span> <span class="mi">0002</span><span class="n">_</span><span class="o">...</span>
+ <span class="o">...</span>
+ <span class="p">[</span><span class="n">X</span><span class="p">]</span> <span class="mi">0031</span><span class="n">_</span><span class="o">...</span>
+</pre></div>
+</div>
+<p>If any entry shows <code class="docutils literal notranslate"><span class="pre">[</span> <span class="pre">]</span></code>, run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">manage.py</span> <span class="pre">migrate</span></code> with the v0.9 image
+to apply the outstanding migrations before proceeding. Skipping this will
+cause the v1.0 application to fail with schema errors on every request.</p>
 </section>
-<section id="relationships">
-<h2>Relationships<a class="headerlink" href="#relationships" title="Link to this heading">¶</a></h2>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Aircraft (central hub)
-├── AircraftNote (1:N)
-├── AircraftEvent (1:N)
-├── AircraftRole (1:N) → User
-├── AircraftShareToken (1:N)
-├── Component (1:N)
-│   ├── ComponentType (N:1)
-│   ├── Parent Component (self-reference)
-│   └── Squawk (1:N, optional link)
-├── Squawk (1:N)
-├── LogbookEntry (1:N)
-├── Document (1:N)
-│   ├── DocumentCollection (N:1, optional)
-│   └── DocumentImage (1:N)
-├── InspectionType (1:N)
-├── InspectionRecord (1:N)
-├── AD (1:N)
-├── ADCompliance (1:N) → AD
-├── MajorRecord (1:N)
-└── ConsumeableRecord (1:N)
+<section id="step-2-upgrade-to-v1-0">
+<h3>Step 2 — Upgrade to v1.0<a class="headerlink" href="#step-2-upgrade-to-v1-0" title="Link to this heading">¶</a></h3>
+<p>Pull and start the v1.0 image as you normally would, then run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>manage.py<span class="w"> </span>migrate
+</pre></div>
+</div>
+<p>Because the schema is unchanged, this produces no work to do. Expected output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">No</span> <span class="n">migrations</span> <span class="n">to</span> <span class="n">apply</span><span class="o">.</span>
 </pre></div>
 </div>
 </section>
-<section id="component-hours-fields">
-<h2>Component Hours Fields<a class="headerlink" href="#component-hours-fields" title="Link to this heading">¶</a></h2>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Field</p></th>
-<th class="head"><p>Purpose</p></th>
-<th class="head"><p>Resets on service?</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">hours_in_service</span></code></p></td>
-<td><p>Total cumulative hours since installation</p></td>
-<td><p>No — never resets on service</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">hours_since_overhaul</span></code></p></td>
-<td><p>Hours since last overhaul or last service</p></td>
-<td><p>Yes — resets on service for <code class="docutils literal notranslate"><span class="pre">replacement_critical</span></code></p></td>
-</tr>
-</tbody>
-</table>
+<section id="step-3-confirm-the-new-migration-state">
+<h3>Step 3 — Confirm the new migration state<a class="headerlink" href="#step-3-confirm-the-new-migration-state" title="Link to this heading">¶</a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>manage.py<span class="w"> </span>showmigrations<span class="w"> </span>core<span class="w"> </span>health
+</pre></div>
 </div>
-<p>Both fields are incremented together whenever aircraft hours are updated. The service reset action always zeros <code class="docutils literal notranslate"><span class="pre">hours_since_overhaul</span></code>; it optionally also zeros <code class="docutils literal notranslate"><span class="pre">hours_in_service</span></code> when the component is physically replaced.</p>
+<p>Expected output after the upgrade:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">core</span>
+ <span class="p">[</span><span class="n">X</span><span class="p">]</span> <span class="mi">0001</span><span class="n">_initial</span>
+<span class="n">health</span>
+ <span class="p">[</span><span class="n">X</span><span class="p">]</span> <span class="mi">0001</span><span class="n">_initial</span>
+</pre></div>
+</div>
+<p>Only the single consolidated initial migration should appear per app. If you
+see this, the upgrade is complete.</p>
 </section>
-<section id="component-critical-flags">
-<h2>Component Critical Flags<a class="headerlink" href="#component-critical-flags" title="Link to this heading">¶</a></h2>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Flag</p></th>
-<th class="head"><p>Tracked via</p></th>
-<th class="head"><p>Purpose</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">replacement_critical</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">replacement_hours</span></code> + <code class="docutils literal notranslate"><span class="pre">hours_since_overhaul</span></code></p></td>
-<td><p>Periodic replacement (oil, filters)</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tbo_critical</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">tbo_hours</span></code> + <code class="docutils literal notranslate"><span class="pre">hours_since_overhaul</span></code></p></td>
-<td><p>Time between overhauls (engines, props)</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">inspection_critical</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">InspectionType</span></code> records</p></td>
-<td><p>Requires periodic inspections</p></td>
-</tr>
-</tbody>
-</table>
+<section id="cleaning-up-orphan-migration-entries-optional">
+<h3>Cleaning up orphan migration entries (optional)<a class="headerlink" href="#cleaning-up-orphan-migration-entries-optional" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">django_migrations</span></code> table still contains the old numbered entries from
+v0.9. Django ignores them entirely — they do not appear in <code class="docutils literal notranslate"><span class="pre">showmigrations</span></code>
+output — so leaving them in place causes no problems. If you prefer a clean
+table, you can remove them:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>manage.py<span class="w"> </span>migrate<span class="w"> </span>core<span class="w"> </span>--prune
+python<span class="w"> </span>manage.py<span class="w"> </span>migrate<span class="w"> </span>health<span class="w"> </span>--prune
+</pre></div>
 </div>
+<p><code class="docutils literal notranslate"><span class="pre">--prune</span></code> removes rows that no longer correspond to a migration file on disk.
+It operates on one app at a time, so both apps must be run separately.</p>
+<blockquote>
+<div><p><strong>Note:</strong> Running <code class="docutils literal notranslate"><span class="pre">--prune</span></code> blocks rollback to v0.9. Without the old
+migration records in <code class="docutils literal notranslate"><span class="pre">django_migrations</span></code>, a v0.9 image will treat migrations
+<code class="docutils literal notranslate"><span class="pre">0002</span></code> and later as unapplied and attempt to run them against an
+already-migrated schema, causing startup failures. Only prune if you are
+confident you will not need to roll back. If you do need to roll back after
+pruning, start the v0.9 container with <code class="docutils literal notranslate"><span class="pre">SKIP_MIGRATIONS=true</span></code>, exec in, run
+<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">manage.py</span> <span class="pre">migrate</span> <span class="pre">--fake</span></code>, then restart without the flag.</p>
+</div></blockquote>
 </section>
-<section id="squawk-priorities">
-<h2>Squawk Priorities<a class="headerlink" href="#squawk-priorities" title="Link to this heading">¶</a></h2>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Value</p></th>
-<th class="head"><p>Label</p></th>
-<th class="head"><p>Color</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p>0</p></td>
-<td><p>Ground Aircraft</p></td>
-<td><p>Red</p></td>
-</tr>
-<tr class="row-odd"><td><p>1</p></td>
-<td><p>Fix Soon</p></td>
-<td><p>Orange</p></td>
-</tr>
-<tr class="row-even"><td><p>2</p></td>
-<td><p>Fix at Next Inspection</p></td>
-<td><p>Blue</p></td>
-</tr>
-<tr class="row-odd"><td><p>3</p></td>
-<td><p>Fix Eventually</p></td>
-<td><p>Grey</p></td>
-</tr>
-</tbody>
-</table>
+<hr class="docutils" />
+<section id="plugin-authors">
+<h3>Plugin authors<a class="headerlink" href="#plugin-authors" title="Link to this heading">¶</a></h3>
+<p>If you maintain a plugin with migrations that depend on a specific migration
+in <code class="docutils literal notranslate"><span class="pre">core</span></code> or <code class="docutils literal notranslate"><span class="pre">health</span></code>, update those dependencies to point to <code class="docutils literal notranslate"><span class="pre">0001_initial</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">dependencies</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s1">&#39;core&#39;</span><span class="p">,</span> <span class="s1">&#39;0001_initial&#39;</span><span class="p">),</span>  <span class="c1"># was (&#39;core&#39;, &#39;0014_aircraftfeature&#39;) or similar</span>
+<span class="p">]</span>
+</pre></div>
 </div>
+<p>Any plugin whose migration references a now-deleted migration name
+(e.g. <code class="docutils literal notranslate"><span class="pre">core.0014_aircraftfeature</span></code>) will raise <code class="docutils literal notranslate"><span class="pre">NodeNotFoundError</span></code> when
+Django builds the migration graph. The example plugin shipped with this
+project has been updated accordingly.</p>
 </section>
-<section id="share-token-privilege-levels">
-<h2>Share Token Privilege Levels<a class="headerlink" href="#share-token-privilege-levels" title="Link to this heading">¶</a></h2>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Level</p></th>
-<th class="head"><p>Data Visible</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">status</span></code></p></td>
-<td><p>Overview, airworthiness, active squawks, public notes, current AD/inspection status, oil/fuel, documents marked “All share links”</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">maintenance</span></code></p></td>
-<td><p>Everything in <code class="docutils literal notranslate"><span class="pre">status</span></code> + full history (logbook, AD/inspection history, resolved squawks, major records) + documents marked “Maintenance only”</p></td>
-</tr>
-</tbody>
-</table>
-</div>
 </section>
 </section>
 
@@ -476,23 +379,15 @@
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="upgrading.html">
-              <div class="page-info">
-                <div class="context">
-                  <span>Next</span>
-                </div>
-                <div class="title">Upgrading Simple Aircraft Manager</div>
-              </div>
-              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
-            </a>
-          <a class="prev-page" href="api-reference.html">
+          
+          <a class="prev-page" href="data-model.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">API Reference</div>
+                <div class="title">Data Model</div>
                 
               </div>
             </a>
@@ -526,14 +421,16 @@
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">Data Model</a><ul>
-<li><a class="reference internal" href="#core-app">Core App</a></li>
-<li><a class="reference internal" href="#health-app">Health App</a></li>
-<li><a class="reference internal" href="#relationships">Relationships</a></li>
-<li><a class="reference internal" href="#component-hours-fields">Component Hours Fields</a></li>
-<li><a class="reference internal" href="#component-critical-flags">Component Critical Flags</a></li>
-<li><a class="reference internal" href="#squawk-priorities">Squawk Priorities</a></li>
-<li><a class="reference internal" href="#share-token-privilege-levels">Share Token Privilege Levels</a></li>
+<li><a class="reference internal" href="#">Upgrading Simple Aircraft Manager</a><ul>
+<li><a class="reference internal" href="#v0-9-v1-0">v0.9 → v1.0</a><ul>
+<li><a class="reference internal" href="#running-management-commands">Running management commands</a></li>
+<li><a class="reference internal" href="#step-1-verify-you-are-fully-migrated-on-v0-9">Step 1 — Verify you are fully migrated on v0.9</a></li>
+<li><a class="reference internal" href="#step-2-upgrade-to-v1-0">Step 2 — Upgrade to v1.0</a></li>
+<li><a class="reference internal" href="#step-3-confirm-the-new-migration-state">Step 3 — Confirm the new migration state</a></li>
+<li><a class="reference internal" href="#cleaning-up-orphan-migration-entries-optional">Cleaning up orphan migration entries (optional)</a></li>
+<li><a class="reference internal" href="#plugin-authors">Plugin authors</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
