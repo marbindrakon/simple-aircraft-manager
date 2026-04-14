@@ -99,6 +99,14 @@ python manage.py migrate health --prune
 `--prune` removes rows that no longer correspond to a migration file on disk.
 It operates on one app at a time, so both apps must be run separately.
 
+> **Note:** Running `--prune` blocks rollback to v0.9. Without the old
+> migration records in `django_migrations`, a v0.9 image will treat migrations
+> `0002` and later as unapplied and attempt to run them against an
+> already-migrated schema, causing startup failures. Only prune if you are
+> confident you will not need to roll back. If you do need to roll back after
+> pruning, start the v0.9 container with `SKIP_MIGRATIONS=true`, exec in, run
+> `python manage.py migrate --fake`, then restart without the flag.
+
 ---
 
 ### Plugin authors
