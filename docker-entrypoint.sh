@@ -44,9 +44,14 @@ if [ -n "${SAM_PLUGIN_DIR}" ] || [ -n "${SAM_PLUGIN_PACKAGES}" ]; then
     python manage.py collectstatic --noinput
 fi
 
-# Run database migrations
-echo "Running database migrations..."
-python manage.py migrate --noinput
+# Run database migrations (set SKIP_MIGRATIONS=true to disable, e.g. when
+# manually faking migrations before starting the app after a rollback)
+if [ "${SKIP_MIGRATIONS}" = "true" ]; then
+    echo "Skipping database migrations (SKIP_MIGRATIONS=true)"
+else
+    echo "Running database migrations..."
+    python manage.py migrate --noinput
+fi
 
 # Create superuser if credentials provided and user doesn't exist
 # Django's createsuperuser --noinput reads DJANGO_SUPERUSER_USERNAME,
