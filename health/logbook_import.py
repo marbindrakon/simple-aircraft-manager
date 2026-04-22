@@ -142,6 +142,19 @@ def run_import(
     elif provider == 'ollama':
         from django.conf import settings as django_settings
         provider_client = getattr(django_settings, 'OLLAMA_BASE_URL', 'http://localhost:11434')
+    elif provider == 'litellm':
+        from django.conf import settings as django_settings
+        base_url = getattr(django_settings, 'LITELLM_BASE_URL', '')
+        if not base_url:
+            yield _ev('error', 'LITELLM_BASE_URL is not configured (set the LITELLM_BASE_URL env var)')
+            return
+        try:
+            import openai
+        except ImportError:
+            yield _ev('error', "The 'openai' package is not installed (pip install openai)")
+            return
+        api_key = getattr(django_settings, 'LITELLM_API_KEY', 'dummy')
+        provider_client = openai.OpenAI(base_url=base_url, api_key=api_key)
     else:
         yield _ev('error', f"Unknown provider: {provider}")
         return
