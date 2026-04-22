@@ -254,8 +254,9 @@ LOGBOOK_IMPORT_MODELS = [
     },
 ]
 
-# Add extra models (e.g. Ollama) via JSON env var without rebuilding the image:
+# Add extra models (e.g. Ollama or LiteLLM) via JSON env var without rebuilding the image:
 #   LOGBOOK_IMPORT_EXTRA_MODELS='[{"id":"llama3.2-vision","name":"Llama 3.2 Vision (local)","provider":"ollama"}]'
+#   LOGBOOK_IMPORT_EXTRA_MODELS='[{"id":"claude-sonnet-4-6","name":"Sonnet 4.6 (via proxy)","provider":"litellm"}]'
 _extra_models_json = os.environ.get('LOGBOOK_IMPORT_EXTRA_MODELS')
 if _extra_models_json:
     import json as _json
@@ -268,6 +269,10 @@ LOGBOOK_IMPORT_DEFAULT_MODEL = os.environ.get(
 # Ollama connection (only needed if any model uses provider=ollama)
 OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
 OLLAMA_TIMEOUT = int(os.environ.get('OLLAMA_TIMEOUT', '1200'))
+
+# LiteLLM proxy connection (only needed if any model uses provider=litellm)
+LITELLM_BASE_URL = os.environ.get('LITELLM_BASE_URL', '')
+LITELLM_API_KEY = os.environ.get('LITELLM_API_KEY', 'dummy')
 
 # Security settings for production
 if not DEBUG:

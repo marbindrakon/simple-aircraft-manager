@@ -208,6 +208,10 @@ LOGBOOK_IMPORT_DEFAULT_MODEL = 'claude-sonnet-4-6'
 OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
 OLLAMA_TIMEOUT = int(os.environ.get('OLLAMA_TIMEOUT', '1200'))
 
+# LiteLLM proxy connection (only needed if any model uses provider=litellm)
+LITELLM_BASE_URL = os.environ.get('LITELLM_BASE_URL', '')
+LITELLM_API_KEY = os.environ.get('LITELLM_API_KEY', 'dummy')
+
 # OIDC Configuration for Development
 # Set OIDC_ENABLED=false by default in dev - enable with environment variable for local testing
 OIDC_ENABLED = os.environ.get('OIDC_ENABLED', 'False').lower() in ('true', '1', 'yes')
