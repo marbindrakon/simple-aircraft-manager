@@ -256,7 +256,7 @@ LOGBOOK_IMPORT_MODELS = [
 
 # Add extra models (e.g. Ollama or LiteLLM) via JSON env var without rebuilding the image:
 #   LOGBOOK_IMPORT_EXTRA_MODELS='[{"id":"llama3.2-vision","name":"Llama 3.2 Vision (local)","provider":"ollama"}]'
-#   LOGBOOK_IMPORT_EXTRA_MODELS='[{"id":"claude-sonnet-4-6","name":"Sonnet 4.6 (via proxy)","provider":"litellm"}]'
+#   LOGBOOK_IMPORT_EXTRA_MODELS='[{"id":"claude-sonnet-4-6-proxy","name":"Sonnet 4.6 (via proxy)","provider":"litellm"}]'
 _extra_models_json = os.environ.get('LOGBOOK_IMPORT_EXTRA_MODELS')
 if _extra_models_json:
     import json as _json
