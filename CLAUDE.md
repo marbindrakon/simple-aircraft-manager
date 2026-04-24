@@ -178,7 +178,7 @@ Required env vars: `OIDC_RP_CLIENT_ID`, `OIDC_RP_CLIENT_SECRET`, `OIDC_OP_DISCOV
 
 ### Logbook Import (Multi-Provider AI)
 
-`health/logbook_import.py`. Providers: `anthropic` (Anthropic SDK, rate-limit retries) and `ollama` (base URL, no retries).
+`health/logbook_import.py`. Providers: `anthropic` (Anthropic SDK, rate-limit retries), `ollama` (base URL, no retries), and `litellm` (OpenAI-compatible SDK against a LiteLLM proxy; proxy handles retries).
 
 Model registry: `LOGBOOK_IMPORT_MODELS` (list of `{id, name, provider}` dicts). Default: `LOGBOOK_IMPORT_DEFAULT_MODEL`. Add prod-only models via `LOGBOOK_IMPORT_EXTRA_MODELS` JSON env var.
 

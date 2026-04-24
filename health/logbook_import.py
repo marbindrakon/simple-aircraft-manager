@@ -142,6 +142,19 @@ def run_import(
     elif provider == 'ollama':
         from django.conf import settings as django_settings
         provider_client = getattr(django_settings, 'OLLAMA_BASE_URL', 'http://localhost:11434')
+    elif provider == 'litellm':
+        from django.conf import settings as django_settings
+        base_url = getattr(django_settings, 'LITELLM_BASE_URL', '')
+        if not base_url:
+            yield _ev('error', 'LITELLM_BASE_URL is not configured (set the LITELLM_BASE_URL env var)')
+            return
+        try:
+            import openai
+        except ImportError:
+            yield _ev('error', "The 'openai' package is not installed (pip install openai)")
+            return
+        api_key = getattr(django_settings, 'LITELLM_API_KEY', 'dummy')
+        provider_client = openai.OpenAI(base_url=base_url, api_key=api_key)
     else:
         yield _ev('error', f"Unknown provider: {provider}")
         return
@@ -506,6 +519,9 @@ def _call_model(
     elif provider == 'ollama':
         return _call_ollama(provider_client, batch_files, model,
                             prior_context_text=prior_context_text)
+    elif provider == 'litellm':
+        return _call_litellm(provider_client, batch_files, model,
+                             prior_context_text=prior_context_text)
     else:
         raise ValueError(f"Unknown provider: {provider}")
 
@@ -671,6 +687,72 @@ def _call_ollama(
             data = json.loads(raw_content)
         except json.JSONDecodeError:
             log.warning("Ollama returned invalid JSON: %s", raw_content[:200])
+            data = {'entries': [], 'non_logbook_pages': [], 'unparseable_pages': []}
+
+    return {
+        'data': data,
+        'truncated': truncated,
+        'output_tokens': output_tokens,
+    }
+
+
+def _call_litellm(
+    client,
+    batch_files: List[Path],
+    model: str,
+    prior_context_text: Optional[str] = None,
+) -> dict:
+    """
+    Send a batch of images to a LiteLLM proxy via the OpenAI-compatible API.
+    Returns dict with keys: 'data', 'truncated', 'output_tokens'.
+    Raises openai.APIError on unrecoverable errors (proxy handles retries internally).
+    """
+    user_content = []
+
+    if prior_context_text:
+        user_content.append({'type': 'text', 'text': prior_context_text})
+
+    for local_idx, image_path in enumerate(batch_files):
+        user_content.append({'type': 'text', 'text': f"Page {local_idx} ({image_path.name}):"})
+        image_bytes = _get_image_bytes(image_path)
+        image_b64 = base64.standard_b64encode(image_bytes).decode('utf-8')
+        media_type = 'image/png' if image_path.suffix.lower() == '.png' else 'image/jpeg'
+        user_content.append({
+            'type': 'image_url',
+            'image_url': {'url': f"data:{media_type};base64,{image_b64}"},
+        })
+
+    user_content.append({
+        'type': 'text',
+        'text': (
+            f"These are {len(batch_files)} logbook page image(s), "
+            f"indexed 0–{len(batch_files) - 1}. "
+            "Extract all logbook entries and return the JSON as specified."
+        ),
+    })
+
+    response = client.chat.completions.create(
+        model=model,
+        max_tokens=_MAX_TOKENS,
+        response_format={'type': 'json_object'},
+        messages=[
+            {'role': 'system', 'content': EXTRACT_SYSTEM_PROMPT},
+            {'role': 'user', 'content': user_content},
+        ],
+    )
+
+    truncated = response.choices[0].finish_reason == 'length'
+    output_tokens = getattr(response.usage, 'completion_tokens', 0)
+
+    data = {}
+    if not truncated:
+        raw = response.choices[0].message.content or '{}'
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            logging.getLogger(__name__).warning(
+                "LiteLLM returned invalid JSON: %s", raw[:200]
+            )
             data = {'entries': [], 'non_logbook_pages': [], 'unparseable_pages': []}
 
     return {

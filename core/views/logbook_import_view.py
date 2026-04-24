@@ -45,6 +45,8 @@ class LogbookImportView(LoginRequiredMixin, View):
         import_models = settings.LOGBOOK_IMPORT_MODELS
         if not os.environ.get('ANTHROPIC_API_KEY'):
             import_models = [m for m in import_models if m.get('provider') != 'anthropic']
+        if not getattr(settings, 'LITELLM_BASE_URL', ''):
+            import_models = [m for m in import_models if m.get('provider') != 'litellm']
         default_model = settings.LOGBOOK_IMPORT_DEFAULT_MODEL
         available_ids = {m['id'] for m in import_models}
         if default_model not in available_ids:

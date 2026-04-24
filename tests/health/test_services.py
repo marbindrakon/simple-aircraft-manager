@@ -170,9 +170,12 @@ class TestAdComplianceStatus:
         assert rank == STATUS_COMPLIANT
 
     def test_calendar_based_recurring_due_soon(self, aircraft):
-        """Complied 11.5 months ago (within 30 days of next due) → DUE_SOON."""
+        """Complied on 1st of this month last year → next due = last day of this month → DUE_SOON."""
         ad = self._make_ad(aircraft, recurring=True, recurring_months=12)
-        complied_date = datetime.date.today() - datetime.timedelta(days=350)
+        today = datetime.date.today()
+        # 1st of this month last year → end_of_month_after(..., 12) = last day of current month,
+        # which is always within 30 days and never overdue.
+        complied_date = today.replace(day=1, year=today.year - 1)
         compliance = self._make_compliance(
             ad, aircraft,
             date_complied=complied_date,
@@ -242,9 +245,10 @@ class TestInspectionComplianceStatus:
         assert rank == STATUS_COMPLIANT
 
     def test_recurring_months_record_almost_due_is_due_soon(self, aircraft):
-        """Record from ~11.9 months ago (within 30 days of next due) → DUE_SOON."""
+        """Record on 1st of this month last year → next due = last day of this month → DUE_SOON."""
         insp_type = self._make_insp_type(aircraft, recurring=True, recurring_months=12)
-        record_date = datetime.date.today() - datetime.timedelta(days=350)
+        today = datetime.date.today()
+        record_date = today.replace(day=1, year=today.year - 1)
         record = self._make_record(insp_type, aircraft, date=record_date)
         rank, _ = inspection_compliance_status(insp_type, record, Decimal('100.0'), datetime.date.today())
         assert rank == STATUS_DUE_SOON
@@ -447,8 +451,9 @@ class TestCalculateAirworthiness:
             recurring_months=12,
         )
         insp_type.applicable_aircraft.add(aircraft)
-        # Record from ~11.9 months ago → due within 30 days
-        record_date = datetime.date.today() - datetime.timedelta(days=350)
+        # Record on 1st of this month last year → next due = last day of this month (within 30 days)
+        today = datetime.date.today()
+        record_date = today.replace(day=1, year=today.year - 1)
         InspectionRecord.objects.create(
             inspection_type=insp_type,
             aircraft=aircraft,

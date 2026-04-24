@@ -229,6 +229,16 @@ class Command(BaseCommand):
             provider_client = anthropic.Anthropic(api_key=api_key)
         elif provider == 'ollama':
             provider_client = settings.OLLAMA_BASE_URL
+        elif provider == 'litellm':
+            base_url = getattr(settings, 'LITELLM_BASE_URL', '')
+            if not base_url:
+                raise CommandError("LITELLM_BASE_URL is not configured (set the LITELLM_BASE_URL env var)")
+            try:
+                import openai
+            except ImportError:
+                raise CommandError("The 'openai' package is not installed")
+            api_key = getattr(settings, 'LITELLM_API_KEY', 'dummy')
+            provider_client = openai.OpenAI(base_url=base_url, api_key=api_key)
         else:
             raise CommandError(f"Unknown provider: {provider}")
 
