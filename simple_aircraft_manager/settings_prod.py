@@ -232,7 +232,7 @@ SAM_STORAGE_QUOTA_GB = int(os.environ['SAM_STORAGE_QUOTA_GB']) if os.environ.get
 # Aircraft import/export settings
 IMPORT_STAGING_DIR = os.environ.get(
     'IMPORT_STAGING_DIR',
-    os.path.join(MEDIA_ROOT, 'import_staging')
+    os.path.join(BASE_DIR, 'import_staging')
 )
 IMPORT_MAX_ARCHIVE_SIZE = int(os.environ.get(
     'IMPORT_MAX_ARCHIVE_SIZE',

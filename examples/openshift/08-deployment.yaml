@@ -92,6 +92,8 @@ spec:
         volumeMounts:
         - name: media
           mountPath: /opt/app-root/src/mediafiles
+        - name: import-staging
+          mountPath: /opt/app-root/src/import_staging
 
         # Resource Limits
         # Note: AI-powered logbook import can use significant memory during
@@ -160,6 +162,10 @@ spec:
       - name: media
         persistentVolumeClaim:
           claimName: sam-media
+      # Private import staging (not mounted into nginx)
+      - name: import-staging
+        persistentVolumeClaim:
+          claimName: sam-import-staging
       # Static files (ephemeral, populated by init container)
       - name: staticfiles
         emptyDir: {}
@@ -235,6 +241,8 @@ spec:
         volumeMounts:
         - name: media
           mountPath: /opt/app-root/src/mediafiles
+        - name: import-staging
+          mountPath: /opt/app-root/src/import_staging
 
         resources:
           requests:
@@ -247,3 +255,6 @@ spec:
       - name: media
         persistentVolumeClaim:
           claimName: sam-media
+      - name: import-staging
+        persistentVolumeClaim:
+          claimName: sam-import-staging

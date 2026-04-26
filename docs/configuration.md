@@ -56,7 +56,7 @@ Controls behaviour for the `.sam.zip` import/export feature.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `IMPORT_STAGING_DIR` | `<MEDIA_ROOT>/import_staging` in production, `<BASE_DIR>/import_staging` in development | Temporary directory for staged upload files while import validation and processing runs. In multi-replica deployments this must be on shared storage. |
+| `IMPORT_STAGING_DIR` | `<BASE_DIR>/import_staging` | Temporary directory for staged upload files while import validation and processing runs. In multi-replica deployments this must be shared storage outside `MEDIA_ROOT`, so staged uploads are not served from `/media/`. |
 | `IMPORT_MAX_ARCHIVE_SIZE` | `10737418240` (10 GiB) | Maximum allowed uncompressed archive size in bytes. Archives exceeding this limit are rejected during validation. |
 
 ## OIDC Authentication (Optional)
