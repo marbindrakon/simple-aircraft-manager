@@ -6,6 +6,7 @@ They reference self.get_object(), self.request, etc. — works via MRO.
 """
 import logging
 import re
+import shutil
 from datetime import date as date_cls
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -861,31 +862,38 @@ class HealthAircraftActionsMixin:
         tmp_path = staging_dir / f"upload{suffix}"
 
         try:
-            staging_dir.mkdir(parents=True, exist_ok=True)
-            with tmp_path.open('wb') as tmp:
-                for chunk in uploaded_file.chunks():
-                    tmp.write(chunk)
-        except OSError:
-            logger.exception("Failed to stage oil analysis PDF")
-            return Response(
-                {'error': 'Failed to stage the PDF. Please try again.'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            try:
+                staging_dir.mkdir(parents=True, exist_ok=True)
+                with tmp_path.open('wb') as tmp:
+                    for chunk in uploaded_file.chunks():
+                        tmp.write(chunk)
+            except OSError:
+                logger.exception("Failed to stage oil analysis PDF")
+                return Response(
+                    {'error': 'Failed to stage the PDF. Please try again.'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+            job.save()
+
+            task = None
+            if apps.is_installed('procrastinate.contrib.django'):
+                from health.tasks import import_oil_analysis_task
+                task = import_oil_analysis_task
+
+            dispatch_import(
+                task,
+                run_oil_analysis_job,
+                (str(job.id), tmp_path),
+                job_id=str(job.id),
+                pdf_path=str(tmp_path),
             )
 
-        job.save()
+            staging_dir = None  # ownership transferred to worker
 
-        task = None
-        if apps.is_installed('procrastinate.contrib.django'):
-            from health.tasks import import_oil_analysis_task
-            task = import_oil_analysis_task
-
-        dispatch_import(
-            task,
-            run_oil_analysis_job,
-            (str(job.id), tmp_path),
-            job_id=str(job.id),
-            pdf_path=str(tmp_path),
-        )
+        finally:
+            if staging_dir is not None:
+                shutil.rmtree(staging_dir, ignore_errors=True)
 
         return Response({'job_id': str(job.id)}, status=status.HTTP_202_ACCEPTED)
 
