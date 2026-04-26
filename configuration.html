@@ -358,6 +358,26 @@
 </table>
 </div>
 </section>
+<section id="background-workers">
+<h2>Background Workers<a class="headerlink" href="#background-workers" title="Link to this heading">¶</a></h2>
+<p>PostgreSQL deployments use Procrastinate for recoverable import jobs. SQLite deployments keep the built-in thread fallback.</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Variable</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SAM_RUN_WORKER</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">true</span></code></p></td>
+<td><p>When <code class="docutils literal notranslate"><span class="pre">true</span></code> and <code class="docutils literal notranslate"><span class="pre">DATABASE_ENGINE=postgresql</span></code>, the container starts a Procrastinate worker alongside the web process. Set to <code class="docutils literal notranslate"><span class="pre">false</span></code> when running a dedicated worker deployment.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
 <section id="superuser-auto-creation">
 <h2>Superuser Auto-Creation<a class="headerlink" href="#superuser-auto-creation" title="Link to this heading">¶</a></h2>
 <div class="table-wrapper colwidths-auto docutils container">
@@ -399,7 +419,7 @@
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">IMPORT_STAGING_DIR</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">&lt;BASE_DIR&gt;/import_staging</span></code></p></td>
-<td><p>Temporary directory for staged upload files while import validation and processing runs</p></td>
+<td><p>Temporary directory for staged upload files while import validation and processing runs. In multi-replica deployments this must be shared storage outside <code class="docutils literal notranslate"><span class="pre">MEDIA_ROOT</span></code>, so staged uploads are not served from <code class="docutils literal notranslate"><span class="pre">/media/</span></code>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">IMPORT_MAX_ARCHIVE_SIZE</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">10737418240</span></code> (10 GiB)</p></td>
@@ -615,6 +635,7 @@
 <li><a class="reference internal" href="#required-for-production">Required for Production</a></li>
 <li><a class="reference internal" href="#general">General</a></li>
 <li><a class="reference internal" href="#database">Database</a></li>
+<li><a class="reference internal" href="#background-workers">Background Workers</a></li>
 <li><a class="reference internal" href="#superuser-auto-creation">Superuser Auto-Creation</a></li>
 <li><a class="reference internal" href="#aircraft-import-export-optional">Aircraft Import / Export (Optional)</a></li>
 <li><a class="reference internal" href="#oidc-authentication-optional">OIDC Authentication (Optional)</a></li>

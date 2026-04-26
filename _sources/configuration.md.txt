@@ -34,6 +34,14 @@ python -c 'from django.core.management.utils import get_random_secret_key; print
 | `DATABASE_HOST` | `localhost` | Database host |
 | `DATABASE_PORT` | `5432` | Database port |
 
+## Background Workers
+
+PostgreSQL deployments use Procrastinate for recoverable import jobs. SQLite deployments keep the built-in thread fallback.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SAM_RUN_WORKER` | `true` | When `true` and `DATABASE_ENGINE=postgresql`, the container starts a Procrastinate worker alongside the web process. Set to `false` when running a dedicated worker deployment. |
+
 ## Superuser Auto-Creation
 
 | Variable | Default | Description |
@@ -48,7 +56,7 @@ Controls behaviour for the `.sam.zip` import/export feature.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `IMPORT_STAGING_DIR` | `<BASE_DIR>/import_staging` | Temporary directory for staged upload files while import validation and processing runs |
+| `IMPORT_STAGING_DIR` | `<BASE_DIR>/import_staging` | Temporary directory for staged upload files while import validation and processing runs. In multi-replica deployments this must be shared storage outside `MEDIA_ROOT`, so staged uploads are not served from `/media/`. |
 | `IMPORT_MAX_ARCHIVE_SIZE` | `10737418240` (10 GiB) | Maximum allowed uncompressed archive size in bytes. Archives exceeding this limit are rejected during validation. |
 
 ## OIDC Authentication (Optional)
