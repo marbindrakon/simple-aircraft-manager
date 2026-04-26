@@ -51,10 +51,12 @@ COPY --chown=1001:0 . .
 # OpenShift runs containers with arbitrary user IDs, so we need group write permissions
 RUN mkdir -p ${APP_HOME}/staticfiles \
              ${APP_HOME}/mediafiles \
+             ${APP_HOME}/import_staging \
              ${APP_HOME}/data && \
     chmod -R g=u ${APP_HOME}/staticfiles \
-                 ${APP_HOME}/mediafiles \
-                 ${APP_HOME}/data
+                  ${APP_HOME}/mediafiles \
+                  ${APP_HOME}/import_staging \
+                  ${APP_HOME}/data
 
 # Collect static files (dummy values needed to satisfy required env vars at build time)
 RUN DJANGO_SECRET_KEY=build-only DJANGO_ALLOWED_HOSTS=localhost \
