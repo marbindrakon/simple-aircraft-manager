@@ -26,3 +26,23 @@ spec:
 
 # Note: If you only have RWO storage and won't scale horizontally,
 # you can change to ReadWriteOnce. However, you'll be limited to 1 replica.
+
+---
+# Persistent Volume Claim for private import staging
+# Stores temporary upload files that worker pods need but nginx must not serve.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sam-import-staging
+  namespace: sam
+  annotations:
+    # Uncomment if using ArgoCD
+    # argocd.argoproj.io/sync-wave: '0'
+spec:
+  accessModes:
+  - ReadWriteMany
+  storageClassName: your-rwx-storage-class
+
+  resources:
+    requests:
+      storage: 10Gi

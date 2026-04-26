@@ -62,6 +62,12 @@ data:
             add_header Cache-Control "public, immutable";
         }
 
+        # Defense in depth for deployments that previously staged imports under MEDIA_ROOT.
+        location ^~ /media/import_staging/ {
+            access_log off;
+            return 404;
+        }
+
         # Media Files (User Uploads)
         location /media/ {
             alias /opt/app-root/src/media/;

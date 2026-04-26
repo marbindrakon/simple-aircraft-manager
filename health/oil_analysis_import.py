@@ -8,7 +8,7 @@ Public API:
 
     run_oil_analysis_job(job_id, pdf_path)
         Background job runner. Fetches ImportJob by job_id, calls run_extraction,
-        stores result or error, and cleans up the temp file. Called from a daemon thread.
+        stores result or error, and cleans up the temp file.
 """
 
 import logging
@@ -35,7 +35,7 @@ def run_extraction(pdf_path: Path, **_kwargs) -> dict:
 def run_oil_analysis_job(job_id, pdf_path: Path, **_kwargs) -> None:
     """
     Background job runner for oil analysis PDF extraction.
-    Called from a daemon thread — do NOT call synchronously in a request.
+    Do NOT call synchronously in a request.
 
     job_id   — UUID of an ImportJob (status='pending')
     pdf_path — Path to the temp PDF file (deleted in finally block)
@@ -69,3 +69,7 @@ def run_oil_analysis_job(job_id, pdf_path: Path, **_kwargs) -> None:
         job.save(update_fields=['status'])
     finally:
         pdf_path.unlink(missing_ok=True)
+        try:
+            pdf_path.parent.rmdir()
+        except OSError:
+            pass

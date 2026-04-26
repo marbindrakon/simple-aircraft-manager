@@ -4,13 +4,14 @@ Health-domain @action methods for AircraftViewSet.
 All action methods are moved here verbatim from core/views.py.
 They reference self.get_object(), self.request, etc. — works via MRO.
 """
+import logging
 import re
-import tempfile
-import threading
+import shutil
 from datetime import date as date_cls
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
+from django.apps import apps
 from django.conf import settings as django_settings
 from django.db import transaction
 from django.db.models import Q
@@ -32,6 +33,7 @@ from core.serializers import (
     AircraftEventNestedSerializer,
     AircraftSerializer,
 )
+from health.dispatch import dispatch_import
 from health.models import (
     Component, ImportJob, LogbookEntry, Squawk, Document, DocumentCollection,
     ConsumableRecord, AD, ADCompliance, InspectionType, InspectionRecord,
@@ -64,6 +66,8 @@ register_pilot_actions('update_hours', 'squawks', 'notes', 'oil_records', 'fuel_
 register_read_pilot_write_owner('ads', 'inspections', 'major_records',
                                 'oil_analysis', 'oil_analysis_ai_extract',
                                 'features')
+
+logger = logging.getLogger(__name__)
 
 
 class HealthAircraftActionsMixin:
@@ -841,28 +845,55 @@ class HealthAircraftActionsMixin:
             return Response({'error': 'An internal error occurred during file validation.'}, 
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        model = request.data.get('model', '')
-        provider = request.data.get('provider', 'parser')
-
-        # Write to a temp file; the job runner is responsible for cleanup
-        suffix = Path(uploaded_file.name).suffix.lower() if uploaded_file.name else '.pdf'
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-            for chunk in uploaded_file.chunks():
-                tmp.write(chunk)
-            tmp_path = Path(tmp.name)
-
-        job = ImportJob.objects.create(
+        job = ImportJob(
             aircraft=aircraft,
             user=request.user,
             job_type='oil_analysis',
         )
 
-        t = threading.Thread(
-            target=run_oil_analysis_job,
-            args=(job.id, tmp_path),
-            daemon=True,
+        # Stage on shared storage when Procrastinate workers run in separate pods.
+        suffix = Path(uploaded_file.name).suffix.lower() if uploaded_file.name else '.pdf'
+        staging_root = getattr(
+            django_settings,
+            'IMPORT_STAGING_DIR',
+            Path(django_settings.BASE_DIR) / 'import_staging',
         )
-        t.start()
+        staging_dir = Path(staging_root) / 'oil_analysis_jobs' / str(job.id)
+        tmp_path = staging_dir / f"upload{suffix}"
+
+        try:
+            try:
+                staging_dir.mkdir(parents=True, exist_ok=True)
+                with tmp_path.open('wb') as tmp:
+                    for chunk in uploaded_file.chunks():
+                        tmp.write(chunk)
+            except OSError:
+                logger.exception("Failed to stage oil analysis PDF")
+                return Response(
+                    {'error': 'Failed to stage the PDF. Please try again.'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+            job.save()
+
+            task = None
+            if apps.is_installed('procrastinate.contrib.django'):
+                from health.tasks import import_oil_analysis_task
+                task = import_oil_analysis_task
+
+            dispatch_import(
+                task,
+                run_oil_analysis_job,
+                (str(job.id), tmp_path),
+                job_id=str(job.id),
+                pdf_path=str(tmp_path),
+            )
+
+            staging_dir = None  # ownership transferred to worker
+
+        finally:
+            if staging_dir is not None:
+                shutil.rmtree(staging_dir, ignore_errors=True)
 
         return Response({'job_id': str(job.id)}, status=status.HTTP_202_ACCEPTED)
 

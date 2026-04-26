@@ -17,6 +17,12 @@ data:
   # Database Configuration
   DATABASE_ENGINE: "postgresql"  # Use PostgreSQL in production
 
+  # Kubernetes runs a dedicated worker Deployment; single-container installs can omit this.
+  SAM_RUN_WORKER: "false"
+
+  # Keep import staging on a private RWX PVC so worker pods can read staged uploads.
+  IMPORT_STAGING_DIR: "/opt/app-root/src/import_staging"
+
   # Timezone
   TZ: "UTC"
 

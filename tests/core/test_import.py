@@ -486,14 +486,14 @@ class TestV1BackwardCompatibility:
 def mock_import_worker():
     """Prevent the background import thread from accessing the test DB.
 
-    ImportView spawns a daemon thread that calls run_aircraft_import_job.
+    ImportView dispatches to a daemon thread in the SQLite/test configuration.
     In the test environment the SQLite DB is inside a transaction, so the
     thread gets a 'database table is locked' or 'Database access not allowed'
     error and emits PytestUnhandledThreadExceptionWarning.  These view tests
     only care about HTTP response shape, not the job outcome, so we mock the
-    worker out entirely.
+    thread start out entirely.
     """
-    with unittest.mock.patch('core.import_export.run_aircraft_import_job'):
+    with unittest.mock.patch('threading.Thread.start'):
         yield
 
 

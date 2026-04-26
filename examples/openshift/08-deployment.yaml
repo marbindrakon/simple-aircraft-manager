@@ -9,7 +9,12 @@ metadata:
     # Uncomment if using ArgoCD
     # argocd.argoproj.io/sync-wave: '3'
 spec:
-  replicas: 1  # Increase for HA (requires RWX media storage)
+  replicas: 2  # HA web serving requires RWX media storage
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: sam
@@ -18,6 +23,14 @@ spec:
       labels:
         app: sam
     spec:
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app: sam
+
       # Init Container: Copy static files to shared volume
       # Runs before main containers start
       initContainers:
@@ -79,6 +92,8 @@ spec:
         volumeMounts:
         - name: media
           mountPath: /opt/app-root/src/mediafiles
+        - name: import-staging
+          mountPath: /opt/app-root/src/import_staging
 
         # Resource Limits
         # Note: AI-powered logbook import can use significant memory during
@@ -147,6 +162,10 @@ spec:
       - name: media
         persistentVolumeClaim:
           claimName: sam-media
+      # Private import staging (not mounted into nginx)
+      - name: import-staging
+        persistentVolumeClaim:
+          claimName: sam-import-staging
       # Static files (ephemeral, populated by init container)
       - name: staticfiles
         emptyDir: {}
@@ -158,3 +177,84 @@ spec:
       - name: tls
         secret:
           secretName: sam-nginx-tls
+
+---
+# Procrastinate Worker Deployment
+# Handles recoverable background imports. No nginx sidecar, Service, or Route needed.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sam-worker
+  namespace: sam
+  annotations:
+    # Uncomment if using ArgoCD
+    # argocd.argoproj.io/sync-wave: '3'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sam-worker
+  template:
+    metadata:
+      labels:
+        app: sam-worker
+    spec:
+      containers:
+      - name: sam-worker
+        image: ghcr.io/marbindrakon/simple-aircraft-manager:latest
+        imagePullPolicy: Always
+        args: ['python', 'manage.py', 'procrastinate', 'worker']
+
+        envFrom:
+        - configMapRef:
+            name: sam-config
+        - secretRef:
+            name: sam
+
+        env:
+        - name: DATABASE_HOST
+          valueFrom:
+            secretKeyRef:
+              name: sam-db-pguser-sam-db
+              key: host
+        - name: DATABASE_PORT
+          valueFrom:
+            secretKeyRef:
+              name: sam-db-pguser-sam-db
+              key: port
+        - name: DATABASE_NAME
+          valueFrom:
+            secretKeyRef:
+              name: sam-db-pguser-sam-db
+              key: dbname
+        - name: DATABASE_USER
+          valueFrom:
+            secretKeyRef:
+              name: sam-db-pguser-sam-db
+              key: user
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: sam-db-pguser-sam-db
+              key: password
+
+        volumeMounts:
+        - name: media
+          mountPath: /opt/app-root/src/mediafiles
+        - name: import-staging
+          mountPath: /opt/app-root/src/import_staging
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            memory: 2Gi
+
+      volumes:
+      - name: media
+        persistentVolumeClaim:
+          claimName: sam-media
+      - name: import-staging
+        persistentVolumeClaim:
+          claimName: sam-import-staging

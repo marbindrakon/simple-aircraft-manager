@@ -35,6 +35,7 @@ db.sqlite3
 test-media/
 media/
 staticfiles/
+import_staging/
 
 # Documentation
 *.md
