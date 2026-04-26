@@ -2,11 +2,10 @@ import logging
 import os
 import shutil
 import tarfile
-import tempfile
-import threading
 import zipfile
 from pathlib import Path
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
@@ -15,6 +14,7 @@ from django.views import View
 
 from core.models import Aircraft, AircraftRole
 from core.permissions import has_aircraft_permission
+from health.dispatch import dispatch_import
 
 logger = logging.getLogger(__name__)
 
@@ -65,17 +65,6 @@ class LogbookImportView(LoginRequiredMixin, View):
             if error_response:
                 return error_response
 
-            tmpdir = tempfile.mkdtemp(prefix='sam_logbook_')
-            image_paths, prep_error = self._prepare_images(request, tmpdir)
-            if prep_error:
-                return JsonResponse({'type': 'error', 'message': prep_error}, status=400)
-
-            if not image_paths:
-                return JsonResponse(
-                    {'type': 'error', 'message': 'No supported image files found in upload.'},
-                    status=400,
-                )
-
             opts = self._parse_options(request)
 
             append_doc_id = opts.get('append_to_document_id')
@@ -91,30 +80,60 @@ class LogbookImportView(LoginRequiredMixin, View):
                     )
 
             from health.models import ImportJob
-            job = ImportJob.objects.create(aircraft=aircraft, status='pending')
+            job = ImportJob(aircraft=aircraft, status='pending', job_type='logbook')
 
-            # Hand tmpdir ownership to the background thread
-            _tmpdir = tmpdir
-            tmpdir = None
-
-            from health.logbook_import import run_import_job
-            t = threading.Thread(
-                target=run_import_job,
-                args=(job.id, _tmpdir, image_paths),
-                kwargs={
-                    'collection_name': opts['collection_name'],
-                    'doc_name': opts['doc_name'],
-                    'doc_type': opts['doc_type'],
-                    'model': opts['model'],
-                    'provider': opts['provider'],
-                    'upload_only': opts['upload_only'],
-                    'log_type_override': opts['log_type_override'] or None,
-                    'batch_size': opts['batch_size'],
-                    'append_to_document_id': append_doc_id,
-                },
-                daemon=True,
+            staging_root = getattr(
+                settings,
+                'IMPORT_STAGING_DIR',
+                os.path.join(settings.BASE_DIR, 'import_staging'),
             )
-            t.start()
+            tmpdir = os.path.join(staging_root, 'logbook_jobs', str(job.id))
+            os.makedirs(tmpdir, exist_ok=True)
+
+            image_paths, prep_error = self._prepare_images(request, tmpdir)
+            if prep_error:
+                return JsonResponse({'type': 'error', 'message': prep_error}, status=400)
+
+            if not image_paths:
+                return JsonResponse(
+                    {'type': 'error', 'message': 'No supported image files found in upload.'},
+                    status=400,
+                )
+
+            image_paths = [str(path.relative_to(Path(tmpdir))) for path in image_paths]
+            job.save()
+
+            # Hand tmpdir ownership to the background worker.
+            _tmpdir = tmpdir
+            from health.logbook_import import run_import_job
+
+            kwargs = {
+                'collection_name': opts['collection_name'],
+                'doc_name': opts['doc_name'],
+                'doc_type': opts['doc_type'],
+                'model': opts['model'],
+                'provider': opts['provider'],
+                'upload_only': opts['upload_only'],
+                'log_type_override': opts['log_type_override'] or None,
+                'batch_size': opts['batch_size'],
+                'append_to_document_id': append_doc_id,
+            }
+            task = None
+            if apps.is_installed('procrastinate.contrib.django'):
+                from health.tasks import import_logbook_task
+                task = import_logbook_task
+
+            dispatch_import(
+                task,
+                run_import_job,
+                (str(job.id), _tmpdir, image_paths),
+                fallback_kwargs=kwargs,
+                job_id=str(job.id),
+                tmpdir=_tmpdir,
+                image_paths=image_paths,
+                **kwargs,
+            )
+            tmpdir = None
 
             return JsonResponse({'job_id': str(job.id)})
 
@@ -334,4 +353,3 @@ class LogbookImportView(LoginRequiredMixin, View):
             'batch_size': batch_size,
             'append_to_document_id': request.POST.get('append_to_document_id', '').strip() or None,
         }
-

@@ -41,6 +41,7 @@ REST_FRAMEWORK = {
 
 # Application definition
 PROMETHEUS_METRICS_ENABLED = os.environ.get('PROMETHEUS_METRICS_ENABLED', 'True').lower() in ('true', '1', 'yes')
+DATABASE_ENGINE = os.environ.get('DATABASE_ENGINE', 'sqlite3')
 
 INSTALLED_APPS = [
     'django.contrib.auth',
@@ -52,8 +53,12 @@ INSTALLED_APPS = [
     'django_filters',
     'core',
     'health',
-    'django.contrib.admin',
 ]
+
+if DATABASE_ENGINE == 'postgresql':
+    INSTALLED_APPS.append('procrastinate.contrib.django')
+
+INSTALLED_APPS.append('django.contrib.admin')
 
 if PROMETHEUS_METRICS_ENABLED:
     INSTALLED_APPS.append('django_prometheus')
@@ -173,7 +178,6 @@ WSGI_APPLICATION = 'simple_aircraft_manager.wsgi.application'
 
 # Database configuration from environment
 # Supports PostgreSQL (recommended) or SQLite for development
-DATABASE_ENGINE = os.environ.get('DATABASE_ENGINE', 'sqlite3')
 
 if DATABASE_ENGINE == 'postgresql':
     DATABASES = {
@@ -228,7 +232,7 @@ SAM_STORAGE_QUOTA_GB = int(os.environ['SAM_STORAGE_QUOTA_GB']) if os.environ.get
 # Aircraft import/export settings
 IMPORT_STAGING_DIR = os.environ.get(
     'IMPORT_STAGING_DIR',
-    os.path.join(BASE_DIR, 'import_staging')
+    os.path.join(MEDIA_ROOT, 'import_staging')
 )
 IMPORT_MAX_ARCHIVE_SIZE = int(os.environ.get(
     'IMPORT_MAX_ARCHIVE_SIZE',

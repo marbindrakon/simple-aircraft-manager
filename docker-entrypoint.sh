@@ -63,5 +63,29 @@ if [ -n "${DJANGO_SUPERUSER_USERNAME}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD}" 
     python manage.py createsuperuser --noinput 2>/dev/null || echo "Superuser already exists"
 fi
 
-# Execute the main command
-exec "$@"
+# Execute the main command. In all-in-one PostgreSQL deployments, run a
+# Procrastinate worker alongside gunicorn so imports remain recoverable without
+# requiring a separate worker service.
+if [ "${SAM_RUN_WORKER:-true}" = "true" ] && [ "${DATABASE_ENGINE}" = "postgresql" ]; then
+    echo "Starting procrastinate worker..."
+    python manage.py procrastinate worker &
+    WORKER_PID=$!
+
+    cleanup() {
+        if [ -n "${APP_PID:-}" ]; then
+            kill $APP_PID 2>/dev/null || true
+            wait $APP_PID 2>/dev/null || true
+        fi
+        kill $WORKER_PID 2>/dev/null || true
+        wait $WORKER_PID 2>/dev/null || true
+    }
+
+    trap cleanup EXIT
+    trap "exit 143" INT TERM
+    "$@" &
+    APP_PID=$!
+    wait -n $APP_PID $WORKER_PID
+    exit $?
+else
+    exec "$@"
+fi

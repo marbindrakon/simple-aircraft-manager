@@ -870,7 +870,7 @@ def run_import_job(job_id, tmpdir, image_paths, **kwargs):
     """
     Run an import as a background job, writing events to ImportJob.
 
-    Intended to be called from a daemon thread.  All kwargs are forwarded
+    Intended to be called from background work.  All kwargs are forwarded
     to run_import() (collection_name, doc_name, doc_type, model, etc.).
     """
     log = logging.getLogger(__name__)
@@ -883,6 +883,12 @@ def run_import_job(job_id, tmpdir, image_paths, **kwargs):
 
     job.status = 'running'
     job.save(update_fields=['status', 'updated_at'])
+
+    tmpdir_path = Path(tmpdir)
+    image_paths = [
+        path if path.is_absolute() else tmpdir_path / path
+        for path in (Path(image_path) for image_path in image_paths)
+    ]
 
     try:
         aircraft = job.aircraft

@@ -135,13 +135,14 @@ class TestOilAnalysisAiExtract:
         assert resp.status_code == 400
         assert 'error' in resp.data
 
-    def test_valid_pdf_upload_returns_202_with_job_id(self, owner_client, aircraft):
+    def test_valid_pdf_upload_returns_202_with_job_id(self, owner_client, aircraft, tmp_path):
         """
         Upload a PDF to the oil_analysis_ai_extract endpoint.
         The view should accept the file, create an ImportJob, and return 202.
         We mock the background thread to avoid DB access in a background thread
         after the test transaction is torn down.
         """
+        from django.test import override_settings
         from unittest.mock import patch
 
         # Minimal valid PDF bytes
@@ -157,7 +158,8 @@ class TestOilAnalysisAiExtract:
         pdf_file.name = 'test.pdf'
 
         # Patch threading.Thread.start so the background job doesn't actually run
-        with patch('threading.Thread.start'):
+        with override_settings(IMPORT_STAGING_DIR=str(tmp_path)), \
+                patch('threading.Thread.start'):
             resp = owner_client.post(
                 f'/api/aircraft/{aircraft.id}/oil_analysis_ai_extract/',
                 {'file': pdf_file},

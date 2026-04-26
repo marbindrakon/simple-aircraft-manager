@@ -8,7 +8,7 @@ Public API:
         Returns (manifest, tail_number, None) on success or (None, None, error_msg).
 
     run_aircraft_import_job(job_id, zip_path, owner_user, tail_number_override=None)
-        Background thread target. Validates data, creates all records, cleans up.
+        Background job target. Validates data, creates all records, cleans up.
 """
 
 import io
@@ -328,7 +328,7 @@ def _remap(id_map_category, old_id):
 
 def run_aircraft_import_job(job_id, zip_path, owner_user, tail_number_override=None):
     """
-    Background import runner. Called from a daemon thread.
+    Background import runner.
 
     job_id         — UUID of an ImportJob (status='pending', aircraft=None)
     zip_path       — absolute path to the staged ZIP file

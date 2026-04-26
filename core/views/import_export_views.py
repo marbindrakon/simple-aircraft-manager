@@ -2,10 +2,10 @@ import io
 import logging
 import os
 import shutil
-import threading
 import uuid
 from datetime import date
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404, JsonResponse, StreamingHttpResponse
@@ -16,6 +16,7 @@ from core.export import export_aircraft_zip
 from core.import_export import run_aircraft_import_job, validate_archive_quick
 from core.models import Aircraft
 from core.permissions import has_aircraft_permission, user_can_create_aircraft
+from health.dispatch import dispatch_import
 from health.models import ImportJob
 
 logger = logging.getLogger(__name__)
@@ -148,16 +149,24 @@ class ImportView(LoginRequiredMixin, View):
                 pass
             return JsonResponse({'error': error}, status=400)
 
-        # Create the ImportJob and start background thread
-        job = ImportJob.objects.create(status='pending', user=request.user)
+        # Create the ImportJob and start background work
+        job = ImportJob.objects.create(status='pending', user=request.user, job_type='aircraft')
 
-        t = threading.Thread(
-            target=run_aircraft_import_job,
-            args=(job.id, zip_path, request.user),
-            kwargs={'tail_number_override': tail_number_override},
-            daemon=True,
+        task = None
+        if apps.is_installed('procrastinate.contrib.django'):
+            from health.tasks import import_aircraft_task
+            task = import_aircraft_task
+
+        dispatch_import(
+            task,
+            run_aircraft_import_job,
+            (str(job.id), zip_path, request.user),
+            fallback_kwargs={'tail_number_override': tail_number_override},
+            job_id=str(job.id),
+            zip_path=zip_path,
+            owner_user_id=request.user.id,
+            tail_number_override=tail_number_override,
         )
-        t.start()
 
         return JsonResponse({'job_id': str(job.id)}, status=202)
 
@@ -190,5 +199,4 @@ class ImportJobStatusView(LoginRequiredMixin, View):
             'events': job.events[after:],
             'result': job.result,
         })
-
 
