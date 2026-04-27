@@ -38,11 +38,11 @@ Run after each successful build on a clean Windows 11 VM. Items grouped by area;
 
 ### Build & basic startup
 
-- [ ] `dist\SimpleAircraftManager\sam.exe` launches without errors (pre-installer).
+- [ ] `dist\SimpleAircraftManager\sam.exe` launches without errors when `%LOCALAPPDATA%\SimpleAircraftManager\config.ini` exists.
 - [ ] System tray icon appears.
 - [ ] Default browser opens to `http://127.0.0.1:8765/` (or fallback port) and the page loads cleanly — no connection-refused.
 - [ ] Dashboard renders with PatternFly CSS and Alpine.js working (WhiteNoise serving static under `DEBUG=False`).
-- [ ] User is auto-logged-in (no-auth mode).
+- [ ] User is auto-logged-in only when `config.ini` explicitly contains `mode = disabled`.
 - [ ] Create one aircraft → reload → it persists.
 - [ ] Upload a logbook scan → view it → file loads (media-serving route works under `DEBUG=False`).
 - [ ] Tray "Quit" cleanly shuts down (process exits, port released within 10s, `instance.lock` released).

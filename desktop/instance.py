@@ -3,7 +3,7 @@
 Uses a lock file in the user-data dir. The file contains the holding process's
 PID and an ISO-8601 creation timestamp. Acquire-time logic:
 
-1. If the lock file does not exist, create it and return a handle.
+1. Try to create the lock file atomically and return a handle on success.
 2. If it exists, read the PID. If that process is still alive, return None
    (the second instance should redirect the user to the running one).
 3. If the PID is dead, the lock is stale: delete and retry once.
@@ -35,7 +35,10 @@ def acquire() -> object | None:
     """
     lock_path = paths.instance_lock_path()
 
-    if lock_path.exists():
+    for _ in range(2):
+        if _write_lock_file_exclusive(lock_path):
+            return lock_path
+
         existing_pid = _read_existing_pid(lock_path)
         if existing_pid is not None and _pid_is_alive(existing_pid):
             LOG.info("Another instance (pid=%s) holds the lock", existing_pid)
@@ -43,13 +46,24 @@ def acquire() -> object | None:
         LOG.info("Breaking stale lock (pid=%s no longer alive)", existing_pid)
         try:
             lock_path.unlink()
+        except FileNotFoundError:
+            continue
         except OSError as e:
             LOG.error("Could not remove stale lock %s: %s", lock_path, e)
             return None
 
+    LOG.error("Could not acquire instance lock %s after stale-lock retry", lock_path)
+    return None
+
+
+def _write_lock_file_exclusive(lock_path) -> bool:
     timestamp = _dt.datetime.now(_dt.timezone.utc).isoformat()
-    lock_path.write_text(f"{os.getpid()}\n{timestamp}", encoding="utf-8")
-    return lock_path  # opaque handle (the path)
+    try:
+        with lock_path.open("x", encoding="utf-8") as f:
+            f.write(f"{os.getpid()}\n{timestamp}")
+    except FileExistsError:
+        return False
+    return True
 
 
 def release(handle) -> None:

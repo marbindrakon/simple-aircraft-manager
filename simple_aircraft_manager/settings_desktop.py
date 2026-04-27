@@ -94,7 +94,7 @@ try:
 except ValueError:
     MIDDLEWARE.insert(0, "whitenoise.middleware.WhiteNoiseMiddleware")
 
-if os.environ.get("SAM_DESKTOP_AUTH_MODE", "disabled") == "disabled":
+if os.environ.get("SAM_DESKTOP_AUTH_MODE") == "disabled":
     try:
         auth_idx = MIDDLEWARE.index("django.contrib.auth.middleware.AuthenticationMiddleware")
         MIDDLEWARE.insert(auth_idx + 1, "desktop.middleware.DesktopAutoLoginMiddleware")

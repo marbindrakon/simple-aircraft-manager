@@ -17,8 +17,6 @@ from __future__ import annotations
 import datetime as _dt
 import logging
 
-from health.models import ImportJob
-
 LOG = logging.getLogger(__name__)
 
 
@@ -26,6 +24,8 @@ def mark_orphan_running_jobs_failed() -> int:
     """Flip every ImportJob with status='running' to 'failed', append an
     explanatory event, and return the number of rows updated.
     """
+    from health.models import ImportJob
+
     orphans = list(ImportJob.objects.filter(status="running"))
     timestamp = _dt.datetime.now(_dt.timezone.utc).isoformat()
 

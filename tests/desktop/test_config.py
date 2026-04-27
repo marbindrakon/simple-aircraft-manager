@@ -5,6 +5,10 @@ import pytest
 from desktop import config, paths
 
 
+def _write_config(mode="disabled"):
+    paths.config_ini_path().write_text(f"[auth]\nmode = {mode}\n")
+
+
 @pytest.fixture
 def mock_keyring(monkeypatch):
     """Replace keyring with an in-memory dict so tests don't touch the real OS keystore."""
@@ -27,19 +31,21 @@ def mock_keyring(monkeypatch):
     return store
 
 
-def test_load_into_env_with_missing_config_uses_defaults(fake_user_data_dir, mock_keyring, monkeypatch):
+def test_load_into_env_with_missing_config_fails_closed(fake_user_data_dir, mock_keyring, monkeypatch):
     monkeypatch.delenv("SAM_DESKTOP_AUTH_MODE", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
-    config.load_into_env()
+    with pytest.raises(config.ConfigError) as excinfo:
+        config.load_into_env()
 
-    assert os.environ["SAM_DESKTOP_AUTH_MODE"] == "disabled"
+    assert "config.ini is missing" in str(excinfo.value)
+    assert "SAM_DESKTOP_AUTH_MODE" not in os.environ
     assert "ANTHROPIC_API_KEY" not in os.environ
 
 
 def test_load_into_env_reads_auth_mode_from_config(fake_user_data_dir, mock_keyring, monkeypatch):
     monkeypatch.delenv("SAM_DESKTOP_AUTH_MODE", raising=False)
-    paths.config_ini_path().write_text("[auth]\nmode = required\n")
+    _write_config("required")
 
     config.load_into_env()
 
@@ -47,7 +53,7 @@ def test_load_into_env_reads_auth_mode_from_config(fake_user_data_dir, mock_keyr
 
 
 def test_load_into_env_rejects_invalid_auth_mode(fake_user_data_dir, mock_keyring):
-    paths.config_ini_path().write_text("[auth]\nmode = bogus\n")
+    _write_config("bogus")
 
     with pytest.raises(config.ConfigError) as excinfo:
         config.load_into_env()
@@ -55,6 +61,7 @@ def test_load_into_env_rejects_invalid_auth_mode(fake_user_data_dir, mock_keyrin
 
 
 def test_seed_file_is_migrated_to_keyring_on_first_load(fake_user_data_dir, mock_keyring, monkeypatch):
+    _write_config()
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     paths.api_key_seed_path().write_text("sk-ant-test-key-123")
 
@@ -66,6 +73,7 @@ def test_seed_file_is_migrated_to_keyring_on_first_load(fake_user_data_dir, mock
 
 
 def test_subsequent_loads_read_from_keyring(fake_user_data_dir, mock_keyring, monkeypatch):
+    _write_config()
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     mock_keyring[("SimpleAircraftManager", "anthropic_api_key")] = "sk-ant-stored-key"
 
@@ -75,6 +83,7 @@ def test_subsequent_loads_read_from_keyring(fake_user_data_dir, mock_keyring, mo
 
 
 def test_seed_migration_failure_leaves_seed_in_place(fake_user_data_dir, monkeypatch):
+    _write_config()
     paths.api_key_seed_path().write_text("sk-ant-fail-key")
 
     def boom(service, username, password):
@@ -93,6 +102,7 @@ def test_seed_migration_failure_leaves_seed_in_place(fake_user_data_dir, monkeyp
 
 
 def test_empty_seed_file_is_deleted_without_writing_keyring(fake_user_data_dir, mock_keyring):
+    _write_config()
     paths.api_key_seed_path().write_text("")
 
     config.load_into_env()
@@ -106,3 +116,11 @@ def test_malformed_config_ini_raises_clear_error(fake_user_data_dir, mock_keyrin
 
     with pytest.raises(config.ConfigError):
         config.load_into_env()
+
+
+def test_config_without_auth_mode_fails_closed(fake_user_data_dir, mock_keyring):
+    paths.config_ini_path().write_text("[auth]\n")
+
+    with pytest.raises(config.ConfigError) as excinfo:
+        config.load_into_env()
+    assert "[auth] mode" in str(excinfo.value)

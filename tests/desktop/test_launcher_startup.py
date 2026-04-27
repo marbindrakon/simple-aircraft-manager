@@ -1,5 +1,9 @@
 """End-to-end test of launcher.startup_sequence() with waitress and pystray stubbed."""
 import json
+import os
+import subprocess
+import sys
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -8,6 +12,22 @@ from django.contrib.auth import get_user_model
 from desktop import launcher, paths
 
 pytestmark = pytest.mark.django_db(transaction=True)
+
+
+def test_launcher_import_does_not_require_django_settings():
+    env = os.environ.copy()
+    env.pop("DJANGO_SETTINGS_MODULE", None)
+    repo_root = Path(__file__).resolve().parents[2]
+
+    result = subprocess.run(
+        [sys.executable, "-c", "import desktop.launcher"],
+        cwd=repo_root,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.fixture

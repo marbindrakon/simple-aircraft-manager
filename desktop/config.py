@@ -20,7 +20,6 @@ KEYRING_SERVICE = "SimpleAircraftManager"
 KEYRING_USERNAME = "anthropic_api_key"
 
 VALID_AUTH_MODES = {"disabled", "required"}
-DEFAULT_AUTH_MODE = "disabled"
 
 
 class ConfigError(RuntimeError):
@@ -48,7 +47,10 @@ def load_into_env() -> None:
 def _read_auth_mode() -> str:
     config_path = paths.config_ini_path()
     if not config_path.exists():
-        return DEFAULT_AUTH_MODE
+        raise ConfigError(
+            f"config.ini is missing at {config_path}; reinstall or create it with "
+            "an explicit [auth] mode."
+        )
 
     parser = configparser.ConfigParser()
     try:
@@ -56,7 +58,10 @@ def _read_auth_mode() -> str:
     except configparser.Error as e:
         raise ConfigError(f"config.ini at {config_path} is malformed: {e}") from e
 
-    mode = parser.get("auth", "mode", fallback=DEFAULT_AUTH_MODE).strip().lower()
+    if not parser.has_section("auth") or not parser.has_option("auth", "mode"):
+        raise ConfigError(f"config.ini at {config_path} must contain [auth] mode")
+
+    mode = parser.get("auth", "mode").strip().lower()
     if mode not in VALID_AUTH_MODES:
         raise ConfigError(
             f"config.ini at {config_path}: auth.mode must be one of "

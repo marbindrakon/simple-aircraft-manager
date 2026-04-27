@@ -117,6 +117,13 @@ begin
   Result := ExpandConstant('{localappdata}\SimpleAircraftManager');
 end;
 
+function JsonEscape(Value: string): string;
+begin
+  Result := Value;
+  StringChangeEx(Result, '\', '\\', True);
+  StringChangeEx(Result, '"', '\"', True);
+end;
+
 procedure WriteConfigIni(AuthMode: string);
 var
   Path, Content: string;
@@ -130,14 +137,12 @@ end;
 procedure WriteBootstrapJson(Username, Password: string);
 var
   Path, Content: string;
-  EscPass: string;
+  EscUser, EscPass: string;
 begin
-  { Minimal JSON escaping: backslash, double-quote }
-  EscPass := Password;
-  StringChangeEx(EscPass, '\', '\\', True);
-  StringChangeEx(EscPass, '"', '\"', True);
+  EscUser := JsonEscape(Username);
+  EscPass := JsonEscape(Password);
   Path := AddBackslash(GetUserDataDir()) + 'bootstrap.json';
-  Content := '{"username": "' + Username + '", "password": "' + EscPass + '"}';
+  Content := '{"username": "' + EscUser + '", "password": "' + EscPass + '"}';
   if not SaveStringToFile(Path, Content, False) then
     MsgBox('Could not write bootstrap.json at ' + Path, mbError, MB_OK);
 end;
