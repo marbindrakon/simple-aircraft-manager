@@ -99,6 +99,9 @@ def startup_sequence(
         # DATABASES['default']['NAME'] here, so migrate creates it. In test
         # environments Django may already be configured against a different
         # database; we guarantee the file exists regardless.
+        # TODO: remove when test fixture redirects DATABASES at paths.db_path()
+        # directly. This pre-touch is a test-only artifact; production migrate
+        # would create the file on its own.
         if not paths.db_path().exists():
             import sqlite3 as _sqlite3
             _conn = _sqlite3.connect(str(paths.db_path()))

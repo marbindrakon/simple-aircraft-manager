@@ -70,6 +70,26 @@ def test_malformed_bootstrap_json_raises(fake_user_data_dir):
         bootstrap.ensure_initial_user(auth_mode="required")
 
 
+def test_required_mode_rejects_short_password(fake_user_data_dir):
+    paths.bootstrap_json_path().write_text(json.dumps({
+        "username": "owner",
+        "password": "short",  # < 8 chars
+    }))
+
+    with pytest.raises(bootstrap.BootstrapError, match="password"):
+        bootstrap.ensure_initial_user(auth_mode="required")
+
+
+def test_required_mode_rejects_short_username(fake_user_data_dir):
+    paths.bootstrap_json_path().write_text(json.dumps({
+        "username": "ab",  # < 3 chars
+        "password": "longenough",
+    }))
+
+    with pytest.raises(bootstrap.BootstrapError, match="username"):
+        bootstrap.ensure_initial_user(auth_mode="required")
+
+
 def test_unknown_auth_mode_raises(fake_user_data_dir):
     with pytest.raises(bootstrap.BootstrapError):
         bootstrap.ensure_initial_user(auth_mode="bogus")

@@ -99,7 +99,11 @@ for _app_config in _django_apps.get_app_configs():
         except Exception:
             pass  # Don't crash startup if a plugin's page URLs fail to load
 
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# In desktop mode the authenticated route below handles MEDIA_URL — never
+# expose an unauthenticated static() shortcut, even with DEBUG=True for
+# debugging.
+if not getattr(settings, "SAM_DESKTOP", False):
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # --- Desktop-only authenticated media route --------------------------------
 # In dev (DEBUG=True), Django's runserver serves MEDIA_URL via the staticfiles

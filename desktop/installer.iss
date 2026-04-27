@@ -8,7 +8,7 @@
 #define AppExeName "sam.exe"
 
 [Setup]
-AppId={{E1F2A301-AAAA-4D1F-9F3C-SAM-DESKTOP-PoC}}
+AppId={{E1F2A301-AAAA-4D1F-9F3C-3A8C5B6D7E8F}}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}

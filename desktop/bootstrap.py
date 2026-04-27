@@ -64,6 +64,11 @@ def _consume_bootstrap_json() -> None:
     except (OSError, json.JSONDecodeError, KeyError) as e:
         raise BootstrapError(f"bootstrap.json is malformed: {e}") from e
 
+    if not isinstance(username, str) or len(username.strip()) < 3:
+        raise BootstrapError("bootstrap.json: username must be a string of at least 3 characters")
+    if not isinstance(password, str) or len(password) < 8:
+        raise BootstrapError("bootstrap.json: password must be a string of at least 8 characters")
+
     UserModel = get_user_model()
     if UserModel.objects.filter(username=username).exists():
         LOG.info("Bootstrap user %r already exists; consuming bootstrap.json without changes", username)
