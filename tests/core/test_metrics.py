@@ -50,3 +50,15 @@ def test_metrics_url_removed(client):
     """/metrics/ must not exist on the Django app — metrics are on port 8087."""
     response = client.get("/metrics/")
     assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_collector_reports_member_count(django_user_model):
+    """sam_member_count should equal the number of active users."""
+    django_user_model.objects.create_user(username="active1", password="x", is_active=True)
+    django_user_model.objects.create_user(username="active2", password="x", is_active=True)
+    django_user_model.objects.create_user(username="inactive", password="x", is_active=False)
+
+    metrics = {m.name: m for m in SAMCollector().collect()}
+    assert "sam_member_count" in metrics
+    assert metrics["sam_member_count"].samples[0].value == 2.0

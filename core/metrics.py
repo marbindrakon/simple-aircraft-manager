@@ -44,6 +44,7 @@ class SAMCollector(Collector):
 
     def collect(self):
         from core.models import Aircraft
+        from django.contrib.auth import get_user_model
 
         yield GaugeMetricFamily(
             "sam_aircraft_count",
@@ -68,4 +69,9 @@ class SAMCollector(Collector):
                 if settings.SAM_STORAGE_QUOTA_GB is not None
                 else -1
             ),
+        )
+        yield GaugeMetricFamily(
+            "sam_member_count",
+            "Number of active users in this SAM instance.",
+            value=get_user_model().objects.filter(is_active=True).count(),
         )
