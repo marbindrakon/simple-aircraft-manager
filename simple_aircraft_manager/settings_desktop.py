@@ -76,7 +76,7 @@ DATABASES = {
 # --- Static & media --------------------------------------------------------
 
 STATIC_URL = "/static/"
-STATIC_ROOT = str(BASE_DIR_FROZEN / "staticfiles")
+STATIC_ROOT = os.environ.get("STATIC_ROOT_OVERRIDE", str(BASE_DIR_FROZEN / "staticfiles"))
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 MEDIA_URL = "/media/"
