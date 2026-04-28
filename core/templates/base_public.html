@@ -8,7 +8,11 @@
     <link rel="icon" type="image/png" href="{% static 'icon.png' %}">
 
     <!-- PatternFly CSS -->
+    {% if sam_use_vendor_assets %}
+    <link rel="stylesheet" href="{% static 'vendor/patternfly.min.css' %}">
+    {% else %}
     <link rel="stylesheet" href="https://unpkg.com/@patternfly/patternfly@5.3.1/patternfly.min.css">
+    {% endif %}
     <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
     <link rel="stylesheet" href="{% static 'css/app.css' %}">
     <script src="{% static 'js/theme-toggle.js' %}"></script>
@@ -46,10 +50,18 @@
     </main>
 
     <!-- Chart.js -->
+    {% if sam_use_vendor_assets %}
+    <script src="{% static 'vendor/chart.umd.min.js' %}"></script>
+    {% else %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    {% endif %}
 
     <!-- Alpine.js -->
+    {% if sam_use_vendor_assets %}
+    <script defer src="{% static 'vendor/alpine.min.js' %}"></script>
+    {% else %}
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {% endif %}
 
     <!-- App JavaScript -->
     <script src="{% static 'js/utils.js' %}"></script>
