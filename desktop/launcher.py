@@ -2,8 +2,8 @@
 
 Two layers:
 - startup_sequence(): dependency-injected orchestration; testable on Linux.
-- main(): wires the real waitress + pystray + webbrowser callables and runs
-          the tray event loop. Called by the PyInstaller bundle's entry point.
+- main(): wires the real waitress + pywebview callables and calls run().
+          Called by the PyInstaller bundle's entry point.
 """
 
 from __future__ import annotations
@@ -15,7 +15,6 @@ import logging.handlers
 import os
 import threading
 import time
-import webbrowser
 from typing import Any, Callable, Optional
 
 from desktop import (
@@ -230,6 +229,24 @@ def run(
         shutdown(result)
 
 
+def _run_pywebview_window(url: str) -> None:
+    """Open a single pywebview window pointed at the local server and run
+    its event loop on the main thread. Returns when the user closes the
+    window. Raises if the WebView2 runtime is missing or the binding fails
+    to initialize — run() catches and surfaces the failure."""
+    import webview  # local import: keep top-level import-light
+
+    webview.create_window(
+        title="Simple Aircraft Manager",
+        url=url,
+        width=1400,
+        height=900,
+        min_size=(900, 600),
+        confirm_close=False,
+    )
+    webview.start()
+
+
 def main() -> int:
     """Entry point for sam.exe (PyInstaller bundle)."""
     configure_logging()
@@ -241,74 +258,12 @@ def main() -> int:
         _show_fatal_messagebox(f"Internal error: {e}")
         return 1
 
-    try:
-        result = startup_sequence(
-            create_server=_create_server,
-            start_ui=webbrowser.open,
-            wait_ready=wait_for_server_ready,
-        )
-    except Exception as e:
-        LOG.exception("Startup failed")
-        _show_fatal_messagebox(
-            f"Simple Aircraft Manager couldn't start.\n\n{e}\n\n"
-            f"See {paths.log_dir() / 'launcher.log'} for details."
-        )
-        return 1
-
-    if result is None:
-        # Second instance — opened the browser to the existing one already.
-        return 0
-
-    try:
-        _run_tray(result)
-    finally:
-        shutdown(result)
-
-    return 0
-
-
-def _run_tray(result: StartupResult) -> None:
-    """Show the system tray icon. Blocks until the user picks Quit."""
-    import pystray
-    from PIL import Image
-
-    # Locate the icon. In the PyInstaller bundle it's next to the executable;
-    # in source it's under desktop/. fall back to a 1x1 image rather than crash.
-    icon_path = paths.user_data_dir().parent  # placeholder; real lookup below
-    try:
-        # When frozen, sys._MEIPASS is the bundle's data root.
-        import sys
-        bundle_root = getattr(sys, "_MEIPASS", None)
-        if bundle_root:
-            icon_image = Image.open(os.path.join(bundle_root, "desktop", "icon.ico"))
-        else:
-            from pathlib import Path
-            icon_image = Image.open(Path(__file__).parent / "icon.ico")
-    except Exception:
-        icon_image = Image.new("RGB", (16, 16), color=(0, 100, 200))
-
-    def _open_browser(_icon, _item):
-        webbrowser.open(f"http://127.0.0.1:{result.port}/")
-
-    def _open_logs(_icon, _item):
-        try:
-            os.startfile(str(paths.log_dir()))  # Windows
-        except AttributeError:
-            # Non-Windows: best effort
-            import subprocess
-            subprocess.Popen(["xdg-open", str(paths.log_dir())])
-
-    def _quit(icon, _item):
-        icon.stop()
-
-    menu = pystray.Menu(
-        pystray.MenuItem("Open in Browser", _open_browser, default=True),
-        pystray.MenuItem("Open Log Folder", _open_logs),
-        pystray.Menu.SEPARATOR,
-        pystray.MenuItem("Quit", _quit),
+    return run(
+        create_server=_create_server,
+        start_ui=_run_pywebview_window,
+        wait_ready=wait_for_server_ready,
+        show_message=_show_fatal_messagebox,
     )
-    icon = pystray.Icon("SimpleAircraftManager", icon_image, "Simple Aircraft Manager", menu)
-    icon.run()
 
 
 def _show_fatal_messagebox(message: str) -> None:

@@ -84,3 +84,27 @@ def test_run_start_ui_failure_shows_friendly_error(
     # Shutdown still ran: server was closed.
     fake_server_obj = callables["create_server"].return_value
     fake_server_obj.close.assert_called_once()
+
+
+def test_run_happy_path_shuts_down_cleanly(
+    fake_user_data_dir, callables, monkeypatch,
+):
+    """start_ui returns normally (window closed by user); shutdown runs,
+    no error message is shown, exit code 0."""
+    paths.config_ini_path().write_text("[auth]\nmode = disabled\n")
+
+    exit_code = launcher.run(
+        create_server=callables["create_server"],
+        start_ui=callables["start_ui"],
+        wait_ready=callables["wait_ready"],
+        show_message=callables["show_message"],
+    )
+
+    assert exit_code == 0
+    callables["start_ui"].assert_called_once()
+    url = callables["start_ui"].call_args.args[0]
+    assert url.startswith("http://127.0.0.1:")
+    callables["show_message"].assert_not_called()
+
+    fake_server_obj = callables["create_server"].return_value
+    fake_server_obj.close.assert_called_once()
