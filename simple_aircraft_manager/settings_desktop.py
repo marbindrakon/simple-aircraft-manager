@@ -77,7 +77,13 @@ DATABASES = {
 
 STATIC_URL = "/static/"
 STATIC_ROOT = os.environ.get("STATIC_ROOT_OVERRIDE", str(BASE_DIR_FROZEN / "staticfiles"))
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+# CompressedManifestStaticFilesStorage requires a staticfiles.json manifest
+# that maps hashed URLs back to real files. That manifest only exists in
+# production deployments where collectstatic has run with hashing enabled.
+# For a loopback desktop server there is no CDN or aggressive caching, so
+# content-hashing provides no benefit. Plain StaticFilesStorage lets
+# WhiteNoise serve files directly by path with no manifest required.
+STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = str(paths.media_root())
