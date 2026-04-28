@@ -14,9 +14,12 @@ if (-not (Test-Path ".\venv")) {
 .\venv\Scripts\Activate.ps1
 
 Write-Host "=== Step 2/5: Install dependencies ==="
-pip install --upgrade pip
-pip install -r requirements.txt
-pip install -r requirements-desktop.txt
+# Use python -m pip to avoid Windows file-locking on the pip executable itself.
+# Redirect stderr to stdout so pip's informational notices don't trigger
+# PowerShell's NativeCommandError under $ErrorActionPreference = "Stop".
+python -m pip install --upgrade pip 2>&1 | Out-Null
+python -m pip install -r requirements.txt 2>&1 | Write-Host
+python -m pip install -r requirements-desktop.txt 2>&1 | Write-Host
 
 Write-Host "=== Step 3/5: Collect static assets ==="
 $env:DJANGO_SETTINGS_MODULE = "simple_aircraft_manager.settings_desktop"
