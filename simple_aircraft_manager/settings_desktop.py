@@ -119,7 +119,14 @@ SECURE_PROXY_SSL_HEADER = None
 # --- Misc ------------------------------------------------------------------
 
 IMPORT_STAGING_DIR = str(paths.import_staging_dir())
+
+# base settings.py defaults PROMETHEUS_METRICS_ENABLED=True and appends
+# django_prometheus to INSTALLED_APPS before this module can override the
+# flag. Remove it explicitly — Prometheus scraping makes no sense for a
+# loopback desktop server, and the package is not bundled by PyInstaller.
 PROMETHEUS_METRICS_ENABLED = False
+INSTALLED_APPS = [app for app in INSTALLED_APPS if app != "django_prometheus"]  # noqa: F405
+MIDDLEWARE = [m for m in MIDDLEWARE if "prometheus" not in m.lower()]  # noqa: F405
 
 # --- Logging ---------------------------------------------------------------
 
