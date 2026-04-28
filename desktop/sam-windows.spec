@@ -74,6 +74,12 @@ hiddenimports = [
     "keyring.backends.Windows",
     "keyring.backends.fail",
     "waitress",
+    # pywebview + Edge WebView2 binding (Windows).
+    "webview",
+    "webview.platforms.edgechromium",
+    "webview.platforms.winforms",
+    "clr_loader",
+    "pythonnet",
 ]
 
 # Pull in all submodules of our own apps so app configs and signal handlers
@@ -83,6 +89,7 @@ hiddenimports += collect_submodules("core")
 hiddenimports += collect_submodules("health")
 hiddenimports += collect_submodules("simple_aircraft_manager")
 hiddenimports += collect_submodules("desktop")
+hiddenimports += collect_submodules("webview")
 
 
 a = Analysis(
