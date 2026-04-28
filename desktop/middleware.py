@@ -14,7 +14,8 @@ from __future__ import annotations
 import json
 import logging
 
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, login as auth_login
+from django.middleware.csrf import get_token
 
 from desktop import paths
 
@@ -30,7 +31,17 @@ class DesktopAutoLoginMiddleware:
     def __call__(self, request):
         user = self._get_user()
         if user is not None:
+            if not request.user.is_authenticated:
+                # First visit or session expired: call login() so the session
+                # carries proper auth data (_auth_user_id, _auth_user_hash,
+                # backend) and login() → rotate_token() seeds the CSRF cookie.
+                # Guarded here so we pay the session-write cost only once per
+                # session, not on every request.
+                auth_login(request, user)
             request.user = user
+            # Ensure the CSRF cookie is written even on subsequent requests
+            # where the browser cookie may have been cleared independently.
+            get_token(request)
         return self.get_response(request)
 
     def _get_user(self):

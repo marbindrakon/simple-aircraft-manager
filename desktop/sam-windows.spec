@@ -61,11 +61,6 @@ hiddenimports = [
     "django.contrib.messages.apps",
     "django.contrib.sessions.apps",
     "django.contrib.staticfiles.apps",
-    "rest_framework",
-    "rest_framework.authentication",
-    "rest_framework.permissions",
-    "rest_framework.parsers",
-    "rest_framework.renderers",
     "django_filters",
     "whitenoise",
     "whitenoise.middleware",
@@ -83,6 +78,7 @@ hiddenimports = [
 
 # Pull in all submodules of our own apps so app configs and signal handlers
 # aren't dropped.
+hiddenimports += collect_submodules("rest_framework")
 hiddenimports += collect_submodules("core")
 hiddenimports += collect_submodules("health")
 hiddenimports += collect_submodules("simple_aircraft_manager")
