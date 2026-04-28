@@ -177,6 +177,52 @@ def shutdown(result: StartupResult, drain_timeout_s: float = 10.0) -> None:
     LOG.info("Shutdown complete")
 
 
+ALREADY_RUNNING_MESSAGE = (
+    "Simple Aircraft Manager is already running. "
+    "Check the taskbar for the existing window."
+)
+
+
+def run(
+    *,
+    create_server: Callable[..., Any],
+    start_ui: Callable[[str], Any],
+    wait_ready: Callable[[int, float], bool],
+    show_message: Callable[[str], Any],
+) -> int:
+    """Orchestrate startup -> UI -> shutdown.
+
+    Returns a process exit code. Surfaces user-facing failures via
+    show_message rather than raising. Tests target this function directly.
+    """
+    try:
+        result = startup_sequence(
+            create_server=create_server,
+            start_ui=start_ui,
+            wait_ready=wait_ready,
+        )
+    except Exception as e:
+        LOG.exception("Startup failed")
+        show_message(
+            f"Simple Aircraft Manager couldn't start.\n\n{e}\n\n"
+            f"See {paths.log_dir() / 'launcher.log'} for details."
+        )
+        return 1
+
+    if result is None:
+        # Second instance — original window stays put; tell the user.
+        show_message(ALREADY_RUNNING_MESSAGE)
+        return 0
+
+    # start_ui blocks until the user closes the window (Task 5).
+    # For now this branch is not exercised by tests in this task.
+    try:
+        # Placeholder: Task 5 wires in the real call.
+        return 0
+    finally:
+        shutdown(result)
+
+
 def main() -> int:
     """Entry point for sam.exe (PyInstaller bundle)."""
     configure_logging()
