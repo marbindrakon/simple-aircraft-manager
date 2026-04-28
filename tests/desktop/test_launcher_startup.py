@@ -74,11 +74,6 @@ def test_no_auth_mode_first_launch(fake_user_data_dir, stubs, monkeypatch):
     assert kwargs["host"] == "127.0.0.1"
     assert isinstance(kwargs["port"], int)
 
-    # UI started for the running server.
-    stubs["start_ui"].assert_called_once()
-    url = stubs["start_ui"].call_args.args[0]
-    assert url.startswith("http://127.0.0.1:")
-
     assert result.port == kwargs["port"]
     assert result.lock_handle is not None
 

@@ -56,3 +56,31 @@ def test_run_second_instance_shows_already_running_message(
     callables["show_message"].assert_called_once()
     msg = callables["show_message"].call_args.args[0]
     assert "already running" in msg.lower()
+
+
+def test_run_start_ui_failure_shows_friendly_error(
+    fake_user_data_dir, callables, monkeypatch,
+):
+    """If start_ui raises (e.g., WebView2 runtime missing), surface a
+    friendly error pointing at the Microsoft download URL, run shutdown,
+    and exit non-zero."""
+    paths.config_ini_path().write_text("[auth]\nmode = disabled\n")
+    callables["start_ui"].side_effect = RuntimeError("simulated webview2 missing")
+
+    exit_code = launcher.run(
+        create_server=callables["create_server"],
+        start_ui=callables["start_ui"],
+        wait_ready=callables["wait_ready"],
+        show_message=callables["show_message"],
+    )
+
+    assert exit_code == 1
+    callables["start_ui"].assert_called_once()
+    callables["show_message"].assert_called_once()
+    msg = callables["show_message"].call_args.args[0]
+    assert "WebView2" in msg
+    assert "go.microsoft.com" in msg
+
+    # Shutdown still ran: server was closed.
+    fake_server_obj = callables["create_server"].return_value
+    fake_server_obj.close.assert_called_once()

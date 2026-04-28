@@ -135,8 +135,6 @@ def startup_sequence(
         if not ready:
             LOG.warning("Server slow to become ready; opening browser anyway")
 
-        start_ui(f"http://127.0.0.1:{port}/")
-
         return StartupResult(
             port=port,
             server=server,
@@ -182,6 +180,14 @@ ALREADY_RUNNING_MESSAGE = (
     "Check the taskbar for the existing window."
 )
 
+WEBVIEW2_MISSING_MESSAGE = (
+    "Simple Aircraft Manager couldn't open its window. "
+    "This usually means the Microsoft Edge WebView2 Runtime is missing.\n\n"
+    "Install it from:\n"
+    "https://go.microsoft.com/fwlink/p/?LinkId=2124703\n\n"
+    "Then launch Simple Aircraft Manager again."
+)
+
 
 def run(
     *,
@@ -210,15 +216,16 @@ def run(
         return 1
 
     if result is None:
-        # Second instance — original window stays put; tell the user.
         show_message(ALREADY_RUNNING_MESSAGE)
         return 0
 
-    # start_ui blocks until the user closes the window (Task 5).
-    # For now this branch is not exercised by tests in this task.
     try:
-        # Placeholder: Task 5 wires in the real call.
+        start_ui(f"http://127.0.0.1:{result.port}/")
         return 0
+    except Exception:
+        LOG.exception("UI failed to start")
+        show_message(WEBVIEW2_MISSING_MESSAGE)
+        return 1
     finally:
         shutdown(result)
 
