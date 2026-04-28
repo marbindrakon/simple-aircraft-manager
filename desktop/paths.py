@@ -51,14 +51,6 @@ def config_ini_path() -> Path:
     return user_data_dir() / "config.ini"
 
 
-def bootstrap_json_path() -> Path:
-    return user_data_dir() / "bootstrap.json"
-
-
-def api_key_seed_path() -> Path:
-    return user_data_dir() / "api_key_seed.txt"
-
-
 def desktop_user_path() -> Path:
     return user_data_dir() / "desktop_user.json"
 

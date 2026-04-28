@@ -1,7 +1,10 @@
-"""Read config.ini, migrate API key from seed file to OS keystore, and export
-the resulting values as environment variables for Django to pick up.
+"""Read config.ini and load the API key from the OS keyring into the
+process environment.
 
-Called exactly once near the top of launcher.main(), before django.setup().
+Called exactly once near the top of launcher.startup_sequence(), AFTER
+the launcher has confirmed config.ini exists. (First-run flow: when
+config.ini is missing, the launcher skips this entirely so the user can
+complete the in-app setup form.)
 """
 
 from __future__ import annotations
@@ -31,13 +34,10 @@ def load_into_env() -> None:
 
     Side effects:
     - Sets SAM_DESKTOP_AUTH_MODE.
-    - Sets ANTHROPIC_API_KEY if a key is in the keystore (or migrated this run).
-    - Migrates a one-shot api_key_seed.txt into the keystore and deletes it.
+    - Sets ANTHROPIC_API_KEY if a key is in the keystore.
     """
     auth_mode = _read_auth_mode()
     os.environ["SAM_DESKTOP_AUTH_MODE"] = auth_mode
-
-    _migrate_seed_to_keyring()
 
     api_key = _load_api_key_from_keyring()
     if api_key:
@@ -68,50 +68,6 @@ def _read_auth_mode() -> str:
             f"{sorted(VALID_AUTH_MODES)}, got {mode!r}"
         )
     return mode
-
-
-def _migrate_seed_to_keyring() -> None:
-    """If an api_key_seed.txt is present, copy its contents to the keystore
-    and best-effort-wipe the file. On any failure, leave the seed alone and
-    log; AI features will simply remain unconfigured this run.
-    """
-    seed_path = paths.api_key_seed_path()
-    if not seed_path.exists():
-        return
-
-    try:
-        value = seed_path.read_text(encoding="utf-8").strip()
-    except OSError as e:
-        LOG.warning("Could not read API key seed file %s: %s", seed_path, e)
-        return
-
-    if not value:
-        # Empty seed file — nothing to migrate; just delete it.
-        try:
-            seed_path.unlink()
-        except OSError as e:
-            LOG.warning("Could not delete empty seed file %s: %s", seed_path, e)
-        return
-
-    try:
-        keyring.set_password(KEYRING_SERVICE, KEYRING_USERNAME, value)
-    except Exception as e:
-        LOG.warning(
-            "Could not save API key to OS keystore (%s); leaving seed in place "
-            "for retry on next launch. AI features disabled this session.",
-            e,
-        )
-        return
-
-    # Best-effort wipe: overwrite then delete. Not guaranteed against SSDs,
-    # journaled filesystems, AV indexers, or cloud-backup clients.
-    try:
-        size = len(value.encode("utf-8"))
-        with open(seed_path, "wb") as f:
-            f.write(b"\x00" * size)
-        seed_path.unlink()
-    except OSError as e:
-        LOG.warning("Could not wipe seed file %s after keyring migration: %s", seed_path, e)
 
 
 def _load_api_key_from_keyring() -> str | None:

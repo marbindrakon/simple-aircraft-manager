@@ -13,6 +13,7 @@ import http.client
 import logging
 import logging.handlers
 import os
+import sys
 import threading
 import time
 from typing import Any, Callable, Optional
@@ -25,6 +26,7 @@ from desktop import (
     instance,
     paths,
     preflight,
+    ui_messages,
 )
 
 LOG = logging.getLogger(__name__)
@@ -78,7 +80,18 @@ def startup_sequence(
         return None
 
     try:
-        config.load_into_env()
+        # First-run state: when config.ini hasn't been written yet, the user
+        # hasn't completed the in-app setup form. We still need to bring up
+        # Django + the loopback server (so the form has somewhere to render),
+        # but we MUST skip config.load_into_env (would raise on the missing
+        # file) and bootstrap.ensure_initial_user (would create the wrong user
+        # before the user has chosen an auth mode). The setup view writes
+        # config.ini on submit; the user is told to relaunch.
+        setup_mode = not paths.config_ini_path().exists()
+
+        if not setup_mode:
+            config.load_into_env()
+
         os.environ.setdefault(
             "DJANGO_SETTINGS_MODULE",
             "simple_aircraft_manager.settings_desktop",
@@ -118,8 +131,9 @@ def startup_sequence(
         # Recovery again, after migrate, in case the first run created the table.
         import_recovery.mark_orphan_running_jobs_failed()
 
-        auth_mode = os.environ.get("SAM_DESKTOP_AUTH_MODE", "disabled")
-        bootstrap.ensure_initial_user(auth_mode=auth_mode)
+        if not setup_mode:
+            auth_mode = os.environ.get("SAM_DESKTOP_AUTH_MODE", "disabled")
+            bootstrap.ensure_initial_user(auth_mode=auth_mode)
 
         port = preflight.pick_free_port(preferred=PREFERRED_PORT)
         instance.write_running_port(port)
@@ -187,6 +201,22 @@ WEBVIEW2_MISSING_MESSAGE = (
     "Then launch Simple Aircraft Manager again."
 )
 
+UI_FAILED_MESSAGE_GENERIC = (
+    "Simple Aircraft Manager couldn't open its window.\n\n"
+    "See the launcher.log under the user-data directory for details."
+)
+
+
+def _ui_failure_message() -> str:
+    """Return the most actionable message for a UI startup failure.
+
+    On Windows the most likely cause is a missing WebView2 runtime; on
+    other platforms we don't have a single canonical fix to suggest.
+    """
+    if sys.platform == "win32":
+        return WEBVIEW2_MISSING_MESSAGE
+    return UI_FAILED_MESSAGE_GENERIC
+
 
 def run(
     *,
@@ -223,7 +253,7 @@ def run(
         return 0
     except Exception:
         LOG.exception("UI failed to start")
-        show_message(WEBVIEW2_MISSING_MESSAGE)
+        show_message(_ui_failure_message())
         return 1
     finally:
         shutdown(result)
@@ -255,25 +285,15 @@ def main() -> int:
         from waitress import create_server as _create_server
     except ImportError as e:
         LOG.exception("waitress not available")
-        _show_fatal_messagebox(f"Internal error: {e}")
+        ui_messages.show_fatal_message(f"Internal error: {e}")
         return 1
 
     return run(
         create_server=_create_server,
         start_ui=_run_pywebview_window,
         wait_ready=wait_for_server_ready,
-        show_message=_show_fatal_messagebox,
+        show_message=ui_messages.show_fatal_message,
     )
-
-
-def _show_fatal_messagebox(message: str) -> None:
-    """Best-effort native messagebox. Falls back to stderr if unavailable."""
-    try:
-        import ctypes
-        ctypes.windll.user32.MessageBoxW(0, message, "Simple Aircraft Manager", 0x10)
-    except Exception:
-        import sys
-        print(message, file=sys.stderr)
 
 
 if __name__ == "__main__":

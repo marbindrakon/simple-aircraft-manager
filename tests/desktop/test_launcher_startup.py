@@ -78,12 +78,16 @@ def test_no_auth_mode_first_launch(fake_user_data_dir, stubs, monkeypatch):
     assert result.lock_handle is not None
 
 
-def test_required_mode_consumes_bootstrap_json(fake_user_data_dir, stubs, monkeypatch):
+def test_required_mode_treats_setup_as_already_done(fake_user_data_dir, stubs, monkeypatch):
+    """In required-auth mode the setup view has already created the
+    superuser by the time the launcher reads config.ini. The launcher
+    must NOT recreate the placeholder ``desktop`` user, because that user
+    doesn't exist in required-auth installs."""
     paths.config_ini_path().write_text("[auth]\nmode = required\n")
-    paths.bootstrap_json_path().write_text(json.dumps({
-        "username": "owner",
-        "password": "hunter22hunter22",
-    }))
+
+    # Simulate the setup view's previous run.
+    User = get_user_model()
+    User.objects.create_superuser(username="owner", email="", password="hunter22hunter22")
 
     import keyring
     monkeypatch.setattr(keyring, "get_password", lambda s, u: None)
@@ -95,10 +99,48 @@ def test_required_mode_consumes_bootstrap_json(fake_user_data_dir, stubs, monkey
         wait_ready=stubs["wait_ready"],
     )
 
+    assert User.objects.filter(username="owner", is_superuser=True).exists()
+    # The placeholder no-auth user must NOT have been created.
+    assert not User.objects.filter(username="desktop").exists()
+    assert not paths.desktop_user_path().exists()
+
+
+def test_setup_mode_when_config_ini_missing(fake_user_data_dir, stubs, monkeypatch):
+    """First-ever launch: no config.ini exists. startup_sequence must:
+    - skip config.load_into_env (would raise on the missing file)
+    - skip bootstrap.ensure_initial_user (no auth mode chosen yet)
+    - still bring up the server so /desktop/setup/ can render
+    """
+    assert not paths.config_ini_path().exists()
+
+    # Confirm we never touch keyring or bootstrap helpers in setup mode.
+    import keyring
+    monkeypatch.setattr(keyring, "get_password", lambda s, u: None)
+    monkeypatch.setattr(keyring, "set_password", lambda s, u, p: None)
+
+    bootstrap_called = MagicMock()
+    monkeypatch.setattr(
+        "desktop.bootstrap.ensure_initial_user",
+        lambda **kw: bootstrap_called(**kw),
+    )
+
+    result = launcher.startup_sequence(
+        create_server=stubs["create_server"],
+        start_ui=stubs["start_ui"],
+        wait_ready=stubs["wait_ready"],
+    )
+
+    bootstrap_called.assert_not_called()
+
+    # Server was started; the launcher returns a real StartupResult so the UI
+    # can open and render the setup form.
+    stubs["create_server"].assert_called_once()
+    assert result is not None
+    assert result.port
+
     User = get_user_model()
-    owner = User.objects.get(username="owner")
-    assert owner.is_superuser
-    assert not paths.bootstrap_json_path().exists()
+    assert not User.objects.filter(username="desktop").exists()
+    assert not paths.config_ini_path().exists()
 
 
 def test_second_instance_returns_none(fake_user_data_dir, stubs, monkeypatch):

@@ -35,14 +35,6 @@ def test_config_ini_path_is_under_user_data_dir(fake_user_data_dir):
     assert paths.config_ini_path() == fake_user_data_dir / "config.ini"
 
 
-def test_bootstrap_json_path_is_under_user_data_dir(fake_user_data_dir):
-    assert paths.bootstrap_json_path() == fake_user_data_dir / "bootstrap.json"
-
-
-def test_api_key_seed_path_is_under_user_data_dir(fake_user_data_dir):
-    assert paths.api_key_seed_path() == fake_user_data_dir / "api_key_seed.txt"
-
-
 def test_desktop_user_path_is_under_user_data_dir(fake_user_data_dir):
     assert paths.desktop_user_path() == fake_user_data_dir / "desktop_user.json"
 

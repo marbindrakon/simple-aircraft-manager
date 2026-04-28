@@ -60,19 +60,7 @@ def test_load_into_env_rejects_invalid_auth_mode(fake_user_data_dir, mock_keyrin
     assert "auth.mode" in str(excinfo.value)
 
 
-def test_seed_file_is_migrated_to_keyring_on_first_load(fake_user_data_dir, mock_keyring, monkeypatch):
-    _write_config()
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    paths.api_key_seed_path().write_text("sk-ant-test-key-123")
-
-    config.load_into_env()
-
-    assert mock_keyring[("SimpleAircraftManager", "anthropic_api_key")] == "sk-ant-test-key-123"
-    assert not paths.api_key_seed_path().exists()
-    assert os.environ["ANTHROPIC_API_KEY"] == "sk-ant-test-key-123"
-
-
-def test_subsequent_loads_read_from_keyring(fake_user_data_dir, mock_keyring, monkeypatch):
+def test_loads_api_key_from_keyring(fake_user_data_dir, mock_keyring, monkeypatch):
     _write_config()
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     mock_keyring[("SimpleAircraftManager", "anthropic_api_key")] = "sk-ant-stored-key"
@@ -82,33 +70,21 @@ def test_subsequent_loads_read_from_keyring(fake_user_data_dir, mock_keyring, mo
     assert os.environ["ANTHROPIC_API_KEY"] == "sk-ant-stored-key"
 
 
-def test_seed_migration_failure_leaves_seed_in_place(fake_user_data_dir, monkeypatch):
+def test_keyring_unavailable_does_not_raise(fake_user_data_dir, monkeypatch):
+    """If the keyring backend is broken, AI features go silently absent
+    rather than blocking startup."""
     _write_config()
-    paths.api_key_seed_path().write_text("sk-ant-fail-key")
-
-    def boom(service, username, password):
-        raise RuntimeError("Credential Manager unavailable")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
     import keyring as keyring_module
-    monkeypatch.setattr(keyring_module, "set_password", boom)
-    monkeypatch.setattr(keyring_module, "get_password", lambda s, u: None)
+    monkeypatch.setattr(
+        keyring_module,
+        "get_password",
+        lambda s, u: (_ for _ in ()).throw(RuntimeError("Keychain unavailable")),
+    )
 
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     config.load_into_env()  # must not raise
-
-    assert paths.api_key_seed_path().exists()
-    assert paths.api_key_seed_path().read_text() == "sk-ant-fail-key"
     assert "ANTHROPIC_API_KEY" not in os.environ
-
-
-def test_empty_seed_file_is_deleted_without_writing_keyring(fake_user_data_dir, mock_keyring):
-    _write_config()
-    paths.api_key_seed_path().write_text("")
-
-    config.load_into_env()
-
-    assert ("SimpleAircraftManager", "anthropic_api_key") not in mock_keyring
-    assert not paths.api_key_seed_path().exists()
 
 
 def test_malformed_config_ini_raises_clear_error(fake_user_data_dir, mock_keyring):

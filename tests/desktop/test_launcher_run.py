@@ -58,14 +58,13 @@ def test_run_second_instance_shows_already_running_message(
     assert "already running" in msg.lower()
 
 
-def test_run_start_ui_failure_shows_friendly_error(
+def test_run_start_ui_failure_on_windows_points_at_webview2(
     fake_user_data_dir, callables, monkeypatch,
 ):
-    """If start_ui raises (e.g., WebView2 runtime missing), surface a
-    friendly error pointing at the Microsoft download URL, run shutdown,
-    and exit non-zero."""
+    """On Windows, start_ui failure surfaces the WebView2 install hint."""
     paths.config_ini_path().write_text("[auth]\nmode = disabled\n")
     callables["start_ui"].side_effect = RuntimeError("simulated webview2 missing")
+    monkeypatch.setattr(launcher.sys, "platform", "win32", raising=False)
 
     exit_code = launcher.run(
         create_server=callables["create_server"],
@@ -84,6 +83,28 @@ def test_run_start_ui_failure_shows_friendly_error(
     # Shutdown still ran: server was closed.
     fake_server_obj = callables["create_server"].return_value
     fake_server_obj.close.assert_called_once()
+
+
+def test_run_start_ui_failure_on_macos_shows_generic_message(
+    fake_user_data_dir, callables, monkeypatch,
+):
+    """On non-Windows, start_ui failure shows a platform-neutral message
+    pointing at the log file rather than the Windows-specific WebView2 hint."""
+    paths.config_ini_path().write_text("[auth]\nmode = disabled\n")
+    callables["start_ui"].side_effect = RuntimeError("simulated cocoa load failure")
+    monkeypatch.setattr(launcher.sys, "platform", "darwin", raising=False)
+
+    exit_code = launcher.run(
+        create_server=callables["create_server"],
+        start_ui=callables["start_ui"],
+        wait_ready=callables["wait_ready"],
+        show_message=callables["show_message"],
+    )
+
+    assert exit_code == 1
+    msg = callables["show_message"].call_args.args[0]
+    assert "WebView2" not in msg
+    assert "launcher.log" in msg
 
 
 def test_run_happy_path_shuts_down_cleanly(

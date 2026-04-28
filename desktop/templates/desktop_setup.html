@@ -1,0 +1,116 @@
+{% extends "base_public.html" %}
+{% load static %}
+
+{% block title %}Setup — Simple Aircraft Manager{% endblock %}
+
+{% block content %}
+<div class="pf-v5-l-bullseye">
+  <div class="pf-v5-c-card" style="max-width: 640px; width: 100%;">
+    <div class="pf-v5-c-card__title">
+      <h1 class="pf-v5-c-title pf-m-xl">Welcome to Simple Aircraft Manager</h1>
+      <p class="pf-v5-u-color-200" style="margin-top: 0.5rem;">
+        Set up your local install. You can change these later inside the app.
+      </p>
+    </div>
+
+    <form method="post" class="pf-v5-c-form" id="setup-form" novalidate>
+      {% csrf_token %}
+      <div class="pf-v5-c-card__body">
+
+        {% if errors.form %}
+          <div class="pf-v5-c-alert pf-m-danger" role="alert">
+            <div class="pf-v5-c-alert__title">{{ errors.form }}</div>
+          </div>
+        {% endif %}
+
+        <fieldset class="pf-v5-c-form__fieldset">
+          <legend class="pf-v5-c-form__label-text">Authentication</legend>
+
+          <div class="pf-v5-c-form__group">
+            <label class="pf-v5-c-radio">
+              <input type="radio" name="auth_mode" value="required"
+                     class="pf-v5-c-radio__input"
+                     {% if values.auth_mode != 'disabled' %}checked{% endif %}>
+              <span class="pf-v5-c-radio__label">Require username and password (recommended)</span>
+              <span class="pf-v5-c-radio__description">
+                A login screen protects your data even on a shared machine.
+              </span>
+            </label>
+
+            <label class="pf-v5-c-radio">
+              <input type="radio" name="auth_mode" value="disabled"
+                     class="pf-v5-c-radio__input"
+                     {% if values.auth_mode == 'disabled' %}checked{% endif %}>
+              <span class="pf-v5-c-radio__label">No login (single-user trusted-device mode)</span>
+              <span class="pf-v5-c-radio__description">
+                The app opens straight to the dashboard. Use only on devices that you alone access.
+              </span>
+            </label>
+
+            {% if errors.auth_mode %}
+              <div class="pf-v5-c-form__helper-text pf-m-error">{{ errors.auth_mode }}</div>
+            {% endif %}
+          </div>
+        </fieldset>
+
+        <fieldset class="pf-v5-c-form__fieldset" id="creds-fieldset">
+          <legend class="pf-v5-c-form__label-text">Initial login</legend>
+
+          <div class="pf-v5-c-form__group">
+            <label class="pf-v5-c-form__label" for="setup-username">Username</label>
+            <input id="setup-username" name="username" type="text"
+                   class="pf-v5-c-form-control"
+                   value="{{ values.username|default:'' }}"
+                   autocomplete="username" minlength="3">
+            {% if errors.username %}
+              <div class="pf-v5-c-form__helper-text pf-m-error">{{ errors.username }}</div>
+            {% endif %}
+          </div>
+
+          <div class="pf-v5-c-form__group">
+            <label class="pf-v5-c-form__label" for="setup-password">Password</label>
+            <input id="setup-password" name="password" type="password"
+                   class="pf-v5-c-form-control"
+                   autocomplete="new-password" minlength="8">
+            {% if errors.password %}
+              <div class="pf-v5-c-form__helper-text pf-m-error">{{ errors.password }}</div>
+            {% endif %}
+          </div>
+
+          <div class="pf-v5-c-form__group">
+            <label class="pf-v5-c-form__label" for="setup-confirm">Confirm password</label>
+            <input id="setup-confirm" name="confirm_password" type="password"
+                   class="pf-v5-c-form-control"
+                   autocomplete="new-password" minlength="8">
+            {% if errors.confirm_password %}
+              <div class="pf-v5-c-form__helper-text pf-m-error">{{ errors.confirm_password }}</div>
+            {% endif %}
+          </div>
+        </fieldset>
+
+        <fieldset class="pf-v5-c-form__fieldset">
+          <legend class="pf-v5-c-form__label-text">AI features (optional)</legend>
+          <div class="pf-v5-c-form__group">
+            <label class="pf-v5-c-form__label" for="setup-api-key">Anthropic API key</label>
+            <input id="setup-api-key" name="api_key" type="password"
+                   class="pf-v5-c-form-control"
+                   value="{{ values.api_key|default:'' }}"
+                   placeholder="sk-ant-…">
+            <div class="pf-v5-c-form__helper-text">
+              Paste a key to enable AI-powered logbook import. Stored encrypted in your OS keychain.
+              Leave blank to skip; you can add a key later from the OS credential manager.
+            </div>
+          </div>
+        </fieldset>
+
+      </div>
+
+      <div class="pf-v5-c-card__footer">
+        <button type="submit" class="pf-v5-c-button pf-m-primary">Save and continue</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="{% static 'js/desktop-setup.js' %}"></script>
+{% endblock %}

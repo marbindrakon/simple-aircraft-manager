@@ -88,7 +88,10 @@ STATIC_ROOT = os.environ.get("STATIC_ROOT_OVERRIDE", str(BASE_DIR_FROZEN / "stat
 # WhiteNoise serve files directly by path with no manifest required.
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
 
-MEDIA_URL = "/media/"
+# Media is served by desktop.urls (login-gated), mounted at /desktop/media/
+# via the SAM plugin URL prefix. MEDIA_URL controls how Django renders
+# user-uploaded asset URLs in templates and serializers, so it must match.
+MEDIA_URL = "/desktop/media/"
 MEDIA_ROOT = str(paths.media_root())
 
 # --- Middleware ------------------------------------------------------------
@@ -111,6 +114,11 @@ if os.environ.get("SAM_DESKTOP_AUTH_MODE") == "disabled":
         # AuthenticationMiddleware should always be present; if it isn't we
         # do nothing rather than guess at placement.
         pass
+
+# First-run setup redirect: when config.ini is missing, push every request
+# at /desktop/setup/. Insert at the very top so it runs before auth, CSRF,
+# and session middleware — none of which we need for the setup page itself.
+MIDDLEWARE.insert(0, "desktop.middleware.DesktopSetupRedirectMiddleware")
 
 # --- Auth backends ---------------------------------------------------------
 
@@ -136,6 +144,12 @@ IMPORT_STAGING_DIR = str(paths.import_staging_dir())
 PROMETHEUS_METRICS_ENABLED = False
 INSTALLED_APPS = [app for app in INSTALLED_APPS if app != "django_prometheus"]  # noqa: F405
 MIDDLEWARE = [m for m in MIDDLEWARE if "prometheus" not in m.lower()]  # noqa: F405
+
+# Register the desktop package as a Django app — only in desktop mode.
+# Activates: app-directories template discovery for desktop/templates/,
+# WhiteNoise static discovery for desktop/static/, and (via the SAM plugin
+# URL loop) URL mounting under /desktop/. Dev and prod never see this.
+INSTALLED_APPS = [*INSTALLED_APPS, "desktop.apps.DesktopConfig"]  # noqa: F405
 
 # --- Logging ---------------------------------------------------------------
 

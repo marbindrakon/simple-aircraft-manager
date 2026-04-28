@@ -1,8 +1,15 @@
-# Desktop Installer (Windows)
+# Desktop Installer (Windows + macOS)
 
-This directory contains the Windows desktop packaging for Simple Aircraft Manager — a per-user installer that bundles the Django app with a Python runtime, a `pywebview` window shell (Microsoft Edge WebView2 runtime required, installed by the user from Microsoft), and a SQLite database under `%LOCALAPPDATA%\SimpleAircraftManager\`.
+This directory contains the desktop packaging for Simple Aircraft Manager — a per-user app that bundles the Django app with a Python runtime, a `pywebview` window shell, and a SQLite database under the platform-specific user-data directory.
 
-## Building the installer
+| Platform | User-data dir | Window backend | Distribution |
+|----------|--------------|----------------|--------------|
+| Windows  | `%LOCALAPPDATA%\SimpleAircraftManager\` | Microsoft Edge WebView2 (user-installed) | Inno Setup `.exe` |
+| macOS    | `~/Library/Application Support/SimpleAircraftManager/` | WKWebView (system) | drag-to-Applications `.dmg` |
+
+The first-run configuration form (auth mode, username + password, Anthropic API key) is served from inside the app at `/desktop/setup/` on every platform. The launcher detects a missing `config.ini` and redirects every request to the setup page until the user submits it. The Windows installer no longer collects this information up front — it only checks for the WebView2 runtime and copies the bundle.
+
+## Building the Windows installer
 
 Authoring happens on Linux; the build itself runs on Windows. The split lets you keep iterating on `desktop/*.py` from your normal dev box and only hop to a Windows VM when you need to validate or ship.
 
@@ -33,16 +40,67 @@ The script:
 
 If any step fails, fix the error and rerun — the script is idempotent.
 
+## Building the macOS app + DMG
+
+Run on macOS 12+ (Apple Silicon). The build is unsigned and un-notarized in this POC.
+
+### Prerequisites
+
+- macOS 12 or later.
+- Python 3.12 (via `brew install python@3.12` or python.org).
+- Xcode Command Line Tools: `xcode-select --install`.
+- For DMG packaging: `brew install create-dmg` (optional — if missing, the script still produces the `.app` bundle).
+
+### Build steps
+
+```bash
+git clone <repo> simple-aircraft-manager
+cd simple-aircraft-manager
+git checkout <feature-branch>
+./desktop/build-macos.sh
+```
+
+The script:
+
+1. Creates a venv at `.venv/` if missing.
+2. Installs `requirements.txt` and `requirements-desktop.txt` (the macOS-only PyObjC packages are pulled in via environment markers).
+3. Runs `collectstatic` into `build/staticfiles/`.
+4. Runs PyInstaller (`desktop/sam-macos.spec`) → `dist/Simple Aircraft Manager.app`.
+5. Runs `create-dmg` → `dist/SimpleAircraftManager-<version>.dmg`.
+
+### Quarantine workaround for unsigned apps
+
+A `.dmg` from a downloaded build hasn't been code-signed or notarized, so first-launch hits Gatekeeper:
+
+> "Simple Aircraft Manager" cannot be opened because the developer cannot be verified.
+
+**To run anyway:** right-click `Simple Aircraft Manager.app` in the Applications folder, choose **Open**, then click **Open** on the warning dialog. macOS records the per-user override; subsequent double-clicks work normally. (Code signing + notarization is on the Day-2 list.)
+
+### macOS smoke-test checklist
+
+- [ ] `./desktop/build-macos.sh` produces both the `.app` and the `.dmg` without errors.
+- [ ] Drag the app to `/Applications`, right-click → Open.
+- [ ] First launch: `~/Library/Application Support/SimpleAircraftManager/config.ini` is **absent**, and the app window opens on `/desktop/setup/` showing the configuration form.
+- [ ] Submit the form with **"No login"**: success page renders; quitting and relaunching opens the dashboard auto-logged-in as `desktop`.
+- [ ] Submit the form with **"Require login"** + a valid username/password: success page renders; relaunching shows the login page; entered credentials work.
+- [ ] Submit the form with an Anthropic API key: relaunch, AI logbook import works (key is read from the macOS Keychain).
+- [ ] Hitting `/dashboard/` directly while `config.ini` is missing redirects to `/desktop/setup/` (not a 404, not a login page).
+- [ ] After setup completes, `/desktop/setup/` returns 404 — the form can't be reused to clobber credentials.
+- [ ] Closing the window cleanly shuts down (process exits, `instance.lock` released within 10s).
+- [ ] Launch the app twice in quick succession: second launch shows an "already running" dialog and exits cleanly.
+
 ## Smoke-test checklist
 
 Run after each successful build on a clean Windows 11 VM. Items grouped by area; check off as you go.
 
 ### Build & basic startup
 
-- [ ] `dist\SimpleAircraftManager\sam.exe` launches without errors when `%LOCALAPPDATA%\SimpleAircraftManager\config.ini` exists.
-- [ ] App window opens with title "Simple Aircraft Manager" and the dashboard renders inside it (no separate browser launched).
+- [ ] `dist\SimpleAircraftManager\sam.exe` launches on a fresh machine and the in-app `/desktop/setup/` form appears (no `config.ini` yet).
+- [ ] Submitting the form with **"Require login"** writes `%LOCALAPPDATA%\SimpleAircraftManager\config.ini`; relaunching shows the login page and the chosen credentials work.
+- [ ] Submitting the form with **"No login"** writes `config.ini`; relaunching opens the dashboard auto-logged-in.
+- [ ] Hitting `/dashboard/` while `config.ini` is missing redirects to `/desktop/setup/`.
+- [ ] After setup, `/desktop/setup/` returns 404.
 - [ ] Dashboard renders with PatternFly CSS and Alpine.js working (WhiteNoise serving static under `DEBUG=False`).
-- [ ] User is auto-logged-in only when `config.ini` explicitly contains `mode = disabled`.
 - [ ] Create one aircraft → reload → it persists.
 - [ ] Upload a logbook scan → view it → file loads (media-serving route works under `DEBUG=False`).
 - [ ] Closing the window cleanly shuts down (process exits, port released within 10s, `instance.lock` released).
@@ -53,9 +111,8 @@ Run after each successful build on a clean Windows 11 VM. Items grouped by area;
 - [ ] `iscc desktop\installer.iss` produces `Output\SimpleAircraftManagerSetup-*.exe`.
 - [ ] On a Win10 machine **without** the Edge WebView2 Runtime: installer aborts at startup with a message offering to open the Microsoft download page. Installing WebView2 manually then re-running the installer succeeds.
 - [ ] Install **without UAC prompt** (per-user install, `PrivilegesRequired=lowest`).
-- [ ] Install with **"Require login"** + Anthropic key: completes, shortcut works, login page appears, entered creds work.
-- [ ] Install with **"No login"** on a fresh machine: shortcut works, no auth prompt, dashboard loads.
-- [ ] Install on a Windows account whose username contains a non-ASCII character (e.g. `andré`): paths resolve, app launches.
+- [ ] Installer no longer prompts for auth mode, credentials, or API key (those moved to the in-app `/desktop/setup/` form). The wizard is just: WebView2 check → file copy → optional desktop shortcut.
+- [ ] Install on a Windows account whose username contains a non-ASCII character (e.g. `andré`): paths resolve, app launches, setup form appears.
 - [ ] Uninstall: removes `%LOCALAPPDATA%\Programs\SimpleAircraftManager\`, leaves `%LOCALAPPDATA%\SimpleAircraftManager\` intact, leaves Credential Manager entry intact.
 
 ### Reinstall scenarios
