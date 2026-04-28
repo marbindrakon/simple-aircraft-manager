@@ -99,4 +99,28 @@ for _app_config in _django_apps.get_app_configs():
         except Exception:
             pass  # Don't crash startup if a plugin's page URLs fail to load
 
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# In desktop mode the authenticated route below handles MEDIA_URL — never
+# expose an unauthenticated static() shortcut, even with DEBUG=True for
+# debugging.
+if not getattr(settings, "SAM_DESKTOP", False):
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# --- Desktop-only authenticated media route --------------------------------
+# In dev (DEBUG=True), Django's runserver serves MEDIA_URL via the staticfiles
+# helper. In production, nginx serves it. In desktop mode (DEBUG=False, no
+# nginx), we need an explicit route. Gated on the SAM_DESKTOP sentinel so it
+# never appears in dev or prod.
+from django.conf import settings as _sam_settings
+
+if getattr(_sam_settings, "SAM_DESKTOP", False):
+    from django.contrib.auth.decorators import login_required
+    from django.urls import re_path
+    from django.views.static import serve as _static_serve
+
+    @login_required
+    def _desktop_media(request, path):
+        return _static_serve(request, path, document_root=_sam_settings.MEDIA_ROOT)
+
+    urlpatterns += [
+        re_path(r"^media/(?P<path>.*)$", _desktop_media, name="desktop-media"),
+    ]

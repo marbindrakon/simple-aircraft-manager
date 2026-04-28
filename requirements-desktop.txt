@@ -1,0 +1,6 @@
+waitress==3.0.0
+pystray==0.19.5
+platformdirs==4.3.6
+keyring==25.6.0
+whitenoise==6.8.2
+pyinstaller==6.15.0
