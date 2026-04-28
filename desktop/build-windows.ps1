@@ -22,6 +22,14 @@ function Invoke-Native {
 $RepoRoot = Resolve-Path "$PSScriptRoot\.."
 Set-Location $RepoRoot
 
+Write-Host "=== Step 0/5: Clean previous build artifacts ==="
+foreach ($dir in @(".\build\sam-windows", ".\dist\SimpleAircraftManager", ".\desktop\Output")) {
+    if (Test-Path $dir) {
+        Remove-Item -Recurse -Force $dir
+        Write-Host "  Removed $dir"
+    }
+}
+
 Write-Host "=== Step 1/5: Create venv (if missing) ==="
 if (-not (Test-Path ".\venv")) {
     Invoke-Native "venv creation" { py -3.12 -m venv venv }
@@ -53,9 +61,6 @@ call_command('collectstatic', interactive=False, verbosity=1)
 }
 
 Write-Host "=== Step 4/5: Run PyInstaller ==="
-if (Test-Path ".\dist\SimpleAircraftManager") {
-    Remove-Item -Recurse -Force .\dist\SimpleAircraftManager
-}
 Invoke-Native "PyInstaller" { python -m PyInstaller desktop\sam-windows.spec --noconfirm }
 
 Write-Host "=== Step 5/5: Run Inno Setup ==="
