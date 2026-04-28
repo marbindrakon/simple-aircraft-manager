@@ -20,9 +20,10 @@ STATIC_BUILD_DIR = REPO_ROOT / "build" / "staticfiles"
 
 # Resource files copied into _internal/.
 datas = [
-    # Django app templates
+    # Django app templates (health/templates is optional — health is currently API-only)
     (str(REPO_ROOT / "core" / "templates"), "core/templates"),
-    (str(REPO_ROOT / "health" / "templates"), "health/templates"),
+    *([( str(REPO_ROOT / "health" / "templates"), "health/templates")]
+      if (REPO_ROOT / "health" / "templates").exists() else []),
 
     # Migrations (PyInstaller's static analysis misses these).
     (str(REPO_ROOT / "core" / "migrations"), "core/migrations"),
