@@ -65,7 +65,7 @@ def configure_logging() -> None:
 def startup_sequence(
     *,
     create_server: Callable[..., Any],
-    open_browser: Callable[[str], Any],
+    start_ui: Callable[[str], Any],
     wait_ready: Callable[[int, float], bool],
 ) -> Optional[StartupResult]:
     """Run every startup step up to "server running and ready."
@@ -76,10 +76,6 @@ def startup_sequence(
 
     lock_handle = instance.acquire()
     if lock_handle is None:
-        existing_port = instance.read_running_port()
-        if existing_port:
-            LOG.info("Another instance running on port %s; redirecting", existing_port)
-            open_browser(f"http://127.0.0.1:{existing_port}/")
         return None
 
     try:
@@ -139,7 +135,7 @@ def startup_sequence(
         if not ready:
             LOG.warning("Server slow to become ready; opening browser anyway")
 
-        open_browser(f"http://127.0.0.1:{port}/")
+        start_ui(f"http://127.0.0.1:{port}/")
 
         return StartupResult(
             port=port,
@@ -195,7 +191,7 @@ def main() -> int:
     try:
         result = startup_sequence(
             create_server=_create_server,
-            open_browser=webbrowser.open,
+            start_ui=webbrowser.open,
             wait_ready=wait_for_server_ready,
         )
     except Exception as e:

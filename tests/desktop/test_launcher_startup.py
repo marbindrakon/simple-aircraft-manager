@@ -38,13 +38,13 @@ def stubs(monkeypatch):
     fake_server.close = MagicMock()
     create_server = MagicMock(return_value=fake_server)
 
-    open_browser = MagicMock()
+    start_ui = MagicMock()
     wait_ready = MagicMock(return_value=True)
 
     return {
         "create_server": create_server,
         "fake_server": fake_server,
-        "open_browser": open_browser,
+        "start_ui": start_ui,
         "wait_ready": wait_ready,
     }
 
@@ -59,7 +59,7 @@ def test_no_auth_mode_first_launch(fake_user_data_dir, stubs, monkeypatch):
 
     result = launcher.startup_sequence(
         create_server=stubs["create_server"],
-        open_browser=stubs["open_browser"],
+        start_ui=stubs["start_ui"],
         wait_ready=stubs["wait_ready"],
     )
 
@@ -74,9 +74,9 @@ def test_no_auth_mode_first_launch(fake_user_data_dir, stubs, monkeypatch):
     assert kwargs["host"] == "127.0.0.1"
     assert isinstance(kwargs["port"], int)
 
-    # Browser opened to the same port.
-    stubs["open_browser"].assert_called_once()
-    url = stubs["open_browser"].call_args.args[0]
+    # UI started for the running server.
+    stubs["start_ui"].assert_called_once()
+    url = stubs["start_ui"].call_args.args[0]
     assert url.startswith("http://127.0.0.1:")
 
     assert result.port == kwargs["port"]
@@ -96,7 +96,7 @@ def test_required_mode_consumes_bootstrap_json(fake_user_data_dir, stubs, monkey
 
     launcher.startup_sequence(
         create_server=stubs["create_server"],
-        open_browser=stubs["open_browser"],
+        start_ui=stubs["start_ui"],
         wait_ready=stubs["wait_ready"],
     )
 
@@ -108,7 +108,8 @@ def test_required_mode_consumes_bootstrap_json(fake_user_data_dir, stubs, monkey
 
 def test_second_instance_returns_none(fake_user_data_dir, stubs, monkeypatch):
     """If another instance holds the lock, startup_sequence returns None and
-    redirects the browser to the existing port."""
+    does not start the UI. The 'already running' user-facing message lives at
+    the run() level, not here."""
     paths.config_ini_path().write_text("[auth]\nmode = disabled\n")
     paths.instance_port_path().write_text("9999")
 
@@ -124,11 +125,10 @@ def test_second_instance_returns_none(fake_user_data_dir, stubs, monkeypatch):
 
     result = launcher.startup_sequence(
         create_server=stubs["create_server"],
-        open_browser=stubs["open_browser"],
+        start_ui=stubs["start_ui"],
         wait_ready=stubs["wait_ready"],
     )
 
     assert result is None
     stubs["create_server"].assert_not_called()
-    stubs["open_browser"].assert_called_once()
-    assert "9999" in stubs["open_browser"].call_args.args[0]
+    stubs["start_ui"].assert_not_called()
