@@ -1,6 +1,6 @@
 # Desktop Installer (Windows)
 
-This directory contains the Windows desktop packaging for Simple Aircraft Manager — a per-user installer that bundles the Django app with a Python runtime, a `pystray` tray launcher, and a SQLite database under `%LOCALAPPDATA%\SimpleAircraftManager\`.
+This directory contains the Windows desktop packaging for Simple Aircraft Manager — a per-user installer that bundles the Django app with a Python runtime, a `pywebview` window shell (Microsoft Edge WebView2 runtime required, installed by the user from Microsoft), and a SQLite database under `%LOCALAPPDATA%\SimpleAircraftManager\`.
 
 ## Building the installer
 
@@ -12,6 +12,7 @@ Authoring happens on Linux; the build itself runs on Windows. The split lets you
 - Python 3.12 from python.org (the launcher in `py.exe` matters for the build script's `py -3.12 -m venv` line).
 - [Inno Setup 6](https://jrsoftware.org/isinfo.php) — install with the "Add iscc to PATH" option, or add `C:\Program Files (x86)\Inno Setup 6\` to PATH manually.
 - Git for Windows.
+- Microsoft Edge WebView2 Runtime — preinstalled on Win11 and Win10 21H2+. On older Win10 boxes, install from https://go.microsoft.com/fwlink/p/?LinkId=2124703 before running the installer.
 
 ### Build steps
 
@@ -39,18 +40,18 @@ Run after each successful build on a clean Windows 11 VM. Items grouped by area;
 ### Build & basic startup
 
 - [ ] `dist\SimpleAircraftManager\sam.exe` launches without errors when `%LOCALAPPDATA%\SimpleAircraftManager\config.ini` exists.
-- [ ] System tray icon appears.
-- [ ] Default browser opens to `http://127.0.0.1:8765/` (or fallback port) and the page loads cleanly — no connection-refused.
+- [ ] App window opens with title "Simple Aircraft Manager" and the dashboard renders inside it (no separate browser launched).
 - [ ] Dashboard renders with PatternFly CSS and Alpine.js working (WhiteNoise serving static under `DEBUG=False`).
 - [ ] User is auto-logged-in only when `config.ini` explicitly contains `mode = disabled`.
 - [ ] Create one aircraft → reload → it persists.
 - [ ] Upload a logbook scan → view it → file loads (media-serving route works under `DEBUG=False`).
-- [ ] Tray "Quit" cleanly shuts down (process exits, port released within 10s, `instance.lock` released).
+- [ ] Closing the window cleanly shuts down (process exits, port released within 10s, `instance.lock` released).
 - [ ] Restart app → previous aircraft + uploaded file still there.
 
 ### Installer behavior
 
 - [ ] `iscc desktop\installer.iss` produces `Output\SimpleAircraftManagerSetup-*.exe`.
+- [ ] On a Win10 machine **without** the Edge WebView2 Runtime: installer aborts at startup with a message offering to open the Microsoft download page. Installing WebView2 manually then re-running the installer succeeds.
 - [ ] Install **without UAC prompt** (per-user install, `PrivilegesRequired=lowest`).
 - [ ] Install with **"Require login"** + Anthropic key: completes, shortcut works, login page appears, entered creds work.
 - [ ] Install with **"No login"** on a fresh machine: shortcut works, no auth prompt, dashboard loads.
@@ -68,9 +69,9 @@ Cross-mode reinstall (no-auth ↔ require-login) is **unsupported** — the prev
 
 ### Robustness
 
-- [ ] Double-click the shortcut twice in quick succession: second instance opens browser to existing port, exits cleanly.
+- [ ] Double-click the shortcut twice in quick succession: second launch shows an "already running" messagebox and exits cleanly; the original window remains visible.
 - [ ] Force-kill via Task Manager during a write, then relaunch: data intact, no stale lock blocks startup, the next launch's backup includes the just-committed write (verifies WAL backup correctness).
-- [ ] Quit via tray while a logbook AI import is mid-flight: on relaunch the `ImportJob` row is marked `failed`, no orphan staging dirs.
+- [ ] Close the window while a logbook AI import is mid-flight: on relaunch the `ImportJob` row is marked `failed`, no orphan staging dirs.
 - [ ] Launch with no internet (offline) and no Anthropic key: app starts, AI features silently absent.
 - [ ] Launch with no internet and an Anthropic key: app starts; AI features show network errors when invoked, no crash.
 
