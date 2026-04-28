@@ -48,6 +48,66 @@ var
   CredsPage: TInputQueryWizardPage;
   ApiKeyPage: TInputQueryWizardPage;
 
+function WebView2Installed(): Boolean;
+var
+  Version: string;
+begin
+  Result := False;
+  { Per-machine 64-bit install — most common on Win10/11. }
+  if RegQueryStringValue(
+       HKEY_LOCAL_MACHINE,
+       'SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
+       'pv', Version) and (Trim(Version) <> '') and (Version <> '0.0.0.0') then
+  begin
+    Result := True;
+    exit;
+  end;
+  { Per-machine 32-bit (rare). }
+  if RegQueryStringValue(
+       HKEY_LOCAL_MACHINE,
+       'SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
+       'pv', Version) and (Trim(Version) <> '') and (Version <> '0.0.0.0') then
+  begin
+    Result := True;
+    exit;
+  end;
+  { Per-user (HKCU) install. }
+  if RegQueryStringValue(
+       HKEY_CURRENT_USER,
+       'SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
+       'pv', Version) and (Trim(Version) <> '') and (Version <> '0.0.0.0') then
+  begin
+    Result := True;
+    exit;
+  end;
+end;
+
+function InitializeSetup(): Boolean;
+var
+  Response: Integer;
+  ErrorCode: Integer;
+begin
+  if WebView2Installed() then begin
+    Result := True;
+    exit;
+  end;
+
+  Response := MsgBox(
+    'Simple Aircraft Manager requires the Microsoft Edge WebView2 Runtime, ' +
+    'which is not installed on this PC.' + #13#10 + #13#10 +
+    'Click OK to open the Microsoft download page in your browser. ' +
+    'Install the WebView2 Runtime, then run this installer again.',
+    mbInformation, MB_OKCANCEL);
+
+  if Response = IDOK then begin
+    ShellExec('open',
+      'https://go.microsoft.com/fwlink/p/?LinkId=2124703',
+      '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);
+  end;
+
+  Result := False;  { Abort install. }
+end;
+
 procedure InitializeWizard;
 begin
   AuthPage := CreateInputOptionPage(
