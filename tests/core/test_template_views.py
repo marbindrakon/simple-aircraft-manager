@@ -163,3 +163,22 @@ class TestUserSearchView:
         data = json.loads(resp.content)
         usernames = [u['username'] for u in data]
         assert owner_user.username in usernames
+
+
+# ---------------------------------------------------------------------------
+# vendor_assets_context processor
+# ---------------------------------------------------------------------------
+
+class TestVendorAssetsContextProcessor:
+    def test_returns_false_by_default(self, rf):
+        from core.context_processors import vendor_assets_context
+        request = rf.get('/')
+        result = vendor_assets_context(request)
+        assert result == {'sam_use_vendor_assets': False}
+
+    def test_returns_true_when_setting_enabled(self, rf, settings):
+        from core.context_processors import vendor_assets_context
+        settings.SAM_USE_VENDOR_ASSETS = True
+        request = rf.get('/')
+        result = vendor_assets_context(request)
+        assert result == {'sam_use_vendor_assets': True}

@@ -37,6 +37,9 @@ from .settings import *  # noqa: E402, F401, F403
 # urls.py checks this to enable the desktop-only authenticated media route.
 SAM_DESKTOP = True
 
+# Always serve vendor assets locally in desktop mode — no CDN reachability assumed.
+SAM_USE_VENDOR_ASSETS = True
+
 # --- Core ------------------------------------------------------------------
 
 DEBUG = False

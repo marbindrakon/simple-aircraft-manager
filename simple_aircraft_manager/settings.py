@@ -91,6 +91,7 @@ TEMPLATES = [
                 'core.context_processors.user_role_context',
                 'core.context_processors.theme_context',
                 'core.context_processors.plugin_registry_context',
+                'core.context_processors.vendor_assets_context',
             ],
         },
     },
@@ -155,6 +156,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Aircraft creation permission: 'any', 'owners', or 'admin'
 AIRCRAFT_CREATE_PERMISSION = os.environ.get('AIRCRAFT_CREATE_PERMISSION', 'any')
+
+# Serve vendor assets (PatternFly, Chart.js, Alpine.js) from local static files
+# instead of CDN. Set to true for air-gapped deployments; always true in desktop mode.
+SAM_USE_VENDOR_ASSETS = os.environ.get('SAM_USE_VENDOR_ASSETS', 'false').lower() == 'true'
 
 # Per-aircraft feature flags — list feature names to disable globally
 DISABLED_FEATURES = []  # e.g. ['flight_tracking', 'oil_analysis']
