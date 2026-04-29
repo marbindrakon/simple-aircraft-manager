@@ -203,7 +203,17 @@ LOGBOOK_IMPORT_MODELS = [
     # },
 ]
 
-LOGBOOK_IMPORT_DEFAULT_MODEL = 'claude-sonnet-4-6'
+# Add extra models (e.g. Ollama or LiteLLM) via JSON env var without rebuilding/reinstalling:
+#   LOGBOOK_IMPORT_EXTRA_MODELS='[{"id":"llama3.2-vision","name":"Llama 3.2 Vision (local)","provider":"ollama"}]'
+#   LOGBOOK_IMPORT_EXTRA_MODELS='[{"id":"claude-sonnet-4-6-proxy","name":"Sonnet 4.6 (via proxy)","provider":"litellm"}]'
+_extra_models_json = os.environ.get('LOGBOOK_IMPORT_EXTRA_MODELS')
+if _extra_models_json:
+    import json as _json
+    LOGBOOK_IMPORT_MODELS += _json.loads(_extra_models_json)
+
+LOGBOOK_IMPORT_DEFAULT_MODEL = os.environ.get(
+    'LOGBOOK_IMPORT_DEFAULT_MODEL', 'claude-sonnet-4-6'
+)
 
 # Oil analysis PDF import reuses LOGBOOK_IMPORT_MODELS for the model list.
 # No separate OIL_ANALYSIS_IMPORT_MODELS setting is needed — the same registry

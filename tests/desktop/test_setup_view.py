@@ -25,38 +25,179 @@ pytestmark = pytest.mark.django_db
 # ---------- pure-function validation ----------------------------------------
 
 
+def _v(**overrides):
+    """Build kwargs for _validate with sensible defaults so each test can
+    override only the fields it cares about."""
+    base = {
+        "auth_mode": "disabled",
+        "username": "",
+        "password": "",
+        "confirm_password": "",
+        "api_key": "",
+        "ollama_model": "",
+        "ollama_base_url": "",
+        "litellm_model": "",
+        "litellm_base_url": "",
+        "litellm_api_key": "",
+        "default_provider": "",
+    }
+    # Allow tests to use the historical "confirm" alias for confirm_password.
+    if "confirm" in overrides:
+        overrides["confirm_password"] = overrides.pop("confirm")
+    base.update(overrides)
+    return base
+
+
 def test_validate_rejects_missing_auth_mode():
-    errors = _validate(auth_mode="", username="alice", password="hunter22pwd", confirm="hunter22pwd")
+    errors = _validate(**_v(auth_mode="", username="alice", password="hunter22pwd", confirm="hunter22pwd"))
     assert "auth_mode" in errors
 
 
 def test_validate_rejects_unknown_auth_mode():
-    errors = _validate(auth_mode="something", username="", password="", confirm="")
+    errors = _validate(**_v(auth_mode="something"))
     assert "auth_mode" in errors
 
 
 def test_validate_required_mode_rejects_short_username():
-    errors = _validate(auth_mode="required", username="ab", password="hunter22pwd", confirm="hunter22pwd")
+    errors = _validate(**_v(auth_mode="required", username="ab", password="hunter22pwd", confirm="hunter22pwd"))
     assert "username" in errors
 
 
 def test_validate_required_mode_rejects_short_password():
-    errors = _validate(auth_mode="required", username="alice", password="short", confirm="short")
+    errors = _validate(**_v(auth_mode="required", username="alice", password="short", confirm="short"))
     assert "password" in errors
 
 
 def test_validate_required_mode_rejects_password_mismatch():
-    errors = _validate(auth_mode="required", username="alice", password="hunter22pwd", confirm="differentpwd")
+    errors = _validate(**_v(auth_mode="required", username="alice", password="hunter22pwd", confirm="differentpwd"))
     assert "confirm_password" in errors
 
 
 def test_validate_required_mode_accepts_clean_input():
-    errors = _validate(auth_mode="required", username="alice", password="hunter22pwd", confirm="hunter22pwd")
+    errors = _validate(**_v(auth_mode="required", username="alice", password="hunter22pwd", confirm="hunter22pwd"))
     assert errors == {}
 
 
 def test_validate_disabled_mode_ignores_username_and_password():
-    errors = _validate(auth_mode="disabled", username="", password="", confirm="")
+    errors = _validate(**_v(auth_mode="disabled"))
+    assert errors == {}
+
+
+def test_validate_accepts_valid_ollama_model_name():
+    errors = _validate(**_v(auth_mode="disabled", ollama_model="llama3.2-vision"))
+    assert errors == {}
+
+
+def test_validate_accepts_namespaced_ollama_model_name():
+    errors = _validate(**_v(auth_mode="disabled", ollama_model="library/qwen2.5vl:7b"))
+    assert errors == {}
+
+
+def test_validate_rejects_ollama_model_with_shell_metachars():
+    errors = _validate(**_v(auth_mode="disabled", ollama_model="evil; rm -rf /"))
+    assert "ollama_model" in errors
+
+
+def test_validate_rejects_ollama_base_url_without_scheme():
+    errors = _validate(**_v(
+        auth_mode="disabled",
+        ollama_model="llama3.2-vision",
+        ollama_base_url="localhost:11434",
+    ))
+    assert "ollama_base_url" in errors
+
+
+def test_validate_ignores_ollama_base_url_when_model_unset():
+    # Helper text URL prefilled while model is blank shouldn't trip validation.
+    errors = _validate(**_v(auth_mode="disabled", ollama_base_url="not-a-url"))
+    assert errors == {}
+
+
+def test_validate_accepts_litellm_with_base_url():
+    errors = _validate(**_v(
+        auth_mode="disabled",
+        litellm_model="gpt-4o-mini",
+        litellm_base_url="https://openrouter.ai/api/v1",
+    ))
+    assert errors == {}
+
+
+def test_validate_accepts_namespaced_litellm_model():
+    errors = _validate(**_v(
+        auth_mode="disabled",
+        litellm_model="anthropic/claude-sonnet-4-6",
+        litellm_base_url="http://localhost:8000/v1",
+    ))
+    assert errors == {}
+
+
+def test_validate_requires_litellm_base_url_when_model_set():
+    errors = _validate(**_v(auth_mode="disabled", litellm_model="gpt-4o-mini"))
+    assert "litellm_base_url" in errors
+
+
+def test_validate_rejects_litellm_base_url_without_scheme():
+    errors = _validate(**_v(
+        auth_mode="disabled",
+        litellm_model="gpt-4o-mini",
+        litellm_base_url="openrouter.ai/api/v1",
+    ))
+    assert "litellm_base_url" in errors
+
+
+def test_validate_rejects_litellm_model_with_shell_metachars():
+    errors = _validate(**_v(
+        auth_mode="disabled",
+        litellm_model="evil; rm -rf /",
+        litellm_base_url="https://openrouter.ai/api/v1",
+    ))
+    assert "litellm_model" in errors
+
+
+def test_validate_requires_default_provider_when_multiple_configured():
+    errors = _validate(**_v(
+        auth_mode="disabled",
+        api_key="sk-ant-xxx",
+        ollama_model="llama3.2-vision",
+    ))
+    assert "default_provider" in errors
+
+
+def test_validate_accepts_default_provider_pointing_at_configured_provider():
+    errors = _validate(**_v(
+        auth_mode="disabled",
+        api_key="sk-ant-xxx",
+        ollama_model="llama3.2-vision",
+        default_provider="ollama",
+    ))
+    assert errors == {}
+
+
+def test_validate_rejects_default_provider_pointing_at_unconfigured_provider():
+    errors = _validate(**_v(
+        auth_mode="disabled",
+        api_key="sk-ant-xxx",
+        default_provider="ollama",  # Ollama isn't configured
+    ))
+    assert errors == {"default_provider": _validate(**_v(
+        auth_mode="disabled",
+        api_key="sk-ant-xxx",
+        default_provider="ollama",
+    ))["default_provider"]}
+
+
+def test_validate_rejects_unknown_default_provider_value():
+    errors = _validate(**_v(
+        auth_mode="disabled",
+        api_key="sk-ant-xxx",
+        default_provider="bogus",
+    ))
+    assert "default_provider" in errors
+
+
+def test_validate_omits_default_provider_when_only_one_configured():
+    # Single-provider setups don't require an explicit choice.
+    errors = _validate(**_v(auth_mode="disabled", ollama_model="llama3.2-vision"))
     assert errors == {}
 
 
@@ -115,6 +256,136 @@ def test_apply_setup_keyring_failure_does_not_block_completion(fake_user_data_di
 
     # Setup still completed — config.ini was written.
     assert paths.config_ini_path().exists()
+
+
+def test_apply_setup_writes_ai_section_when_ollama_model_given(fake_user_data_dir, monkeypatch):
+    monkeypatch.setattr("desktop.setup_view.keyring.set_password", lambda *a, **kw: None)
+
+    _apply_setup(
+        auth_mode="disabled",
+        username="",
+        password="",
+        api_key="",
+        ollama_model="llama3.2-vision",
+        ollama_base_url="http://localhost:11434",
+    )
+
+    cfg = paths.config_ini_path().read_text()
+    assert "[ai]" in cfg
+    assert "ollama_model = llama3.2-vision" in cfg
+    assert "ollama_base_url = http://localhost:11434" in cfg
+
+
+def test_apply_setup_omits_ai_section_when_ollama_model_blank(fake_user_data_dir, monkeypatch):
+    monkeypatch.setattr("desktop.setup_view.keyring.set_password", lambda *a, **kw: None)
+
+    _apply_setup(auth_mode="disabled", username="", password="", api_key="")
+
+    cfg = paths.config_ini_path().read_text()
+    assert "[ai]" not in cfg
+
+
+def test_apply_setup_omits_ollama_base_url_line_when_blank(fake_user_data_dir, monkeypatch):
+    monkeypatch.setattr("desktop.setup_view.keyring.set_password", lambda *a, **kw: None)
+
+    _apply_setup(
+        auth_mode="disabled",
+        username="",
+        password="",
+        api_key="",
+        ollama_model="llama3.2-vision",
+        ollama_base_url="",
+    )
+
+    cfg = paths.config_ini_path().read_text()
+    assert "ollama_model = llama3.2-vision" in cfg
+    assert "ollama_base_url" not in cfg
+
+
+def test_apply_setup_writes_litellm_lines_and_keyring(fake_user_data_dir, monkeypatch):
+    set_password = mock.MagicMock()
+    monkeypatch.setattr("desktop.setup_view.keyring.set_password", set_password)
+
+    _apply_setup(
+        auth_mode="disabled",
+        username="",
+        password="",
+        api_key="",
+        litellm_model="anthropic/claude-sonnet-4-6",
+        litellm_base_url="https://openrouter.ai/api/v1",
+        litellm_api_key="sk-or-v1-test",
+    )
+
+    cfg = paths.config_ini_path().read_text()
+    assert "litellm_model = anthropic/claude-sonnet-4-6" in cfg
+    assert "litellm_base_url = https://openrouter.ai/api/v1" in cfg
+    # API key must NEVER end up in the plaintext config file.
+    assert "sk-or-v1-test" not in cfg
+
+    set_password.assert_any_call("SimpleAircraftManager", "litellm_api_key", "sk-or-v1-test")
+
+
+def test_apply_setup_writes_default_provider_when_multiple_configured(fake_user_data_dir, monkeypatch):
+    monkeypatch.setattr("desktop.setup_view.keyring.set_password", lambda *a, **kw: None)
+
+    _apply_setup(
+        auth_mode="disabled",
+        username="",
+        password="",
+        api_key="sk-ant-test",
+        ollama_model="llama3.2-vision",
+        litellm_model="gpt-4o-mini",
+        litellm_base_url="https://openrouter.ai/api/v1",
+        default_provider="litellm",
+    )
+
+    cfg = paths.config_ini_path().read_text()
+    assert "default_provider = litellm" in cfg
+
+
+def test_apply_setup_omits_default_provider_when_only_one_configured(fake_user_data_dir, monkeypatch):
+    monkeypatch.setattr("desktop.setup_view.keyring.set_password", lambda *a, **kw: None)
+
+    _apply_setup(
+        auth_mode="disabled",
+        username="",
+        password="",
+        api_key="",
+        ollama_model="llama3.2-vision",
+        # default_provider blank — loader infers Ollama since it's the only one.
+    )
+
+    cfg = paths.config_ini_path().read_text()
+    assert "default_provider" not in cfg
+    assert "ollama_model = llama3.2-vision" in cfg
+
+
+def test_apply_setup_writes_all_three_providers_with_explicit_default(fake_user_data_dir, monkeypatch):
+    set_password = mock.MagicMock()
+    monkeypatch.setattr("desktop.setup_view.keyring.set_password", set_password)
+
+    _apply_setup(
+        auth_mode="disabled",
+        username="",
+        password="",
+        api_key="sk-ant-test",
+        ollama_model="llama3.2-vision",
+        ollama_base_url="http://localhost:11434",
+        litellm_model="anthropic/claude-sonnet-4-6",
+        litellm_base_url="https://openrouter.ai/api/v1",
+        litellm_api_key="sk-or-v1-test",
+        default_provider="anthropic",
+    )
+
+    cfg = paths.config_ini_path().read_text()
+    assert "default_provider = anthropic" in cfg
+    assert "ollama_model = llama3.2-vision" in cfg
+    assert "litellm_model = anthropic/claude-sonnet-4-6" in cfg
+
+    # Both API keys went to the keyring under different usernames.
+    calls = {(c.args[1], c.args[2]) for c in set_password.call_args_list}
+    assert ("anthropic_api_key", "sk-ant-test") in calls
+    assert ("litellm_api_key", "sk-or-v1-test") in calls
 
 
 def test_apply_setup_existing_superuser_is_left_alone(fake_user_data_dir, monkeypatch):

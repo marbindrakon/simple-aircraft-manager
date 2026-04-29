@@ -90,16 +90,139 @@
 
         <fieldset class="pf-v5-c-form__fieldset">
           <legend class="pf-v5-c-form__label-text">AI features (optional)</legend>
+          <p class="pf-v5-u-color-200" style="margin-bottom: 1rem;">
+            Configure any combination of providers. Anthropic gives the highest extraction quality.
+            A local Ollama model runs on your machine&rsquo;s GPU for free (Metal on Apple Silicon,
+            CUDA/ROCm on supported PCs). An OpenAI-compatible endpoint connects to vLLM, OpenRouter,
+            a LiteLLM proxy, or any other server that speaks the OpenAI Chat Completions API.
+            If you configure more than one, pick which is the default at the bottom.
+          </p>
+
+          <h3 class="pf-v5-c-title pf-m-md" style="margin-top: 1rem;">Anthropic API</h3>
           <div class="pf-v5-c-form__group">
             <label class="pf-v5-c-form__label" for="setup-api-key">Anthropic API key</label>
             <input id="setup-api-key" name="api_key" type="password"
                    class="pf-v5-c-form-control"
-                   value="{{ values.api_key|default:'' }}"
                    placeholder="sk-ant-…">
             <div class="pf-v5-c-form__helper-text">
-              Paste a key to enable AI-powered logbook import. Stored encrypted in your OS keychain.
-              Leave blank to skip; you can add a key later from the OS credential manager.
+              Paste a key to enable AI-powered logbook import. Stored in your OS credential store
+              (Keychain on macOS, Credential Manager on Windows, Secret Service on Linux).
+              Leave blank to skip.
             </div>
+          </div>
+
+          <h3 class="pf-v5-c-title pf-m-md" style="margin-top: 1.5rem;">Local Ollama</h3>
+          <div class="pf-v5-c-form__group">
+            <label class="pf-v5-c-form__label" for="setup-ollama-model">Ollama model</label>
+            <input id="setup-ollama-model" name="ollama_model" type="text"
+                   class="pf-v5-c-form-control"
+                   value="{{ values.ollama_model|default:'' }}"
+                   placeholder="llama3.2-vision">
+            <div class="pf-v5-c-form__helper-text">
+              Name of a vision-capable Ollama model already pulled to this machine
+              (e.g. <code>llama3.2-vision</code> or <code>qwen2.5vl:7b</code>).
+              Requires Ollama installed and running. Leave blank to skip.
+            </div>
+            {% if errors.ollama_model %}
+              <div class="pf-v5-c-form__helper-text pf-m-error">{{ errors.ollama_model }}</div>
+            {% endif %}
+          </div>
+
+          <div class="pf-v5-c-form__group" id="ollama-base-url-group">
+            <label class="pf-v5-c-form__label" for="setup-ollama-base-url">Ollama base URL</label>
+            <input id="setup-ollama-base-url" name="ollama_base_url" type="text"
+                   class="pf-v5-c-form-control"
+                   value="{{ values.ollama_base_url|default:'http://localhost:11434' }}"
+                   placeholder="http://localhost:11434">
+            <div class="pf-v5-c-form__helper-text">
+              Change only if Ollama runs on a non-default port or remote host.
+            </div>
+            {% if errors.ollama_base_url %}
+              <div class="pf-v5-c-form__helper-text pf-m-error">{{ errors.ollama_base_url }}</div>
+            {% endif %}
+          </div>
+
+          <h3 class="pf-v5-c-title pf-m-md" style="margin-top: 1.5rem;">OpenAI-compatible endpoint</h3>
+          <div class="pf-v5-c-form__group">
+            <label class="pf-v5-c-form__label" for="setup-litellm-model">Model ID</label>
+            <input id="setup-litellm-model" name="litellm_model" type="text"
+                   class="pf-v5-c-form-control"
+                   value="{{ values.litellm_model|default:'' }}"
+                   placeholder="gpt-4o-mini">
+            <div class="pf-v5-c-form__helper-text">
+              Model identifier accepted by your endpoint (e.g. <code>gpt-4o-mini</code>,
+              <code>anthropic/claude-sonnet-4-6</code>, or a vLLM-served model name).
+              Leave blank to skip.
+            </div>
+            {% if errors.litellm_model %}
+              <div class="pf-v5-c-form__helper-text pf-m-error">{{ errors.litellm_model }}</div>
+            {% endif %}
+          </div>
+
+          <div class="pf-v5-c-form__group" id="litellm-base-url-group">
+            <label class="pf-v5-c-form__label" for="setup-litellm-base-url">Endpoint base URL</label>
+            <input id="setup-litellm-base-url" name="litellm_base_url" type="text"
+                   class="pf-v5-c-form-control"
+                   value="{{ values.litellm_base_url|default:'' }}"
+                   placeholder="https://openrouter.ai/api/v1">
+            <div class="pf-v5-c-form__helper-text">
+              The OpenAI-compatible base URL for your endpoint, e.g.
+              <code>https://openrouter.ai/api/v1</code>, <code>http://localhost:8000/v1</code>
+              (vLLM), or your LiteLLM proxy URL.
+            </div>
+            {% if errors.litellm_base_url %}
+              <div class="pf-v5-c-form__helper-text pf-m-error">{{ errors.litellm_base_url }}</div>
+            {% endif %}
+          </div>
+
+          <div class="pf-v5-c-form__group" id="litellm-api-key-group">
+            <label class="pf-v5-c-form__label" for="setup-litellm-api-key">API key</label>
+            <input id="setup-litellm-api-key" name="litellm_api_key" type="password"
+                   class="pf-v5-c-form-control"
+                   placeholder="leave blank if your endpoint doesn't require one">
+            <div class="pf-v5-c-form__helper-text">
+              Stored in your OS credential store. Leave blank for endpoints with no authentication
+              (e.g. a local vLLM server).
+            </div>
+          </div>
+
+          <h3 class="pf-v5-c-title pf-m-md" style="margin-top: 1.5rem;">Default model</h3>
+          <div class="pf-v5-c-form__group" id="default-provider-group">
+            <p class="pf-v5-u-color-200" style="margin-bottom: 0.5rem;">
+              Which provider should be selected by default in the import-page model picker?
+              Only providers you&rsquo;ve filled in above are selectable.
+            </p>
+
+            <label class="pf-v5-c-radio">
+              <input type="radio" name="default_provider" value="anthropic"
+                     class="pf-v5-c-radio__input"
+                     data-default-provider-radio="anthropic"
+                     {% if values.default_provider == 'anthropic' %}checked{% endif %}
+                     disabled>
+              <span class="pf-v5-c-radio__label">Anthropic API</span>
+            </label>
+
+            <label class="pf-v5-c-radio">
+              <input type="radio" name="default_provider" value="ollama"
+                     class="pf-v5-c-radio__input"
+                     data-default-provider-radio="ollama"
+                     {% if values.default_provider == 'ollama' %}checked{% endif %}
+                     disabled>
+              <span class="pf-v5-c-radio__label">Local Ollama</span>
+            </label>
+
+            <label class="pf-v5-c-radio">
+              <input type="radio" name="default_provider" value="litellm"
+                     class="pf-v5-c-radio__input"
+                     data-default-provider-radio="litellm"
+                     {% if values.default_provider == 'litellm' %}checked{% endif %}
+                     disabled>
+              <span class="pf-v5-c-radio__label">OpenAI-compatible endpoint</span>
+            </label>
+
+            {% if errors.default_provider %}
+              <div class="pf-v5-c-form__helper-text pf-m-error">{{ errors.default_provider }}</div>
+            {% endif %}
           </div>
         </fieldset>
 
