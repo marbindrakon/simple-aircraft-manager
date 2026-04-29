@@ -1,4 +1,4 @@
-# Desktop Installer (Windows + macOS)
+# Desktop Installer (Windows + macOS + Linux)
 
 This directory contains the desktop packaging for Simple Aircraft Manager — a per-user app that bundles the Django app with a Python runtime, a `pywebview` window shell, and a SQLite database under the platform-specific user-data directory.
 
@@ -6,6 +6,7 @@ This directory contains the desktop packaging for Simple Aircraft Manager — a 
 |----------|--------------|----------------|--------------|
 | Windows  | `%LOCALAPPDATA%\SimpleAircraftManager\` | Microsoft Edge WebView2 (user-installed) | Inno Setup `.exe` |
 | macOS    | `~/Library/Application Support/SimpleAircraftManager/` | WKWebView (system) | drag-to-Applications `.dmg` |
+| Linux    | `~/.var/app/app.simpleaircraft.Manager/data/SimpleAircraftManager/` | WebKitGTK (bundled in Flatpak runtime) | single-file `.flatpak` bundle — see [`flatpak/README.md`](flatpak/README.md) |
 
 The first-run configuration form (auth mode, username + password, Anthropic API key) is served from inside the app at `/desktop/setup/` on every platform. The launcher detects a missing `config.ini` and redirects every request to the setup page until the user submits it. The Windows installer no longer collects this information up front — it only checks for the WebView2 runtime and copies the bundle.
 

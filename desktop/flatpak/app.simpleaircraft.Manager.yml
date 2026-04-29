@@ -1,0 +1,76 @@
+app-id: app.simpleaircraft.Manager
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+command: simple-aircraft-manager
+
+finish-args:
+  # Loopback HTTP between webview and bundled Waitress, plus outbound HTTPS
+  # to AI providers (Anthropic, OpenAI, Ollama).
+  - --share=network
+  - --share=ipc
+  # Webview rendering (WebKitGTK).
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # OS keyring (GNOME Keyring / KWallet via SecretService).
+  - --talk-name=org.freedesktop.secrets
+
+# File uploads from the webview (logbook PDFs, AD docs, etc.) go through
+# the FileChooser portal automatically — no broad --filesystem= grant needed.
+
+modules:
+  - name: simple-aircraft-manager
+    buildsystem: simple
+    build-options:
+      build-args:
+        # pip needs PyPI access during the build. Standalone bundles allow
+        # this; Flathub submission would replace this with a generated
+        # python3-requirements.json (offline, reproducible).
+        - --share=network
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: '1'
+        PIP_NO_CACHE_DIR: '1'
+    build-commands:
+      # 1. Install Python deps into /app. PyObjC entries in
+      #    requirements-desktop.txt are gated on sys_platform=="darwin"
+      #    and skip automatically on Linux.
+      - python3 -m pip install --prefix=/app -r requirements.txt -r requirements-desktop.txt
+
+      # 2. Copy the application source tree into the app prefix.
+      - install -d /app/share/simple-aircraft-manager
+      - cp -r simple_aircraft_manager core health desktop manage.py
+          /app/share/simple-aircraft-manager/
+
+      # 3. Run collectstatic at build time so /static/ is read-only at runtime.
+      #    HOME is redirected so settings_desktop's path-resolution side effects
+      #    (secret_key, data dir) land in /tmp during build, not /app.
+      - cd /app/share/simple-aircraft-manager &&
+        DJANGO_SETTINGS_MODULE=simple_aircraft_manager.settings_desktop
+        SAM_DESKTOP_AUTH_MODE=disabled
+        HOME=/tmp/sam-build
+        PYTHONPATH=/app/share/simple-aircraft-manager
+        python3 manage.py collectstatic --noinput
+
+      # 4. Install entrypoint shim + Linux desktop metadata.
+      - install -Dm755 desktop/flatpak/launcher.sh /app/bin/simple-aircraft-manager
+      - install -Dm644 desktop/flatpak/app.simpleaircraft.Manager.desktop
+          /app/share/applications/app.simpleaircraft.Manager.desktop
+      - install -Dm644 desktop/flatpak/app.simpleaircraft.Manager.metainfo.xml
+          /app/share/metainfo/app.simpleaircraft.Manager.metainfo.xml
+      - install -Dm644 desktop/flatpak/icon-256.png
+          /app/share/icons/hicolor/256x256/apps/app.simpleaircraft.Manager.png
+    sources:
+      - type: dir
+        path: ..
+        skip:
+          - .git
+          - .venv
+          - venv
+          - build
+          - dist
+          - htmlcov
+          - node_modules
+          - __pycache__
+          - .pytest_cache
+          - .mypy_cache

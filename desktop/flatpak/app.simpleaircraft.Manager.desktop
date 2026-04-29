@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Simple Aircraft Manager
+GenericName=Aircraft Maintenance Tracker
+Comment=Track aircraft maintenance, hours, and regulatory compliance
+Exec=simple-aircraft-manager
+Icon=app.simpleaircraft.Manager
+Terminal=false
+Categories=Office;ProjectManagement;
+Keywords=aircraft;aviation;maintenance;logbook;
+StartupNotify=true
