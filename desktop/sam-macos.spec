@@ -31,6 +31,11 @@ datas = [
     (str(REPO_ROOT / "core" / "migrations"), "core/migrations"),
     (str(REPO_ROOT / "health" / "migrations"), "health/migrations"),
 
+    # Non-Python data files loaded by health.logbook_import at runtime via
+    # Path(__file__).parent / 'ai_prompts' — PyInstaller's static analysis
+    # doesn't follow this kind of resource read.
+    (str(REPO_ROOT / "health" / "ai_prompts"), "health/ai_prompts"),
+
     # Collected static assets (must be built BEFORE invoking PyInstaller).
     (str(STATIC_BUILD_DIR), "staticfiles"),
 
