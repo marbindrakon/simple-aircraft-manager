@@ -77,3 +77,6 @@ TODO.md
 
 # Git worktrees
 .worktrees/
+
+# Private originals for oil-analysis fixture anonymization (never commit raw PDFs)
+test-pdfs/
