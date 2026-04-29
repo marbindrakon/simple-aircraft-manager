@@ -77,8 +77,8 @@ hiddenimports = [
     "whitenoise.storage",
     "PIL.Image",
     "PIL._imagingft",
-    "pymupdf",
-    "fitz",
+    "pypdfium2",
+    "pypdfium2_raw",
     "anthropic",
     "openai",
     # macOS Keychain backend.

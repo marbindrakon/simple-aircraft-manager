@@ -3,9 +3,8 @@ Unit tests for health/oil_analysis_parsers.py
 
 These are pure unit tests — no DB access needed.
 """
-import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -134,33 +133,18 @@ class TestHexRe:
 
 
 # ---------------------------------------------------------------------------
-# parse() dispatch tests — mock fitz.open to test lab detection + dispatch
+# parse() dispatch tests — mock _extract_text to test lab detection + dispatch
 # ---------------------------------------------------------------------------
 
 class TestParseDispatch:
-    def _make_mock_fitz(self, text_content):
-        """Create a mock fitz module whose open() returns a document with given text."""
-        mock_page = MagicMock()
-        # get_text() with no args or 'text' returns text_content; 'words' returns []
-        mock_page.get_text.side_effect = lambda mode='text', **kw: (
-            text_content if mode != 'words' else []
-        )
-        mock_doc = MagicMock()
-        mock_doc.__iter__ = MagicMock(return_value=iter([mock_page]))
-        mock_doc.close = MagicMock()
-        mock_fitz = MagicMock()
-        mock_fitz.open.return_value = mock_doc
-        return mock_fitz
-
     def test_unrecognized_lab_raises_value_error(self):
         """parse() with unrecognized lab text raises ValueError."""
-        from health.oil_analysis_parsers import parse
+        from health import oil_analysis_parsers as oap
 
-        mock_fitz = self._make_mock_fitz('Random oil lab report with no known identifier')
-
-        with patch.dict(sys.modules, {'fitz': mock_fitz}):
+        with patch.object(oap, '_extract_text',
+                          return_value='Random oil lab report with no known identifier'):
             with pytest.raises(ValueError, match='Unrecognized'):
-                parse(Path('/fake/report.pdf'))
+                oap.parse(Path('/fake/report.pdf'))
 
     def test_blackstone_lab_detected_in_text(self):
         """_detect_lab correctly returns 'blackstone' for Blackstone text."""
