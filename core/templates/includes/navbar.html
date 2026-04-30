@@ -65,6 +65,9 @@
                     <li>
                         <a class="pf-v5-c-dropdown__menu-item" href="/api/">API</a>
                     </li>
+                    <li>
+                        <a class="pf-v5-c-dropdown__menu-item" href="{% url 'about' %}">About &amp; Licenses</a>
+                    </li>
                     {% if user.is_superuser %}
                     <li class="pf-v5-c-dropdown__separator" role="separator"></li>
                     <li>

@@ -28,6 +28,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-test.txt -r requirements-desktop.txt
 
+      - name: License gate
+        run: |
+          pip install pip-licenses
+          pip-licenses --format=csv \
+            --fail-on="GPL;LGPL;AGPL;SSPL;BUSL;CDDL;EPL" \
+            --ignore-packages pyinstaller pyinstaller-hooks-contrib
+
       - name: Run tests
         run: python -m pytest
 

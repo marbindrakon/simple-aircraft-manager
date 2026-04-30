@@ -75,6 +75,10 @@ celerybeat.pid
 # Local notes
 TODO.md
 
+# Generated at build time — do not commit
+THIRD-PARTY-NOTICES.txt
+licenses/
+
 # Git worktrees
 .worktrees/
 

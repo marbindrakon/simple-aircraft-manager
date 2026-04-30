@@ -1,0 +1,63 @@
+================================================================
+Web assets
+================================================================
+
+Alpine.js 3.x — MIT
+  Copyright (c) 2019-present Caleb Porzio and contributors
+  https://github.com/alpinejs/alpine
+
+Chart.js 4 — MIT
+  Copyright (c) 2014-2024 Chart.js Contributors
+  https://github.com/chartjs/Chart.js
+
+PatternFly 5.3.1 — MIT
+  Copyright (c) Red Hat, Inc.
+  https://github.com/patternfly/patternfly
+
+================================================================
+Fonts and icons
+================================================================
+
+Red Hat Display, Red Hat Text, Red Hat Mono — SIL Open Font License 1.1
+  Copyright 2021 Red Hat, Inc.
+  Reserved Font Name: "Red Hat"
+  https://github.com/RedHatOfficial/RedHatFont
+
+PatternFly Icon Font (pficon) — MIT
+  Copyright (c) Red Hat, Inc.
+  https://github.com/patternfly/patternfly
+
+Font Awesome 6 Free
+  Fonts: SIL Open Font License 1.1
+  Icons: Creative Commons Attribution 4.0 International (CC BY 4.0)
+  Code: MIT
+  Copyright 2024 Fonticons, Inc.
+  https://fontawesome.com
+
+The full text of the SIL Open Font License 1.1 ships next to each font
+binary under core/static/vendor/assets/.
+
+================================================================
+Microsoft Edge WebView2 Runtime (Windows only)
+================================================================
+
+Simple Aircraft Manager uses the Microsoft Edge WebView2 Runtime to display
+its user interface on Windows. The WebView2 Runtime is not bundled with this
+product; it is a separate Microsoft component installed by the operating
+system or downloaded by the user. Download and license terms are available
+from Microsoft at:
+
+  https://developer.microsoft.com/en-us/microsoft-edge/webview2/
+
+================================================================
+PyInstaller bootloader
+================================================================
+
+The desktop bundle is built with PyInstaller, which embeds a small native
+"bootloader" binary alongside the application. The bootloader is licensed
+under the GPLv2 with an explicit exception that permits redistribution as
+part of non-GPL applications. The bootloader is the only component of
+PyInstaller that ships in the bundle; PyInstaller itself is a build-time
+dependency. See:
+
+  https://github.com/pyinstaller/pyinstaller/blob/develop/COPYING.txt

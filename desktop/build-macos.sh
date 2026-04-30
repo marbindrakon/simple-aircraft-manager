@@ -38,6 +38,13 @@ log "Step 2/5: Install dependencies"
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install -r requirements-desktop.txt
+python -m pip install -r requirements-build.txt
+
+log "Step 2b/5: Generate THIRD-PARTY-NOTICES.txt and per-package license files"
+# Compact attribution table (no full boilerplate — readable by humans).
+python scripts/generate_third_party_notices.py
+# Per-package verbatim license/notice files bundled alongside the table.
+python scripts/generate_third_party_notices.py --save-licenses licenses/
 
 log "Step 3/5: Collect static assets"
 export DJANGO_SETTINGS_MODULE="simple_aircraft_manager.settings_desktop"

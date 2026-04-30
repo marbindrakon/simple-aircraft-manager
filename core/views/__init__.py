@@ -25,6 +25,9 @@ from core.views.template_views import (
     SquawkHistoryView,
 )
 
+# About / third-party notices page
+from core.views.about_view import AboutView
+
 # Logbook import UI
 from core.views.logbook_import_view import LogbookImportView
 
@@ -65,6 +68,7 @@ __all__ = [
     "DashboardView",
     "AircraftDetailView",
     "SquawkHistoryView",
+    "AboutView",
     "LogbookImportView",
     "PublicAircraftView",
     "custom_logout",

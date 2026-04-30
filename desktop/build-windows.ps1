@@ -40,6 +40,13 @@ Write-Host "=== Step 2/5: Install dependencies ==="
 Invoke-Native "pip upgrade"                  { python -m pip install --upgrade pip }
 Invoke-Native "pip install requirements"     { python -m pip install -r requirements.txt }
 Invoke-Native "pip install requirements-desktop" { python -m pip install -r requirements-desktop.txt }
+Invoke-Native "pip install requirements-build"   { python -m pip install -r requirements-build.txt }
+
+Write-Host "=== Step 2b/5: Generate THIRD-PARTY-NOTICES.txt and per-package license files ==="
+# Compact attribution table (no full boilerplate — readable by humans).
+Invoke-Native "generate notices" { python scripts\generate_third_party_notices.py }
+# Per-package verbatim license/notice files bundled alongside the table.
+Invoke-Native "save licenses"   { python scripts\generate_third_party_notices.py --save-licenses licenses\ }
 
 Write-Host "=== Step 3/5: Collect static assets ==="
 $env:DJANGO_SETTINGS_MODULE = "simple_aircraft_manager.settings_desktop"

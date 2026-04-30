@@ -48,6 +48,7 @@ datas = [
     # Misc resources.
     (str(REPO_ROOT / "LICENSE"), "."),
     (str(REPO_ROOT / "THIRD-PARTY-NOTICES.txt"), "."),
+    (str(REPO_ROOT / "licenses"), "licenses"),
 ]
 
 # Add Django's bundled migrations and admin templates (auth, contenttypes,

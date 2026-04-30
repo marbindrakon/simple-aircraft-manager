@@ -46,6 +46,7 @@ datas = [
     # Misc resources Inno Setup also reads.
     (str(REPO_ROOT / "LICENSE"), "."),
     (str(REPO_ROOT / "THIRD-PARTY-NOTICES.txt"), "."),
+    (str(REPO_ROOT / "licenses"), "licenses"),
     (str(REPO_ROOT / "desktop" / "icon.ico"), "desktop"),
 ]
 

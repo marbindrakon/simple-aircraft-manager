@@ -5,7 +5,7 @@
   <summary>Track aircraft maintenance, hours, and regulatory compliance</summary>
 
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>Unlicense</project_license>
+  <project_license>Unlicense AND BSD-3-Clause AND MIT AND Apache-2.0 AND MPL-2.0 AND ZPL-2.1 AND OFL-1.1 AND CC-BY-4.0</project_license>
 
   <developer id="app.simpleaircraft">
     <name>Simple Aircraft Manager Contributors</name>
