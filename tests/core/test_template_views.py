@@ -62,6 +62,34 @@ class TestDashboardView:
 
 
 # ---------------------------------------------------------------------------
+# Base template assets
+# ---------------------------------------------------------------------------
+
+class TestBaseTemplateAssets:
+    def test_dashboard_does_not_load_stale_fonts_css(self, auth_client):
+        resp = auth_client.get('/dashboard/')
+        assert resp.status_code == 200
+        html = resp.content.decode()
+
+        assert 'css/fonts.css' not in html
+        assert 'overpass-webfont' not in html
+
+    def test_vendor_assets_mode_uses_local_app_shell_assets(self, auth_client, settings):
+        settings.SAM_USE_VENDOR_ASSETS = True
+
+        resp = auth_client.get('/dashboard/')
+        assert resp.status_code == 200
+        html = resp.content.decode()
+
+        assert 'vendor/patternfly.min.css' in html
+        assert 'vendor/chart.umd.min.js' in html
+        assert 'vendor/alpine.min.js' in html
+        assert 'css/fonts.css' not in html
+        assert 'unpkg.com' not in html
+        assert 'cdn.jsdelivr.net' not in html
+
+
+# ---------------------------------------------------------------------------
 # AircraftDetailView
 # ---------------------------------------------------------------------------
 
