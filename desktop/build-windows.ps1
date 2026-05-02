@@ -48,6 +48,9 @@ Invoke-Native "generate notices" { python scripts\generate_third_party_notices.p
 # Per-package verbatim license/notice files bundled alongside the table.
 Invoke-Native "save licenses"   { python scripts\generate_third_party_notices.py --save-licenses licenses\ }
 
+Write-Host "=== Step 2c/5: Install desktop packaging tools ==="
+Invoke-Native "pip install requirements-desktop-build" { python -m pip install -r requirements-desktop-build.txt }
+
 Write-Host "=== Step 3/5: Collect static assets ==="
 $env:DJANGO_SETTINGS_MODULE = "simple_aircraft_manager.settings_desktop"
 $env:SAM_DESKTOP_AUTH_MODE = "disabled"

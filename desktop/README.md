@@ -34,10 +34,13 @@ git checkout <feature-branch>
 The script:
 
 1. Creates a venv at `.\venv\` if missing.
-2. Installs `requirements.txt` and `requirements-desktop.txt`.
-3. Runs `collectstatic` into `build\staticfiles\`.
-4. Runs PyInstaller (`desktop\sam-windows.spec`) → `dist\SimpleAircraftManager\`.
-5. Runs Inno Setup → `Output\SimpleAircraftManagerSetup-<version>.exe`.
+2. Installs runtime deps from `requirements.txt` and `requirements-desktop.txt`.
+3. Installs notice tooling from `requirements-build.txt` and generates notices
+   before PyInstaller is present.
+4. Installs packaging tools from `requirements-desktop-build.txt`.
+5. Runs `collectstatic` into `build\staticfiles\`.
+6. Runs PyInstaller (`desktop\sam-windows.spec`) → `dist\SimpleAircraftManager\`.
+7. Runs Inno Setup → `Output\SimpleAircraftManagerSetup-<version>.exe`.
 
 If any step fails, fix the error and rerun — the script is idempotent.
 
@@ -64,10 +67,14 @@ git checkout <feature-branch>
 The script:
 
 1. Creates a venv at `.venv/` if missing.
-2. Installs `requirements.txt` and `requirements-desktop.txt` (the macOS-only PyObjC packages are pulled in via environment markers).
-3. Runs `collectstatic` into `build/staticfiles/`.
-4. Runs PyInstaller (`desktop/sam-macos.spec`) → `dist/Simple Aircraft Manager.app`.
-5. Runs `create-dmg` → `dist/SimpleAircraftManager-<version>.dmg`.
+2. Installs runtime deps from `requirements.txt` and `requirements-desktop.txt`
+   (the macOS-only PyObjC packages are pulled in via environment markers).
+3. Installs notice tooling from `requirements-build.txt` and generates notices
+   before PyInstaller is present.
+4. Installs packaging tools from `requirements-desktop-build.txt`.
+5. Runs `collectstatic` into `build/staticfiles/`.
+6. Runs PyInstaller (`desktop/sam-macos.spec`) → `dist/Simple Aircraft Manager.app`.
+7. Runs `create-dmg` → `dist/SimpleAircraftManager-<version>.dmg`.
 
 ### Quarantine workaround for unsigned apps
 

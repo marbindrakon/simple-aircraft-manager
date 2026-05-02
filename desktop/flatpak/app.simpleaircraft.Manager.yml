@@ -32,17 +32,19 @@ modules:
         PIP_DISABLE_PIP_VERSION_CHECK: '1'
         PIP_NO_CACHE_DIR: '1'
     build-commands:
-      # 1. Install Python deps into /app. PyObjC entries in
+      # 1. Install runtime Python deps into /app. PyObjC entries in
       #    requirements-desktop.txt are gated on sys_platform=="darwin"
       #    and skip automatically on Linux.
       - python3 -m pip install --prefix=/app -r requirements.txt -r requirements-desktop.txt
 
-      # 1b. Install build-time tooling (pip-licenses) and generate notices.
+      # 1b. Install build-time notice tooling outside /app and generate notices.
       #     Compact attribution table + per-package verbatim license files.
       #     See scripts/generate_third_party_notices.py.
-      - python3 -m pip install --prefix=/app -r requirements-build.txt
-      - python3 scripts/generate_third_party_notices.py --output THIRD-PARTY-NOTICES.txt
-      - python3 scripts/generate_third_party_notices.py --save-licenses licenses/
+      - python3 -m pip install --target=/tmp/sam-build-tools -r requirements-build.txt
+      - PYTHONPATH=/tmp/sam-build-tools
+        python3 scripts/generate_third_party_notices.py --output THIRD-PARTY-NOTICES.txt
+      - PYTHONPATH=/tmp/sam-build-tools
+        python3 scripts/generate_third_party_notices.py --save-licenses licenses/
 
       # 2. Copy the application source tree into the app prefix.
       - install -d /app/share/simple-aircraft-manager

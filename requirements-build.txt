@@ -1,12 +1,13 @@
-# Build-time tooling — NOT bundled into the desktop runtime.
+# Build-time notice tooling — NOT bundled into the desktop runtime.
 #
-# Used by scripts/generate_third_party_notices.py during the desktop build to
-# enumerate every Python dependency installed in the build venv and emit a
-# license + copyright manifest that ships in the bundle as
-# THIRD-PARTY-NOTICES.txt. See COMPLIANCE_PLAN.md (Phase 2) for the rationale.
+# Used by scripts/generate_third_party_notices.py to enumerate the runtime
+# dependency set and emit THIRD-PARTY-NOTICES.txt plus per-package license
+# files. See COMPLIANCE_PLAN.md (Phase 2) for the rationale.
 #
 # Install with:
 #   pip install -r requirements-build.txt
-# Run AFTER -r requirements.txt and -r requirements-desktop.txt so pip-licenses
-# can see the runtime deps it's supposed to inventory.
-pip-licenses>=5.0
+# Run AFTER -r requirements.txt and -r requirements-desktop.txt and BEFORE
+# requirements-desktop-build.txt so PyInstaller stays out of runtime notices.
+pip-licenses==5.5.5
+prettytable==3.17.0
+wcwidth==0.6.0

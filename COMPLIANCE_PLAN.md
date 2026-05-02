@@ -27,8 +27,9 @@ The current 35-line [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt) covers
 3 packages out of ~60. Replace with a generated, comprehensive file.
 
 **Steps:**
-1. Add `pip-licenses` to a new `requirements-build.txt` (build-time only, not
-   runtime; keep it out of the bundled deps).
+1. Add pinned notice tooling to `requirements-build.txt` (build-time only, not
+   runtime; keep it out of the bundled deps) and pinned PyInstaller tooling to
+   `requirements-desktop-build.txt` (desktop packaging only, not runtime).
 2. Add a generation step to all three build scripts:
    - [desktop/build-macos.sh](desktop/build-macos.sh)
    - [desktop/build-windows.ps1](desktop/build-windows.ps1)
@@ -41,7 +42,8 @@ The current 35-line [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt) covers
                 --output-file THIRD-PARTY-NOTICES.txt
    ```
    Run *after* `pip install` of all runtime deps (so it picks up exactly
-   what's in the bundle), *before* PyInstaller runs (so it gets bundled).
+   what's in the bundle), *before* `requirements-desktop-build.txt` is
+   installed and PyInstaller runs.
 
 3. Append a hand-written **"Web assets and fonts"** section covering items
    that pip-licenses won't see — text below is a starting template:
@@ -167,7 +169,7 @@ slips in. Add to the existing GitHub Actions workflow.
 ```yaml
 - name: License gate
   run: |
-    pip install pip-licenses
+    pip install -r requirements-build.txt
     pip-licenses --format=csv --fail-on="GPL;LGPL;AGPL;SSPL;BUSL;CDDL;EPL"
 ```
 
@@ -185,9 +187,9 @@ are blockers as of commit `89ef92a`; they all just need attribution.
 
 | License family | Packages | Notes |
 |---|---|---|
-| MIT | anthropic, Markdown, keyring, bottle, proxy_tools, platformdirs, whitenoise, altgraph, macholib, pyobjc-* (5), h11, charset-normalizer, jaraco.classes/functools/context, more-itertools, pluggy, docstring_parser, sniffio (MIT/Apache-2), Pillow (HPND, MIT-style), pypdf | Standard MIT notice |
+| MIT | anthropic, Markdown, keyring, bottle, proxy_tools, platformdirs, whitenoise, pyobjc-* (5), h11, charset-normalizer, jaraco.classes/functools/context, more-itertools, pluggy, docstring_parser, sniffio (MIT/Apache-2), Pillow (HPND, MIT-style), pypdf | Standard MIT notice |
 | BSD-2/3 | Django, djangorestframework, django-filter, asgiref, sqlparse, pywebview, httpx, httpcore, pytest-django, pypdfium2 (Apache-2 / BSD-3) | Standard BSD notice |
-| Apache-2.0 | openai, requests, distro, django-prometheus, pyinstaller-hooks-contrib (dual w/ GPLv2), coverage, pypdfium2 | Include each project's NOTICE file when present (openai, requests have NOTICEs) |
+| Apache-2.0 | openai, requests, distro, django-prometheus, coverage, pypdfium2 | Include each project's NOTICE file when present (openai, requests have NOTICEs) |
 | MPL-2.0 (file-level) | certifi (CA data, MPL), tqdm (MPL+MIT mix) | Ship the `.py`/`.pem` source files in the bundle as-is (PyInstaller already does); include MPL-2.0 text once |
 | GPLv2 + bootloader exception | pyinstaller (bootloader binary in `dist/SimpleAircraftManager/`) | Exception explicitly permits redistribution as part of non-GPL apps. Include PyInstaller's COPYING.txt. |
 | ZPL 2.1 | waitress | Permissive, ship LICENSE text |

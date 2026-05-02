@@ -33,7 +33,17 @@ EXTRAS_FILE = Path(__file__).resolve().parent / "notices_extras.txt"
 DEFAULT_OUTPUT = REPO_ROOT / "THIRD-PARTY-NOTICES.txt"
 
 _PIP_LICENSES_IGNORE = [
-    "--ignore-packages", "pip-licenses", "prettytable", "tomli", "wcwidth",
+    "--ignore-packages",
+    "pip-licenses",
+    "prettytable",
+    "tomli",
+    "wcwidth",
+    "pyinstaller",
+    "pyinstaller-hooks-contrib",
+    "altgraph",
+    "macholib",
+    "pefile",
+    "pywin32-ctypes",
 ]
 
 HEADER = """\

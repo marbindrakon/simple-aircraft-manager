@@ -46,6 +46,9 @@ python scripts/generate_third_party_notices.py
 # Per-package verbatim license/notice files bundled alongside the table.
 python scripts/generate_third_party_notices.py --save-licenses licenses/
 
+log "Step 2c/5: Install desktop packaging tools"
+python -m pip install -r requirements-desktop-build.txt
+
 log "Step 3/5: Collect static assets"
 export DJANGO_SETTINGS_MODULE="simple_aircraft_manager.settings_desktop"
 export SAM_DESKTOP_AUTH_MODE="disabled"
