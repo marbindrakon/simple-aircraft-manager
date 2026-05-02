@@ -118,3 +118,133 @@ Tips for Best Results
   correct any errors.
 - **Use log type override** when the entire logbook is one type (e.g., an
   engine logbook). This improves accuracy by removing ambiguity.
+
+.. _local-ai-desktop:
+
+Local & Custom AI Providers (Desktop App)
+-----------------------------------------
+
+The desktop build can run logbook transcription against a **local Ollama
+model** or **any OpenAI-compatible endpoint** (vLLM, LiteLLM proxy,
+OpenRouter, etc.) in addition to or instead of the Anthropic API. You can
+configure any combination of the three; if more than one is configured,
+you pick which becomes the default in the import-page model selector.
+
+On Apple Silicon Macs, Ollama uses the GPU via Metal -- but the same setup
+works on Windows and Linux desktop builds (Ollama uses CUDA or ROCm where
+available, otherwise CPU).
+
+This is a power-user feature: you choose and size models yourself, and
+quality varies between providers and models.
+
+Local Ollama
+~~~~~~~~~~~~
+
+1. Install Ollama from https://ollama.com (or ``brew install ollama`` on
+   macOS) and start it -- the menu-bar app, or ``ollama serve`` in a
+   terminal.
+
+2. Pull a **vision-capable** model. Text-only models will not work here:
+
+   .. code-block:: console
+
+      $ ollama pull llama3.2-vision
+      # or, for a smaller / faster option:
+      $ ollama pull qwen2.5vl:7b
+
+3. **First-run setup screen** (when you launch the desktop app for the
+   first time): in the *AI features* section, fill in **Ollama model**
+   with the tag you pulled (e.g. ``llama3.2-vision``). Leave the
+   **Ollama base URL** on its default unless you run Ollama on a
+   non-default port. The Anthropic API key field can be blank if you
+   only want local AI.
+
+4. Restart the app. The Ollama model will appear in the **AI model**
+   dropdown on the import page.
+
+**Choosing a model**
+
+- ``llama3.2-vision`` (11B parameters) is a reasonable starting point on
+  Apple Silicon Macs or recent NVIDIA GPUs with 16 GB+ of system or VRAM.
+- ``qwen2.5vl:7b`` is faster and uses less memory but with somewhat
+  lower extraction quality on dense logbook pages.
+- A 7B-class model needs roughly 6 GB of free RAM; 11B-class models want
+  12 GB+.
+
+OpenAI-compatible endpoint (vLLM, OpenRouter, LiteLLM)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For routing through a hosted aggregator (OpenRouter), a self-hosted
+inference server (vLLM, LiteLLM proxy), or any other server that speaks
+the OpenAI Chat Completions API, fill in the **OpenAI-compatible
+endpoint** subsection of the setup form:
+
+- **Model ID** -- whatever string the endpoint expects, e.g.
+  ``gpt-4o-mini``, ``anthropic/claude-sonnet-4-6`` (OpenRouter-style),
+  or your vLLM-served model name.
+- **Endpoint base URL** -- the OpenAI-compatible base, e.g.
+  ``https://openrouter.ai/api/v1``, ``http://localhost:8000/v1`` (vLLM),
+  or your LiteLLM proxy URL.
+- **API key** -- stored in your OS credential store (Keychain on macOS,
+  Credential Manager on Windows, Secret Service on Linux). Leave blank
+  for endpoints with no authentication, such as a local vLLM server on
+  your own machine.
+
+The model needs to be vision-capable for logbook transcription to work.
+Text-only models will fail at the first batch.
+
+Choosing a default
+~~~~~~~~~~~~~~~~~~
+
+When more than one provider is configured, the **Default model** radio
+group at the bottom of the AI section decides which provider's model is
+preselected on the logbook import page. You can still pick any of the
+configured models per import; the radio just sets the initial value.
+
+To flip the default later, edit the desktop config file (path varies by
+OS, see below) and change the ``default_provider`` line in the ``[ai]``
+section to one of ``anthropic``, ``ollama``, or ``litellm``. Then restart
+the app.
+
+Editing config.ini after first-run setup
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Already past first-run setup? You can edit the desktop config file
+directly. Its location depends on your OS:
+
+- **macOS**: ``~/Library/Application Support/SimpleAircraftManager/config.ini``
+- **Windows**: ``%LOCALAPPDATA%\SimpleAircraftManager\config.ini``
+- **Linux**: ``~/.local/share/SimpleAircraftManager/config.ini``
+
+Add an ``[ai]`` section like this:
+
+.. code-block:: ini
+
+   [ai]
+   default_provider = ollama
+   ollama_model = llama3.2-vision
+   ollama_base_url = http://localhost:11434
+   litellm_model = gpt-4o-mini
+   litellm_base_url = https://openrouter.ai/api/v1
+
+API keys are *not* stored in this file -- they live in the OS credential
+store. To set or change them outside the first-run flow, use the Keychain
+Access app (macOS), Credential Manager (Windows), or ``secret-tool``
+(Linux), under service ``SimpleAircraftManager`` with usernames
+``anthropic_api_key`` or ``litellm_api_key``.
+
+Restart the app for changes to ``config.ini`` to take effect.
+
+Tradeoffs
+~~~~~~~~~
+
+- Local models are slower per page than the Anthropic API on most
+  hardware, and JSON-schema compliance is weaker -- expect occasional
+  truncation or malformed entries that you have to clean up by hand.
+- OpenAI-compatible endpoints vary widely. Hosted aggregators
+  (OpenRouter, etc.) typically work well. Self-hosted vLLM with a
+  capable vision model is fast but requires GPU resources.
+- Image quality matters even more than with the Anthropic API. Crisp
+  scans make a noticeable difference.
+- With Ollama or a self-hosted endpoint, all processing stays on your
+  machine; nothing leaves it.

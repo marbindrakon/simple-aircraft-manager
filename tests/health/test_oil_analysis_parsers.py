@@ -3,13 +3,16 @@ Unit tests for health/oil_analysis_parsers.py
 
 These are pure unit tests — no DB access needed.
 """
-import sys
+import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from health.oil_analysis_parsers import _parse_number, _parse_date, _detect_lab, _HEX_RE
+from health.oil_analysis_parsers import _parse_number, _parse_date, _detect_lab, _HEX_RE, parse
+
+
+FIXTURE_DIR = Path(__file__).resolve().parent.parent / 'fixtures' / 'oil_pdfs'
 
 
 # ---------------------------------------------------------------------------
@@ -134,33 +137,18 @@ class TestHexRe:
 
 
 # ---------------------------------------------------------------------------
-# parse() dispatch tests — mock fitz.open to test lab detection + dispatch
+# parse() dispatch tests — mock _extract_text to test lab detection + dispatch
 # ---------------------------------------------------------------------------
 
 class TestParseDispatch:
-    def _make_mock_fitz(self, text_content):
-        """Create a mock fitz module whose open() returns a document with given text."""
-        mock_page = MagicMock()
-        # get_text() with no args or 'text' returns text_content; 'words' returns []
-        mock_page.get_text.side_effect = lambda mode='text', **kw: (
-            text_content if mode != 'words' else []
-        )
-        mock_doc = MagicMock()
-        mock_doc.__iter__ = MagicMock(return_value=iter([mock_page]))
-        mock_doc.close = MagicMock()
-        mock_fitz = MagicMock()
-        mock_fitz.open.return_value = mock_doc
-        return mock_fitz
-
     def test_unrecognized_lab_raises_value_error(self):
         """parse() with unrecognized lab text raises ValueError."""
-        from health.oil_analysis_parsers import parse
+        from health import oil_analysis_parsers as oap
 
-        mock_fitz = self._make_mock_fitz('Random oil lab report with no known identifier')
-
-        with patch.dict(sys.modules, {'fitz': mock_fitz}):
+        with patch.object(oap, '_extract_text',
+                          return_value='Random oil lab report with no known identifier'):
             with pytest.raises(ValueError, match='Unrecognized'):
-                parse(Path('/fake/report.pdf'))
+                oap.parse(Path('/fake/report.pdf'))
 
     def test_blackstone_lab_detected_in_text(self):
         """_detect_lab correctly returns 'blackstone' for Blackstone text."""
@@ -173,3 +161,39 @@ class TestParseDispatch:
         from health.oil_analysis_parsers import _detect_lab
         text = 'Aviation Laboratories analysis report avlab.com'
         assert _detect_lab(text) == 'avlab'
+
+
+# ---------------------------------------------------------------------------
+# Golden-fixture regression — parse anonymized PDFs and assert the result
+# matches the checked-in JSON. Catches drift in pypdfium2 word extraction or
+# in any of the lab-specific parser logic.
+#
+# Fixtures live in tests/fixtures/oil_pdfs/ and were produced by
+# scripts/anonymize_oil_pdfs.py from private originals (see test-pdfs/,
+# gitignored). To refresh after intentional parser changes:
+#
+#   python scripts/anonymize_oil_pdfs.py   # regenerate PDFs from originals
+#   python -c "import json, sys; sys.path.insert(0, '.'); \
+#              from pathlib import Path; from health.oil_analysis_parsers import parse; \
+#              [open(p.with_suffix('.json'), 'w').write(json.dumps(parse(p), indent=2, sort_keys=True) + chr(10)) \
+#               for p in sorted(Path('tests/fixtures/oil_pdfs').glob('*.pdf'))]"
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize('pdf_name', [
+    'blackstone_2024-01-25.pdf',
+    'blackstone_2020-01-09.pdf',
+    'avlab_2024-01-25.pdf',
+    'avlab_2024-03-29.pdf',
+])
+def test_golden_fixture(pdf_name):
+    pdf_path = FIXTURE_DIR / pdf_name
+    json_path = pdf_path.with_suffix('.json')
+    assert pdf_path.exists(), f'fixture missing: {pdf_path}'
+    assert json_path.exists(), f'golden missing: {json_path}'
+
+    actual = parse(pdf_path)
+    expected = json.loads(json_path.read_text())
+    assert actual == expected, (
+        f'\nParser output for {pdf_name} drifted from golden.\n'
+        f'If the change is intentional, regenerate the goldens (see test docstring).'
+    )

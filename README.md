@@ -73,3 +73,5 @@ Full documentation is available at **[docs.simple-aircraft.app](https://docs.sim
 ## License
 
 This project is dedicated to the public domain. You may use, copy, modify, and distribute it for any purpose without restriction. See [The Unlicense](https://unlicense.org) for details.
+
+Distributed binaries aggregate third-party software listed in [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).

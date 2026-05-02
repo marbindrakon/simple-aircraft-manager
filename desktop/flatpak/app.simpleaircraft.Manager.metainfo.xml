@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>app.simpleaircraft.Manager</id>
+  <name>Simple Aircraft Manager</name>
+  <summary>Track aircraft maintenance, hours, and regulatory compliance</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>Unlicense AND BSD-3-Clause AND MIT AND Apache-2.0 AND MPL-2.0 AND ZPL-2.1 AND OFL-1.1 AND CC-BY-4.0</project_license>
+
+  <developer id="app.simpleaircraft">
+    <name>Simple Aircraft Manager Contributors</name>
+  </developer>
+
+  <description>
+    <p>
+      Simple Aircraft Manager is a maintenance tracker for general-aviation
+      aircraft. It records component hours, time in service, inspections,
+      Airworthiness Directive compliance, squawks, and logbook entries, and
+      computes overall airworthiness status against FAA-style thresholds.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Component hours tracking with TBO and replacement-interval alerts</li>
+      <li>Squawk workflow with priority levels including grounding squawks</li>
+      <li>Airworthiness Directive recording with compliance history</li>
+      <li>Periodic inspection scheduling (annual, 100-hour, transponder, etc.)</li>
+      <li>Oil and fuel consumption tracking with charts</li>
+      <li>Logbook entry management with optional AI-assisted PDF import</li>
+      <li>Document storage with collections and a built-in viewer</li>
+      <li>Read-only public sharing links for mechanics and inspectors</li>
+    </ul>
+    <p>
+      The desktop build runs entirely on the user's machine — a local
+      SQLite database, a loopback HTTP server, and a webview. No cloud
+      account is required. AI-assisted logbook import is optional and
+      configurable per-provider during first-run setup.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">app.simpleaircraft.Manager.desktop</launchable>
+
+  <categories>
+    <category>Office</category>
+    <category>ProjectManagement</category>
+  </categories>
+
+  <keywords>
+    <keyword>aircraft</keyword>
+    <keyword>aviation</keyword>
+    <keyword>maintenance</keyword>
+    <keyword>logbook</keyword>
+  </keywords>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="0.1.0-poc" date="2026-04-29">
+      <description>
+        <p>Initial proof-of-concept Flatpak build.</p>
+      </description>
+    </release>
+  </releases>
+</component>

@@ -1,0 +1,30 @@
+{
+  "lab": "AVLab",
+  "lab_number": null,
+  "oil_type": null,
+  "report_date": "2024-02-01",
+  "samples": [
+    {
+      "analysis_date": "2024-01-30",
+      "elements_ppm": {
+        "aluminum": 6.8,
+        "chromium": 4.1,
+        "copper": 13.0,
+        "iron": 30.2,
+        "lead": 1510.0,
+        "nickel": 0.5,
+        "silicon": 3.7,
+        "tin": 0.0
+      },
+      "engine_hours": 518.1,
+      "lab_comments": "THE CHIPS SENT AS WELL AS A TRACE AMOUNT OF DEBRIS REMOVED FROM THE FILTER CONSISTS OF ALLOY STEEL, CLOSEST MATCH AMS# 6274, WITH THE LARGEST PIECE MEASURING 2342 X 2052 MICRONS. ALL OIL VALUES SEEM FINE. WE WILL CONTINUE TO MONITOR THIS ENGINE WITH YOUR NEXT SAMPLE. PLEASE CONTACT THE ENGINE MANUFACTURER'S SERVICE REP IF FURTHER ASSISTANCE IS NEEDED.",
+      "oil_added_quarts": 5.0,
+      "oil_hours": 43.0,
+      "oil_properties": null,
+      "sample_date": "2024-01-25",
+      "sample_number": "P90",
+      "status": "monitor"
+    }
+  ],
+  "tail_number": "N0000X"
+}

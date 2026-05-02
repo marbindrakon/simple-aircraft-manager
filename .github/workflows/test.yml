@@ -21,10 +21,19 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: requirements-test.txt
+          cache-dependency-path: |
+            requirements-test.txt
+            requirements-desktop.txt
+            requirements-build.txt
 
       - name: Install dependencies
-        run: pip install -r requirements-test.txt
+        run: pip install -r requirements-test.txt -r requirements-desktop.txt
+
+      - name: License gate
+        run: |
+          pip install -r requirements-build.txt
+          pip-licenses --format=csv \
+            --fail-on="GPL;LGPL;AGPL;SSPL;BUSL;CDDL;EPL"
 
       - name: Run tests
         run: python -m pytest

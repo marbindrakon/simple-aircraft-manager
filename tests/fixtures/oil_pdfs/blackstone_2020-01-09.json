@@ -1,0 +1,48 @@
+{
+  "lab": "Blackstone",
+  "lab_number": "L00000",
+  "oil_type": "Aeroshell W100 (AD)",
+  "report_date": "2020-01-09",
+  "samples": [
+    {
+      "analysis_date": null,
+      "elements_ppm": {
+        "aluminum": 19.0,
+        "barium": 0.0,
+        "boron": 0.0,
+        "calcium": 0.0,
+        "chromium": 6.0,
+        "copper": 15.0,
+        "iron": 818.0,
+        "lead": 692.0,
+        "magnesium": 12.0,
+        "manganese": 6.0,
+        "molybdenum": 1.0,
+        "nickel": 2.0,
+        "phosphorus": 8.0,
+        "potassium": 0.0,
+        "silicon": 7.0,
+        "silver": 0.0,
+        "sodium": 1.0,
+        "tin": 6.0,
+        "titanium": 0.0,
+        "zinc": 4.0
+      },
+      "engine_hours": 293.0,
+      "lab_comments": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+      "oil_added_quarts": 0.0,
+      "oil_hours": 4.0,
+      "oil_properties": {
+        "flashpoint_f": 490.0,
+        "fuel_percent": 0.5,
+        "insolubles_percent": 0.4,
+        "viscosity_cst_100c": 18.63,
+        "viscosity_sus_210f": 92.7,
+        "water_percent": 0.0
+      },
+      "sample_date": "2019-12-30",
+      "status": null
+    }
+  ],
+  "tail_number": "N0000X"
+}
