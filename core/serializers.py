@@ -24,11 +24,24 @@ class AircraftSerializer(AirworthinessMixin, UserRoleMixin, serializers.Hyperlin
     airworthiness = serializers.SerializerMethodField()
     user_role = serializers.SerializerMethodField()
     has_share_links = serializers.SerializerMethodField()
+    # ALL reverse relations must be declared as PK lists (Gotcha #7): depth=1
+    # otherwise nests them, and any nested model with a User FK 500s on the
+    # missing 'user-detail' route (e.g. Squawk.reported_by once populated).
+    # The nested copies were also dead weight — the frontend reads the
+    # dedicated summary keys and per-tab endpoints, never aircraft.<relation>.
     notes = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     events = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     roles = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     flight_logs = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     features = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    squawks = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    ads = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    inspections = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    ad_compliance = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    components = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    doc_collections = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    documents = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    applicable_inspections = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
         model = Aircraft

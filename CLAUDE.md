@@ -233,7 +233,7 @@ Documents have `collection` FK set or `collection=null` (uncollected). Both retu
 
 ### 7. AircraftSerializer depth=1 and User FKs
 
-`AircraftSerializer` uses `depth = 1`. Any new reverse relation from Aircraft to a model with a `User` FK causes a 500 (DRF tries to generate `user-detail` URL; no endpoint exists). Fix: declare the relation as `PrimaryKeyRelatedField(many=True, read_only=True)` explicitly on `AircraftSerializer`.
+`AircraftSerializer` uses `depth = 1`. Any reverse relation from Aircraft left undeclared gets nested, and if the nested model has a `User` FK it 500s (DRF generates a `user-detail` URL; no endpoint exists) — this bit for real once `Squawk.reported_by` started being populated. **Every reverse relation is now declared as `PrimaryKeyRelatedField(many=True, read_only=True)` on `AircraftSerializer` — declare any new one the same way.** The frontend never reads nested `aircraft.<relation>` objects; it uses the dedicated summary keys and per-tab endpoints.
 
 ### 8. `apiRequest` Signature — Options Object, Not Positional Args
 

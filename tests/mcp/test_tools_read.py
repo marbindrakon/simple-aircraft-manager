@@ -237,3 +237,24 @@ class TestLogbookSlimAndPagination:
             offset += 3
         assert len(seen) == 7
         assert len(set(seen)) == 7  # no boundary duplicates
+
+
+class TestSummaryRegression:
+    def test_summary_with_attributed_squawk_and_flight_log(self, owner_mcp_client, aircraft, owner_user):
+        """R1 regression: once Squawk.reported_by is populated, AircraftSerializer's
+        depth=1 nested a Squawk whose User FK hyperlinked to the nonexistent
+        'user-detail' route and 500'd. Reverse relations must serialize as PK lists."""
+        import datetime as dt
+        from health.models import FlightLog
+        Squawk.objects.create(
+            aircraft=aircraft, priority=3, issue_reported='Seat rail wear',
+            reported_by=owner_user)
+        FlightLog.objects.create(
+            aircraft=aircraft, date=dt.date.today(), tach_time=1)
+        payload = tool_payload(owner_mcp_client, 'get_aircraft_summary',
+                               {'aircraft_id': str(aircraft.id)})
+        # Reverse relations on the aircraft object are compact ID lists
+        assert isinstance(payload['aircraft']['squawks'][0], str)
+        assert isinstance(payload['aircraft']['flight_logs'][0], str)
+        # The hydrated squawk list is still served at the top level
+        assert payload['active_squawks'][0]['issue_reported'] == 'Seat rail wear'
