@@ -27,6 +27,32 @@ def _check_feature(aircraft, feature, label):
         raise ToolError(f"The {label} feature is disabled for this aircraft")
 
 
+def _slim_logbook_entry(entry):
+    """
+    Compact a serialized logbook entry for MCP responses.
+
+    The web serializer inlines full document payloads (log_image_detail /
+    related_documents_detail), each carrying the source document's complete
+    page-image manifest — repeated per entry, this dominated measured responses
+    (a limit=100 search was 1.39 MB, ~68% repeated manifests). Agents only
+    need a reference: {id, name} plus the entry's own page_number.
+    """
+    slim = {
+        k: v for k, v in entry.items()
+        if k not in ('url', 'log_image', 'log_image_detail',
+                     'related_documents', 'related_documents_detail')
+    }
+    detail = entry.get('log_image_detail')
+    slim['log_document'] = (
+        {'id': detail.get('id'), 'name': detail.get('name')} if detail else None
+    )
+    slim['related_documents'] = [
+        {'id': d.get('id'), 'name': d.get('name')}
+        for d in entry.get('related_documents_detail') or []
+    ]
+    return slim
+
+
 @tool(
     'list_aircraft',
     "List all aircraft the user has access to, with current hours, status, and "
@@ -56,7 +82,11 @@ def list_aircraft(request, args):
 )
 def get_aircraft_summary(request, args):
     aircraft = resolve_aircraft(request.user, args['aircraft_id'])
-    return aircraft_summary_payload(aircraft, request)
+    payload = aircraft_summary_payload(aircraft, request)
+    # Slim the recent logbook entries — the web payload inlines full document
+    # page manifests per entry (see _slim_logbook_entry).
+    payload['recent_logs'] = [_slim_logbook_entry(e) for e in payload['recent_logs']]
+    return payload
 
 
 @tool(
@@ -168,7 +198,10 @@ def get_events(request, args):
 @tool(
     'search_logbook',
     "Search an aircraft's maintenance logbook entries (inspections, parts "
-    "replaced, mechanic signoffs — not per-flight records), newest first.",
+    "replaced, mechanic signoffs — not per-flight records), newest first. "
+    "Page through large result sets with offset; total reflects the active "
+    "filters. Source documents are returned as {id, name} references plus the "
+    "entry's page_number.",
     {
         'type': 'object',
         'properties': {
@@ -181,6 +214,7 @@ def get_events(request, args):
             'date_from': {'type': 'string', 'description': 'ISO date (YYYY-MM-DD), inclusive'},
             'date_to': {'type': 'string', 'description': 'ISO date (YYYY-MM-DD), inclusive'},
             'limit': {'type': 'integer', 'description': 'Max entries (default 20, max 100)'},
+            'offset': {'type': 'integer', 'description': 'Entries to skip, for pagination (default 0)'},
         },
         'required': ['aircraft_id'],
     },
@@ -209,10 +243,17 @@ def search_logbook(request, args):
 
     total = qs.count()
     limit = min(max(int(args.get('limit', 20)), 1), 100)
+    offset = max(int(args.get('offset', 0)), 0)
     data = LogbookEntrySerializer(
-        qs.order_by('-date')[:limit], many=True, context={'request': request}
+        qs.order_by('-date', '-id')[offset:offset + limit],
+        many=True, context={'request': request},
     ).data
-    return {'entries': data, 'total': total}
+    return {
+        'entries': [_slim_logbook_entry(e) for e in data],
+        'total': total,
+        'offset': offset,
+        'limit': limit,
+    }
 
 
 @tool(

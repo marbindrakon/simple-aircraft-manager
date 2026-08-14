@@ -192,13 +192,13 @@ class HealthAircraftActionsMixin:
             data = request.data.copy()
             data['aircraft'] = aircraft.id
 
-            # Set reported_by to current user if authenticated
-            if request.user.is_authenticated:
-                data['reported_by'] = request.user.id
-
             serializer = SquawkCreateUpdateSerializer(data=data)
             if serializer.is_valid():
-                squawk = serializer.save()
+                # reported_by is not a serializer field (clients must not set
+                # it), so attribute the squawk at save time.
+                squawk = serializer.save(
+                    reported_by=request.user if request.user.is_authenticated else None
+                )
                 log_event(
                     aircraft, 'squawk',
                     f"Squawk reported: {squawk.get_priority_display()}",

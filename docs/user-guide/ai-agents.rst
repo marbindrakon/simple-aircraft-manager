@@ -29,7 +29,7 @@ see, with the same role rules as the web interface.
 
 - Update aircraft hours
 - Log flights (with automatic hour cascade and oil/fuel records)
-- Report squawks
+- Report squawks, and resolve them (resolving requires the owner role)
 - Add notes
 - Record oil/fuel top-offs
 

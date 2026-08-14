@@ -176,3 +176,64 @@ class TestConsumptionStats:
                                {'aircraft_id': str(aircraft.id), 'type': 'fuel'})
         assert payload['average'] is None
         assert payload['record_count'] == 0
+
+
+class TestLogbookSlimAndPagination:
+    def _make_entries(self, aircraft, n, with_doc=False):
+        import datetime as dt
+        from health.models import Document, DocumentImage, LogbookEntry
+        doc = None
+        if with_doc:
+            doc = Document.objects.create(aircraft=aircraft, name='Engine Log 1', doc_type='LOG')
+            for i in range(3):
+                DocumentImage.objects.create(document=doc, image=f'imgs/p{i}.png', order=i)
+        entries = []
+        for i in range(n):
+            entries.append(LogbookEntry.objects.create(
+                aircraft=aircraft,
+                date=dt.date(2026, 1, 1) + dt.timedelta(days=i),
+                log_type='ENG',
+                entry_type='MAINTENANCE',
+                text=f'Entry {i}',
+                log_image=doc,
+                page_number=i + 1,
+            ))
+        return entries
+
+    def test_entries_are_slim_with_document_reference(self, owner_mcp_client, aircraft):
+        self._make_entries(aircraft, 2, with_doc=True)
+        payload = tool_payload(owner_mcp_client, 'search_logbook',
+                               {'aircraft_id': str(aircraft.id)})
+        entry = payload['entries'][0]
+        # Heavy manifest fields must be gone
+        for heavy in ('log_image_detail', 'related_documents_detail', 'url', 'log_image'):
+            assert heavy not in entry
+        # Compact reference remains
+        assert entry['log_document']['name'] == 'Engine Log 1'
+        assert 'id' in entry['log_document']
+        assert entry['page_number'] == 2
+        assert entry['related_documents'] == []
+
+    def test_summary_recent_logs_are_slim(self, owner_mcp_client, aircraft):
+        self._make_entries(aircraft, 1, with_doc=True)
+        payload = tool_payload(owner_mcp_client, 'get_aircraft_summary',
+                               {'aircraft_id': str(aircraft.id)})
+        entry = payload['recent_logs'][0]
+        assert 'log_image_detail' not in entry
+        assert entry['log_document']['name'] == 'Engine Log 1'
+
+    def test_offset_pagination_walks_without_duplicates(self, owner_mcp_client, aircraft):
+        self._make_entries(aircraft, 7)
+        seen = []
+        offset = 0
+        while True:
+            page = tool_payload(owner_mcp_client, 'search_logbook', {
+                'aircraft_id': str(aircraft.id), 'limit': 3, 'offset': offset,
+            })
+            assert page['offset'] == offset
+            seen.extend(e['id'] for e in page['entries'])
+            if offset + 3 >= page['total']:
+                break
+            offset += 3
+        assert len(seen) == 7
+        assert len(set(seen)) == 7  # no boundary duplicates

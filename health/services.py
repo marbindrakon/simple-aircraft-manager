@@ -498,7 +498,9 @@ def create_flight_log(aircraft, serializer, user):
             comp.hours_since_overhaul += tach_delta
             comp.save()
 
-        # Auto-create ConsumableRecords for oil/fuel added
+        # Auto-create ConsumableRecords for oil/fuel added, logging the same
+        # oil/fuel events a standalone consumable record would so the event
+        # log stays a complete audit trail.
         if flight.oil_added:
             ConsumableRecord.objects.create(
                 record_type=ConsumableRecord.RECORD_TYPE_OIL,
@@ -510,6 +512,12 @@ def create_flight_log(aircraft, serializer, user):
                 flight_hours=aircraft.tach_time,
                 notes=f"Auto-created from flight log {flight.id}",
             )
+            log_event(
+                aircraft, 'oil',
+                f"Oil added: {flight.oil_added} qt",
+                user=user,
+                notes=f"From flight log {flight.id}",
+            )
         if flight.fuel_added:
             ConsumableRecord.objects.create(
                 record_type=ConsumableRecord.RECORD_TYPE_FUEL,
@@ -520,6 +528,12 @@ def create_flight_log(aircraft, serializer, user):
                 consumable_type=flight.fuel_added_type or '',
                 flight_hours=aircraft.tach_time,
                 notes=f"Auto-created from flight log {flight.id}",
+            )
+            log_event(
+                aircraft, 'fuel',
+                f"Fuel added: {flight.fuel_added} gal",
+                user=user,
+                notes=f"From flight log {flight.id}",
             )
 
         route_str = ''

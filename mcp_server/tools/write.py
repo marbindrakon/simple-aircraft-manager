@@ -130,15 +130,59 @@ def create_squawk(request, args):
 
     data = {k: v for k, v in args.items() if k != 'aircraft_id'}
     data['aircraft'] = aircraft.id
-    data['reported_by'] = request.user.id
     serializer = SquawkCreateUpdateSerializer(data=data)
     serializer.is_valid(raise_exception=True)
-    squawk = serializer.save()
+    # reported_by is not a serializer field (clients must not set it), so
+    # attribute the squawk at save time.
+    squawk = serializer.save(reported_by=request.user)
     log_event(
         aircraft, 'squawk',
         f"Squawk reported: {squawk.get_priority_display()}",
         user=request.user,
     )
+    return SquawkNestedSerializer(squawk, context={'request': request}).data
+
+
+@tool(
+    'resolve_squawk',
+    "Mark a squawk as resolved (the closing half of the squawk workflow — "
+    "resolving a priority-0 squawk can un-ground the aircraft). Requires the "
+    "OWNER role on the aircraft; pilots can report squawks but not resolve "
+    "them.",
+    {
+        'type': 'object',
+        'properties': {
+            'aircraft_id': _AIRCRAFT_ID,
+            'squawk_id': {'type': 'string', 'description': 'Squawk UUID (from list_squawks)'},
+            'notes': {'type': 'string', 'description': 'Resolution notes to append to the squawk'},
+        },
+        'required': ['aircraft_id', 'squawk_id'],
+    },
+    required_scope=SCOPE_WRITE,
+)
+def resolve_squawk(request, args):
+    from django.core.exceptions import ValidationError
+    from health.models import Squawk
+    from health.serializers import SquawkNestedSerializer
+
+    aircraft = resolve_aircraft(request.user, args['aircraft_id'], require_owner=True)
+    try:
+        squawk = aircraft.squawks.get(id=args['squawk_id'])
+    except (Squawk.DoesNotExist, ValidationError, ValueError, TypeError):
+        raise ToolError('Squawk not found')
+
+    already_resolved = squawk.resolved
+    squawk.resolved = True
+    notes = args.get('notes')
+    if notes:
+        squawk.notes = f"{squawk.notes}\n{notes}".strip()
+    squawk.save()
+    if not already_resolved:
+        log_event(
+            aircraft, 'squawk',
+            f"Squawk resolved: {squawk.get_priority_display()}",
+            user=request.user,
+        )
     return SquawkNestedSerializer(squawk, context={'request': request}).data
 
 

@@ -168,3 +168,68 @@ class TestCreateSquawkNoteConsumable:
         ]:
             args = {'aircraft_id': str(aircraft.id), **extra}
             assert tool_error(other_mcp_client, name, args) == 'Aircraft not found'
+
+
+class TestSquawkAttributionAndResolution:
+    def test_create_squawk_sets_reported_by(self, pilot_mcp_client, aircraft_with_pilot, pilot_user):
+        payload = tool_payload(pilot_mcp_client, 'create_squawk', {
+            'aircraft_id': str(aircraft_with_pilot.id),
+            'issue_reported': 'Attitude indicator sluggish',
+        })
+        squawk = Squawk.objects.get(id=payload['id'])
+        assert squawk.reported_by == pilot_user
+
+    def test_owner_resolves_squawk(self, owner_mcp_client, aircraft, squawk):
+        payload = tool_payload(owner_mcp_client, 'resolve_squawk', {
+            'aircraft_id': str(aircraft.id),
+            'squawk_id': str(squawk.id),
+            'notes': 'Pads replaced',
+        })
+        assert payload['resolved'] is True
+        squawk.refresh_from_db()
+        assert squawk.resolved is True
+        assert 'Pads replaced' in squawk.notes
+        assert AircraftEvent.objects.filter(
+            aircraft=aircraft, category='squawk',
+            event_name__startswith='Squawk resolved').exists()
+
+    def test_resolving_p0_squawk_ungrounds(self, owner_mcp_client, aircraft):
+        grounding = Squawk.objects.create(
+            aircraft=aircraft, priority=0, issue_reported='Engine fire')
+        tool_payload(owner_mcp_client, 'resolve_squawk', {
+            'aircraft_id': str(aircraft.id), 'squawk_id': str(grounding.id),
+        })
+        status = tool_payload(owner_mcp_client, 'get_airworthiness',
+                              {'aircraft_id': str(aircraft.id)})
+        assert status['can_fly'] is True
+
+    def test_pilot_cannot_resolve(self, pilot_mcp_client, aircraft_with_pilot, squawk):
+        message = tool_error(pilot_mcp_client, 'resolve_squawk', {
+            'aircraft_id': str(aircraft_with_pilot.id),
+            'squawk_id': str(squawk.id),
+        })
+        assert 'owner role' in message
+        squawk.refresh_from_db()
+        assert squawk.resolved is False
+
+    def test_unknown_squawk_not_found(self, owner_mcp_client, aircraft):
+        assert tool_error(owner_mcp_client, 'resolve_squawk', {
+            'aircraft_id': str(aircraft.id),
+            'squawk_id': '00000000-0000-0000-0000-000000000000',
+        }) == 'Squawk not found'
+
+
+class TestFlightConsumableEvents:
+    def test_flight_oil_fuel_emit_events(self, owner_mcp_client, aircraft):
+        tool_payload(owner_mcp_client, 'create_flight_log', {
+            'aircraft_id': str(aircraft.id),
+            'date': datetime.date.today().isoformat(),
+            'tach_time': 1.0,
+            'oil_added': 1,
+            'fuel_added': 15,
+        })
+        assert AircraftEvent.objects.filter(aircraft=aircraft, category='flight').count() == 1
+        assert AircraftEvent.objects.filter(
+            aircraft=aircraft, category='oil', event_name__startswith='Oil added').count() == 1
+        assert AircraftEvent.objects.filter(
+            aircraft=aircraft, category='fuel', event_name__startswith='Fuel added').count() == 1
