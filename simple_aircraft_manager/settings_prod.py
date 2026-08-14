@@ -101,7 +101,19 @@ OAUTH2_PROVIDER = {
     },
     'DEFAULT_SCOPES': ['read'],
     'PKCE_REQUIRED': True,
+    # Restrict to the authorization-code + refresh flow MCP clients use. DOT's
+    # defaults also enable the resource-owner password, implicit, and
+    # client-credentials grants; on an internet-facing token endpoint the
+    # password grant is an unthrottled credential-testing oracle against local
+    # accounts. The BCP gates reject those grants at runtime regardless of how
+    # an Application was created (DCR or the /o/applications/ form).
+    'OAUTH2_GRANT_TYPES_SUPPORTED': ['authorization_code', 'refresh_token'],
+    'OAUTH2_RESPONSE_TYPES_SUPPORTED': ['code'],
+    'COMPLIANT_BCP_RFC9700_PASSWORD_GRANT': True,
+    'COMPLIANT_BCP_RFC9700_IMPLICIT_GRANT': True,
     'DCR_ENABLED': MCP_DCR_ENABLED,
+    # Anonymous DCR issues a registration-management token; give it a finite life.
+    'DCR_REGISTRATION_TOKEN_EXPIRE_SECONDS': 90 * 24 * 3600,
     # claude.ai registers its client anonymously before the user authorizes;
     # registration grants no data access until a user completes the consent flow.
     'DCR_REGISTRATION_PERMISSION_CLASSES': ('oauth2_provider.dcr.AllowAllDCRPermission',),

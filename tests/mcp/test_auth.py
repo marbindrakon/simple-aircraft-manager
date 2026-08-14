@@ -82,6 +82,38 @@ def test_protected_resource_metadata(client, db):
     assert data['authorization_servers']
 
 
+def test_metadata_does_not_advertise_risky_grants(client, db):
+    data = client.get('/.well-known/oauth-authorization-server').json()
+    assert data['grant_types_supported'] == ['authorization_code', 'refresh_token']
+    assert data['response_types_supported'] == ['code']
+    assert 'password' not in data['grant_types_supported']
+    assert 'token' not in data['response_types_supported']  # no implicit
+
+
+def test_password_grant_rejected(client, db, owner_user):
+    # Even with a public application explicitly set to the password grant (so
+    # client auth is not the blocker), the RFC 9700 gate must reject the grant
+    # at the token endpoint — no credential-testing oracle against local users.
+    from oauth2_provider.models import Application
+    app = Application.objects.create(
+        name='password-client',
+        client_type=Application.CLIENT_PUBLIC,
+        authorization_grant_type=Application.GRANT_PASSWORD,
+    )
+    owner_user.set_password('supersecret')
+    owner_user.save()
+    response = client.post('/o/token/', data={
+        'grant_type': 'password',
+        'username': owner_user.username,
+        'password': 'supersecret',
+        'client_id': app.client_id,
+        'scope': 'read write',
+    })
+    assert response.status_code == 400
+    assert b'access_token' not in response.content
+    assert response.json()['error'] in ('unauthorized_client', 'unsupported_grant_type')
+
+
 def test_authorization_server_metadata(client, db):
     prm = client.get('/.well-known/oauth-protected-resource/mcp').json()
     issuer = prm['authorization_servers'][0]
