@@ -11,13 +11,15 @@ Determines if an aircraft is safe to fly based on:
 import calendar
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field
 
+from django.db import transaction
 from django.db.models import Q
 
 from health.models import (
-    AD, ADCompliance, Squawk, InspectionType, InspectionRecord, Component
+    AD, ADCompliance, Squawk, InspectionType, InspectionRecord, Component,
+    ConsumableRecord,
 )
 
 
@@ -377,3 +379,366 @@ def _check_component_replacement(aircraft, current_hours: Decimal, today: date, 
                 description=due_description,
                 item_id=str(component.id),
             ))
+
+
+# ---------------------------------------------------------------------------
+# Shared aircraft write/read services
+#
+# Used by both the AircraftViewSet actions (health/aircraft_actions.py) and the
+# MCP server tools (mcp_server/) so the two surfaces share one implementation.
+# ---------------------------------------------------------------------------
+
+
+class AircraftGroundedError(Exception):
+    """Write rejected: the aircraft is grounded (RED) and the
+    airworthiness_enforcement feature is enabled for it."""
+
+    def __init__(self, airworthiness: AirworthinessStatus):
+        self.airworthiness = airworthiness
+        grounding = '; '.join(
+            issue.title for issue in airworthiness.issues
+            if issue.severity == STATUS_RED
+        )
+        message = "Aircraft is grounded and airworthiness enforcement is enabled"
+        if grounding:
+            message = f"{message}: {grounding}"
+        super().__init__(message)
+
+
+def enforce_airworthiness(aircraft):
+    """
+    Raise AircraftGroundedError when the aircraft's airworthiness status is RED
+    and the per-aircraft airworthiness_enforcement feature is enabled.
+
+    Called before writes that record flight activity (hours updates, flight
+    logs). ORANGE (due soon) never blocks; maintenance writes that can clear a
+    grounding (compliance records, inspections, squawk resolution) are never
+    routed through this check.
+    """
+    from core.features import feature_available
+    if not feature_available('airworthiness_enforcement', aircraft):
+        return
+    result = calculate_airworthiness(aircraft)
+    if result.status == STATUS_RED:
+        raise AircraftGroundedError(result)
+
+
+def apply_hours_update(aircraft, new_tach_time: Decimal, new_hobbs_time: Optional[Decimal], user) -> Dict[str, Any]:
+    """
+    Set the aircraft's absolute tach (and optionally hobbs) reading and cascade
+    the delta to all IN-USE components' hours_in_service/hours_since_overhaul
+    (clamped at 0 so corrections can't go negative). Logs an 'hours' event.
+
+    Raises AircraftGroundedError when airworthiness enforcement blocks the write.
+    """
+    from core.events import log_event
+
+    enforce_airworthiness(aircraft)
+
+    hours_delta = new_tach_time - aircraft.tach_time
+    old_tach = aircraft.tach_time
+
+    aircraft.tach_time = new_tach_time
+    if new_hobbs_time is not None:
+        aircraft.hobbs_time = new_hobbs_time
+    aircraft.save()
+
+    # ALWAYS update all in-service components (not optional)
+    # Clamp component hours at 0 to prevent negative values on corrections.
+    components = aircraft.components.filter(status='IN-USE')
+    updated_components = []
+    for component in components:
+        component.hours_in_service = max(Decimal('0'), component.hours_in_service + hours_delta)
+        component.hours_since_overhaul = max(Decimal('0'), component.hours_since_overhaul + hours_delta)
+        component.save()
+        updated_components.append(str(component.id))
+
+    delta_sign = '+' if hours_delta >= 0 else ''
+    log_event(
+        aircraft, 'hours',
+        f"Hours {'updated' if hours_delta >= 0 else 'corrected'} to {new_tach_time}",
+        user=user,
+        notes=f"Previous: {old_tach}, delta: {delta_sign}{hours_delta}",
+    )
+
+    return {
+        'success': True,
+        'aircraft_hours': float(aircraft.tach_time),  # backward compat
+        'tach_time': float(aircraft.tach_time),
+        'hobbs_time': float(aircraft.hobbs_time),
+        'hours_added': float(hours_delta),
+        'components_updated': len(updated_components),
+    }
+
+
+def create_flight_log(aircraft, serializer, user):
+    """
+    Create a flight log from a valid FlightLogCreateUpdateSerializer and apply
+    its side effects atomically: increment aircraft tach/hobbs by the flight
+    delta, sync IN-USE component hours, auto-create oil/fuel ConsumableRecords,
+    and log a 'flight' event. Returns the FlightLog instance.
+
+    Raises AircraftGroundedError when airworthiness enforcement blocks the write.
+    """
+    from core.events import log_event
+
+    enforce_airworthiness(aircraft)
+
+    with transaction.atomic():
+        flight = serializer.save()
+        tach_delta = flight.tach_time
+        aircraft.tach_time += tach_delta
+        if flight.hobbs_time:
+            aircraft.hobbs_time += flight.hobbs_time
+        aircraft.save()
+
+        # Sync IN-USE component hours
+        for comp in aircraft.components.filter(status='IN-USE'):
+            comp.hours_in_service += tach_delta
+            comp.hours_since_overhaul += tach_delta
+            comp.save()
+
+        # Auto-create ConsumableRecords for oil/fuel added
+        if flight.oil_added:
+            ConsumableRecord.objects.create(
+                record_type=ConsumableRecord.RECORD_TYPE_OIL,
+                aircraft=aircraft,
+                date=flight.date,
+                quantity_added=flight.oil_added,
+                level_after=flight.oil_level_after,
+                consumable_type=flight.oil_added_type or '',
+                flight_hours=aircraft.tach_time,
+                notes=f"Auto-created from flight log {flight.id}",
+            )
+        if flight.fuel_added:
+            ConsumableRecord.objects.create(
+                record_type=ConsumableRecord.RECORD_TYPE_FUEL,
+                aircraft=aircraft,
+                date=flight.date,
+                quantity_added=flight.fuel_added,
+                level_after=flight.fuel_level_after,
+                consumable_type=flight.fuel_added_type or '',
+                flight_hours=aircraft.tach_time,
+                notes=f"Auto-created from flight log {flight.id}",
+            )
+
+        route_str = ''
+        if flight.departure_location and flight.destination_location:
+            route_str = f" ({flight.departure_location}→{flight.destination_location})"
+        log_event(
+            aircraft, 'flight',
+            f"Flight logged: {flight.tach_time} hrs{route_str}",
+            user=user,
+        )
+
+    return flight
+
+
+def ad_status_list(aircraft) -> List[Dict[str, Any]]:
+    """
+    Serialized list of all ADs applicable to the aircraft (directly or via its
+    components), each with latest_compliance and a compliance_status label
+    ('compliant' | 'due_soon' | 'overdue' | 'no_compliance' | 'conditional')
+    plus next-due extras from ad_compliance_status().
+    """
+    from health.serializers import ADNestedSerializer, ADComplianceNestedSerializer
+
+    component_ids = aircraft.components.values_list('id', flat=True)
+    aircraft_ads = AD.objects.filter(applicable_aircraft=aircraft)
+    component_ads = AD.objects.filter(applicable_component__in=component_ids)
+    all_ads = (aircraft_ads | component_ads).distinct()
+
+    current_hours = aircraft.tach_time - aircraft.tach_time_offset
+
+    ads_data = []
+    for ad in all_ads:
+        ad_dict = ADNestedSerializer(ad).data
+
+        # Get latest compliance record
+        compliance = ADCompliance.objects.filter(
+            ad=ad
+        ).filter(
+            Q(aircraft=aircraft) | Q(component__aircraft=aircraft)
+        ).order_by('-date_complied').first()
+
+        if compliance:
+            ad_dict['latest_compliance'] = ADComplianceNestedSerializer(compliance).data
+        else:
+            ad_dict['latest_compliance'] = None
+
+        # Conditional ADs use a separate status that doesn't affect airworthiness
+        if ad.compliance_type == 'conditional':
+            ad_dict['compliance_status'] = 'compliant' if compliance else 'conditional'
+            ads_data.append(ad_dict)
+            continue
+
+        if not compliance:
+            ad_dict['compliance_status'] = 'no_compliance'
+        elif compliance.permanent:
+            ad_dict['compliance_status'] = 'compliant'
+        else:
+            today = date.today()
+            rank, extras = ad_compliance_status(ad, compliance, current_hours, today)
+            ad_dict.update(extras)
+            ad_dict['compliance_status'] = STATUS_LABELS[rank]
+
+        ads_data.append(ad_dict)
+
+    return ads_data
+
+
+def inspection_status_list(aircraft) -> List[Dict[str, Any]]:
+    """
+    Serialized list of all InspectionTypes applicable to the aircraft (directly
+    or via its components), each with latest_record and a compliance_status
+    label ('compliant' | 'due_soon' | 'overdue' | 'never_completed') plus
+    next-due extras from inspection_compliance_status().
+    """
+    from health.serializers import (
+        InspectionTypeNestedSerializer, InspectionRecordNestedSerializer,
+    )
+
+    component_ids = aircraft.components.values_list('id', flat=True)
+    aircraft_inspections = InspectionType.objects.filter(applicable_aircraft=aircraft)
+    component_inspections = InspectionType.objects.filter(applicable_component__in=component_ids)
+    all_types = (aircraft_inspections | component_inspections).distinct()
+
+    current_hours = aircraft.tach_time - aircraft.tach_time_offset
+    today = date.today()
+
+    result = []
+    for insp_type in all_types:
+        type_dict = InspectionTypeNestedSerializer(insp_type).data
+
+        last_record = InspectionRecord.objects.filter(
+            inspection_type=insp_type
+        ).filter(
+            Q(aircraft=aircraft) | Q(component__aircraft=aircraft)
+        ).order_by('-date').first()
+
+        if last_record:
+            type_dict['latest_record'] = InspectionRecordNestedSerializer(last_record).data
+        else:
+            type_dict['latest_record'] = None
+
+        if not last_record:
+            type_dict['compliance_status'] = 'never_completed'
+        else:
+            rank, extras = inspection_compliance_status(insp_type, last_record, current_hours, today)
+            type_dict.update(extras)
+            type_dict['compliance_status'] = STATUS_LABELS[rank]
+
+        result.append(type_dict)
+
+    return result
+
+
+def _iqr_outlier_bounds(values: List[float]) -> Optional[Tuple[float, float]]:
+    """IQR outlier bounds matching the chart logic in
+    aircraft-detail-consumables.js (computeOutlierBounds)."""
+    if len(values) < 5:
+        return None
+    nums = sorted(values)
+    n = len(nums)
+    q1 = nums[n // 4]
+    q3 = nums[(3 * n) // 4]
+    iqr = q3 - q1
+    if iqr == 0:
+        return None
+    return (q1 - 1.5 * iqr, q3 + 1.5 * iqr)
+
+
+def consumption_stats(aircraft, record_type: str) -> Dict[str, Any]:
+    """
+    Server-side oil/fuel consumption statistics, mirroring the chart math in
+    aircraft-detail-consumables.js: per-interval datapoints between consecutive
+    records (sorted by flight_hours; only intervals with quantity > 0 and hours
+    delta > 0), averaged over the last 20 datapoints with IQR outliers and
+    excluded_from_averages records left out (falling back to all datapoints in
+    the window when everything is excluded).
+
+    Metric: oil → hours per quart (hours_delta / qty); fuel → gallons per hour
+    (qty / hours_delta).
+    """
+    records = list(
+        aircraft.consumable_records
+        .filter(record_type=record_type)
+        .order_by('flight_hours', 'date')
+    )
+
+    is_oil = record_type == ConsumableRecord.RECORD_TYPE_OIL
+    metric_name = 'hours_per_quart' if is_oil else 'gallons_per_hour'
+
+    datapoints = []  # (value, excluded_from_averages)
+    for prev, cur in zip(records, records[1:]):
+        if prev.flight_hours is None or cur.flight_hours is None:
+            continue
+        hours_delta = float(cur.flight_hours) - float(prev.flight_hours)
+        qty = float(cur.quantity_added)
+        if qty > 0 and hours_delta > 0:
+            value = (hours_delta / qty) if is_oil else (qty / hours_delta)
+            datapoints.append((value, bool(cur.excluded_from_averages)))
+
+    stats: Dict[str, Any] = {
+        'record_type': record_type,
+        'metric': metric_name,
+        'record_count': len(records),
+        'interval_count': len(datapoints),
+        'average': None,
+        'excluded_from_average': 0,
+    }
+    if records:
+        stats['first_record_date'] = records[0].date.isoformat()
+        stats['last_record_date'] = records[-1].date.isoformat()
+        stats['total_quantity_added'] = float(sum(r.quantity_added for r in records))
+
+    if not datapoints:
+        return stats
+
+    values = [v for v, _ in datapoints]
+    bounds = _iqr_outlier_bounds(values)
+
+    window = datapoints[-20:]
+    included = [
+        v for v, excluded in window
+        if not excluded and (bounds is None or bounds[0] <= v <= bounds[1])
+    ]
+    # Fallback: if every point is excluded, include them all
+    source = included if included else [v for v, _ in window]
+    stats['average'] = round(sum(source) / len(source), 1)
+    stats['excluded_from_average'] = len(window) - len(included)
+    stats['latest_value'] = round(values[-1], 1)
+    return stats
+
+
+def aircraft_summary_payload(aircraft, request) -> Dict[str, Any]:
+    """
+    The aircraft summary payload served by GET /api/aircraft/{id}/summary/ and
+    the MCP get_aircraft_summary tool: aircraft (with airworthiness), all
+    components, 10 most recent logbook entries, active squawks, notes, and the
+    per-aircraft feature map.
+    """
+    from core.features import feature_available, get_feature_catalog, get_known_feature_names
+    from core.serializers import AircraftSerializer, AircraftNoteNestedSerializer
+    from health.serializers import (
+        ComponentSerializer, LogbookEntrySerializer, SquawkNestedSerializer,
+    )
+
+    context = {'request': request}
+    return {
+        'aircraft': AircraftSerializer(aircraft, context=context).data,
+        'components': ComponentSerializer(
+            aircraft.components.all(), many=True, context=context
+        ).data,
+        'recent_logs': LogbookEntrySerializer(
+            aircraft.logbook_entries.order_by('-date')[:10], many=True, context=context
+        ).data,
+        'active_squawks': SquawkNestedSerializer(
+            aircraft.squawks.filter(resolved=False), many=True, context=context
+        ).data,
+        'notes': AircraftNoteNestedSerializer(
+            aircraft.notes.order_by('-added_timestamp'), many=True, context=context
+        ).data,
+        'features': {f: feature_available(f, aircraft) for f in get_known_feature_names()},
+        'feature_catalog': get_feature_catalog(),
+    }

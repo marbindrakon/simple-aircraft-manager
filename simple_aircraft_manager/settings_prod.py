@@ -51,8 +51,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'django_filters',
+    'oauth2_provider',
     'core',
     'health',
+    'mcp_server',
 ]
 
 if DATABASE_ENGINE == 'postgresql':
@@ -84,6 +86,31 @@ def _discover_sam_plugins():
 for _plugin in _discover_sam_plugins():
     if _plugin not in INSTALLED_APPS:
         INSTALLED_APPS.append(_plugin)
+
+# MCP server (Model Context Protocol) for AI agents
+# MCP_ENABLED gates the /mcp endpoint and the OAuth AS routes (/o/, .well-known).
+# MCP_DCR_ENABLED gates RFC 7591 dynamic client registration (needed for
+# claude.ai's automatic connector flow; disable to require pre-created clients).
+MCP_ENABLED = os.environ.get('MCP_ENABLED', 'False').lower() in ('true', '1', 'yes')
+MCP_DCR_ENABLED = os.environ.get('MCP_DCR_ENABLED', 'True').lower() in ('true', '1', 'yes')
+
+OAUTH2_PROVIDER = {
+    'SCOPES': {
+        'read': 'Read aircraft data (status, compliance, records)',
+        'write': 'Record flights, hours, squawks, notes, and oil/fuel',
+    },
+    'DEFAULT_SCOPES': ['read'],
+    'PKCE_REQUIRED': True,
+    'DCR_ENABLED': MCP_DCR_ENABLED,
+    # claude.ai registers its client anonymously before the user authorizes;
+    # registration grants no data access until a user completes the consent flow.
+    'DCR_REGISTRATION_PERMISSION_CLASSES': ('oauth2_provider.dcr.AllowAllDCRPermission',),
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 3600,
+    'REFRESH_TOKEN_EXPIRE_SECONDS': 90 * 24 * 3600,
+    'ROTATE_REFRESH_TOKEN': True,
+    'ALLOWED_REDIRECT_URI_SCHEMES': ['https'],
+    'OAUTH2_PROTECTED_RESOURCE_NAME': 'Simple Aircraft Manager MCP',
+}
 
 # OIDC Configuration
 OIDC_ENABLED = os.environ.get('OIDC_ENABLED', 'False').lower() in ('true', '1', 'yes')

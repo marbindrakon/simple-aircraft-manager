@@ -7,14 +7,11 @@ They reference self.get_object(), self.request, etc. — works via MRO.
 import logging
 import re
 import shutil
-from datetime import date as date_cls
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from django.apps import apps
 from django.conf import settings as django_settings
-from django.db import transaction
-from django.db.models import Q
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -25,13 +22,12 @@ from core.action_registry import (
     register_read_pilot_write_owner,
 )
 from core.events import log_event
-from core.features import feature_available, get_feature_catalog, get_known_feature_names
+from core.features import feature_available, get_feature_catalog
 from core.models import AircraftEvent
 from core.serializers import (
     AircraftNoteNestedSerializer,
     AircraftNoteCreateUpdateSerializer,
     AircraftEventNestedSerializer,
-    AircraftSerializer,
 )
 from health.dispatch import dispatch_import
 from health.models import (
@@ -41,7 +37,7 @@ from health.models import (
 )
 from health.serializers import (
     ComponentSerializer, ComponentCreateUpdateSerializer,
-    LogbookEntrySerializer, SquawkSerializer,
+    SquawkSerializer,
     SquawkNestedSerializer, SquawkCreateUpdateSerializer,
     DocumentCollectionNestedSerializer, DocumentNestedSerializer,
     ConsumableRecordNestedSerializer, ConsumableRecordCreateSerializer,
@@ -55,8 +51,8 @@ from health.serializers import (
 )
 from health.oil_analysis_import import run_oil_analysis_job
 from health.services import (
-    end_of_month_after, ad_compliance_status, inspection_compliance_status,
-    STATUS_LABELS,
+    AircraftGroundedError, apply_hours_update, create_flight_log,
+    ad_status_list, inspection_status_list, aircraft_summary_payload,
 )
 
 # Register permissions at module load time.
@@ -100,50 +96,25 @@ class HealthAircraftActionsMixin:
             return Response({'error': 'Invalid tach time value'},
                           status=status.HTTP_400_BAD_REQUEST)
 
-        hours_delta = new_tach_time - aircraft.tach_time
-        old_tach = aircraft.tach_time
-
-        # Update aircraft tach
-        aircraft.tach_time = new_tach_time
-
         # Optional hobbs update
+        new_hobbs_time = None
         new_hobbs_raw = request.data.get('new_hobbs_time')
         if new_hobbs_raw is not None:
             try:
                 new_hobbs_time = Decimal(str(new_hobbs_raw))
-                aircraft.hobbs_time = new_hobbs_time
             except (ValueError, InvalidOperation, TypeError):
                 return Response({'error': 'Invalid hobbs time value'},
                               status=status.HTTP_400_BAD_REQUEST)
 
-        aircraft.save()
+        try:
+            result = apply_hours_update(aircraft, new_tach_time, new_hobbs_time, request.user)
+        except AircraftGroundedError as e:
+            return Response(
+                {'error': str(e), 'airworthiness': e.airworthiness.to_dict()},
+                status=status.HTTP_409_CONFLICT,
+            )
 
-        # ALWAYS update all in-service components (not optional)
-        # Clamp component hours at 0 to prevent negative values on corrections.
-        components = aircraft.components.filter(status='IN-USE')
-        updated_components = []
-        for component in components:
-            component.hours_in_service = max(Decimal('0'), component.hours_in_service + hours_delta)
-            component.hours_since_overhaul = max(Decimal('0'), component.hours_since_overhaul + hours_delta)
-            component.save()
-            updated_components.append(str(component.id))
-
-        delta_sign = '+' if hours_delta >= 0 else ''
-        log_event(
-            aircraft, 'hours',
-            f"Hours {'updated' if hours_delta >= 0 else 'corrected'} to {new_tach_time}",
-            user=request.user,
-            notes=f"Previous: {old_tach}, delta: {delta_sign}{hours_delta}",
-        )
-
-        return Response({
-            'success': True,
-            'aircraft_hours': float(aircraft.tach_time),  # backward compat
-            'tach_time': float(aircraft.tach_time),
-            'hobbs_time': float(aircraft.hobbs_time),
-            'hours_added': float(hours_delta),
-            'components_updated': len(updated_components),
-        })
+        return Response(result)
 
     @action(detail=True, methods=['get'])
     def summary(self, request, pk=None):
@@ -152,32 +123,7 @@ class HealthAircraftActionsMixin:
         GET /api/aircraft/{id}/summary/
         """
         aircraft = self.get_object()
-
-        return Response({
-            'aircraft': AircraftSerializer(aircraft, context={'request': request}).data,
-            'components': ComponentSerializer(
-                aircraft.components.all(),
-                many=True,
-                context={'request': request}
-            ).data,
-            'recent_logs': LogbookEntrySerializer(
-                aircraft.logbook_entries.order_by('-date')[:10],
-                many=True,
-                context={'request': request}
-            ).data,
-            'active_squawks': SquawkNestedSerializer(
-                aircraft.squawks.filter(resolved=False),
-                many=True,
-                context={'request': request}
-            ).data,
-            'notes': AircraftNoteNestedSerializer(
-                aircraft.notes.order_by('-added_timestamp'),
-                many=True,
-                context={'request': request}
-            ).data,
-            'features': {f: feature_available(f, aircraft) for f in get_known_feature_names()},
-            'feature_catalog': get_feature_catalog(),
-        })
+        return Response(aircraft_summary_payload(aircraft, request))
 
     @action(detail=True, methods=['get'])
     def documents(self, request, pk=None):
@@ -387,49 +333,7 @@ class HealthAircraftActionsMixin:
         aircraft = self.get_object()
 
         if request.method == 'GET':
-            # Get ADs applicable to this aircraft (direct or via components)
-            component_ids = aircraft.components.values_list('id', flat=True)
-            aircraft_ads = AD.objects.filter(applicable_aircraft=aircraft)
-            component_ads = AD.objects.filter(applicable_component__in=component_ids)
-            all_ads = (aircraft_ads | component_ads).distinct()
-
-            current_hours = aircraft.tach_time - aircraft.tach_time_offset
-
-            ads_data = []
-            for ad in all_ads:
-                ad_dict = ADNestedSerializer(ad).data
-
-                # Get latest compliance record
-                compliance = ADCompliance.objects.filter(
-                    ad=ad
-                ).filter(
-                    Q(aircraft=aircraft) | Q(component__aircraft=aircraft)
-                ).order_by('-date_complied').first()
-
-                if compliance:
-                    ad_dict['latest_compliance'] = ADComplianceNestedSerializer(compliance).data
-                else:
-                    ad_dict['latest_compliance'] = None
-
-                # Conditional ADs use a separate status that doesn't affect airworthiness
-                if ad.compliance_type == 'conditional':
-                    ad_dict['compliance_status'] = 'compliant' if compliance else 'conditional'
-                    ads_data.append(ad_dict)
-                    continue
-
-                if not compliance:
-                    ad_dict['compliance_status'] = 'no_compliance'
-                elif compliance.permanent:
-                    ad_dict['compliance_status'] = 'compliant'
-                else:
-                    today = date_cls.today()
-                    rank, extras = ad_compliance_status(ad, compliance, current_hours, today)
-                    ad_dict.update(extras)
-                    ad_dict['compliance_status'] = STATUS_LABELS[rank]
-
-                ads_data.append(ad_dict)
-
-            return Response({'ads': ads_data})
+            return Response({'ads': ad_status_list(aircraft)})
 
         elif request.method == 'POST':
             ad_id = request.data.get('ad_id')
@@ -507,39 +411,7 @@ class HealthAircraftActionsMixin:
         aircraft = self.get_object()
 
         if request.method == 'GET':
-            component_ids = aircraft.components.values_list('id', flat=True)
-            aircraft_inspections = InspectionType.objects.filter(applicable_aircraft=aircraft)
-            component_inspections = InspectionType.objects.filter(applicable_component__in=component_ids)
-            all_types = (aircraft_inspections | component_inspections).distinct()
-
-            current_hours = aircraft.tach_time - aircraft.tach_time_offset
-            today = date_cls.today()
-
-            result = []
-            for insp_type in all_types:
-                type_dict = InspectionTypeNestedSerializer(insp_type).data
-
-                last_record = InspectionRecord.objects.filter(
-                    inspection_type=insp_type
-                ).filter(
-                    Q(aircraft=aircraft) | Q(component__aircraft=aircraft)
-                ).order_by('-date').first()
-
-                if last_record:
-                    type_dict['latest_record'] = InspectionRecordNestedSerializer(last_record).data
-                else:
-                    type_dict['latest_record'] = None
-
-                if not last_record:
-                    type_dict['compliance_status'] = 'never_completed'
-                else:
-                    rank, extras = inspection_compliance_status(insp_type, last_record, current_hours, today)
-                    type_dict.update(extras)
-                    type_dict['compliance_status'] = STATUS_LABELS[rank]
-
-                result.append(type_dict)
-
-            return Response({'inspection_types': result})
+            return Response({'inspection_types': inspection_status_list(aircraft)})
 
         elif request.method == 'POST':
             # Case 1: Add existing InspectionType to aircraft
@@ -633,51 +505,12 @@ class HealthAircraftActionsMixin:
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        with transaction.atomic():
-            flight = serializer.save()
-            tach_delta = flight.tach_time
-            aircraft.tach_time += tach_delta
-            if flight.hobbs_time:
-                aircraft.hobbs_time += flight.hobbs_time
-            aircraft.save()
-
-            # Sync IN-USE component hours
-            for comp in aircraft.components.filter(status='IN-USE'):
-                comp.hours_in_service += tach_delta
-                comp.hours_since_overhaul += tach_delta
-                comp.save()
-
-            # Auto-create ConsumableRecords for oil/fuel added
-            if flight.oil_added:
-                ConsumableRecord.objects.create(
-                    record_type=ConsumableRecord.RECORD_TYPE_OIL,
-                    aircraft=aircraft,
-                    date=flight.date,
-                    quantity_added=flight.oil_added,
-                    level_after=flight.oil_level_after,
-                    consumable_type=flight.oil_added_type or '',
-                    flight_hours=aircraft.tach_time,
-                    notes=f"Auto-created from flight log {flight.id}",
-                )
-            if flight.fuel_added:
-                ConsumableRecord.objects.create(
-                    record_type=ConsumableRecord.RECORD_TYPE_FUEL,
-                    aircraft=aircraft,
-                    date=flight.date,
-                    quantity_added=flight.fuel_added,
-                    level_after=flight.fuel_level_after,
-                    consumable_type=flight.fuel_added_type or '',
-                    flight_hours=aircraft.tach_time,
-                    notes=f"Auto-created from flight log {flight.id}",
-                )
-
-            route_str = ''
-            if flight.departure_location and flight.destination_location:
-                route_str = f" ({flight.departure_location}→{flight.destination_location})"
-            log_event(
-                aircraft, 'flight',
-                f"Flight logged: {flight.tach_time} hrs{route_str}",
-                user=request.user,
+        try:
+            flight = create_flight_log(aircraft, serializer, request.user)
+        except AircraftGroundedError as e:
+            return Response(
+                {'error': str(e), 'airworthiness': e.airworthiness.to_dict()},
+                status=status.HTTP_409_CONFLICT,
             )
 
         return Response(
