@@ -78,12 +78,14 @@ def call_tool(client, name, arguments=None):
 
 
 def tool_payload(client, name, arguments=None):
-    """Call a tool expecting success; return its structuredContent."""
+    """Call a tool expecting success; return its payload parsed from content text."""
     body = call_tool(client, name, arguments)
     assert 'result' in body, body
     result = body['result']
     assert result.get('isError') is False, result
-    return result['structuredContent']
+    # Compact single-copy envelope: payload lives only in content[0].text
+    assert 'structuredContent' not in result
+    return json.loads(result['content'][0]['text'])
 
 
 def tool_error(client, name, arguments=None):

@@ -27,6 +27,38 @@ def _check_feature(aircraft, feature, label):
         raise ToolError(f"The {label} feature is disabled for this aircraft")
 
 
+# Component relation fields serialized as hyperlink lists by the web
+# serializer — dead weight for agents (parent_component_id/_name and
+# component_type_id/_name scalars remain for the tree and type).
+_COMPONENT_DROP_FIELDS = (
+    'url', 'aircraft', 'parent_component', 'component_type', 'components',
+    'doc_collections', 'documents', 'squawks', 'applicable_inspections',
+    'ads', 'inspections', 'ad_compliance',
+)
+
+
+def _slim_component(comp):
+    return {k: v for k, v in comp.items() if k not in _COMPONENT_DROP_FIELDS}
+
+
+def _compact_aircraft(aircraft_dict):
+    """
+    Context-friendly aircraft object: every top-level list field on the web
+    serializer is a bare UUID list (see AircraftSerializer) that an agent can't
+    act on — replace each with a `<name>_count` integer. Nested dicts like
+    airworthiness pass through untouched.
+    """
+    out = {}
+    for k, v in aircraft_dict.items():
+        if k == 'url':
+            continue
+        if isinstance(v, list):
+            out[f'{k}_count'] = len(v)
+        else:
+            out[k] = v
+    return out
+
+
 def _slim_logbook_entry(entry):
     """
     Compact a serialized logbook entry for MCP responses.
@@ -75,17 +107,24 @@ def list_aircraft(request, args):
     'get_aircraft_summary',
     "Full snapshot of one aircraft: details with airworthiness, all components "
     "(with hours and criticality), the 10 most recent logbook entries, active "
-    "squawks, notes, and the per-aircraft feature flags. Check the features map "
-    "before using feature-gated tools (flight logs, oil/fuel records).",
+    "squawks, notes, and the per-aircraft feature flags. Related records "
+    "appear as <name>_count integers — fetch detail with the dedicated tools "
+    "(get_compliance_status, search_logbook, list_flight_logs, get_events). "
+    "Check the features map before using feature-gated tools (flight logs, "
+    "oil/fuel records).",
     {'type': 'object', 'properties': {'aircraft_id': _AIRCRAFT_ID}, 'required': ['aircraft_id']},
     required_scope=SCOPE_READ,
 )
 def get_aircraft_summary(request, args):
     aircraft = resolve_aircraft(request.user, args['aircraft_id'])
     payload = aircraft_summary_payload(aircraft, request)
-    # Slim the recent logbook entries — the web payload inlines full document
-    # page manifests per entry (see _slim_logbook_entry).
+    # Context-friendly shaping (web payload is untouched): counts instead of
+    # UUID lists, components without hyperlink-list relations, logbook entries
+    # without inlined document page manifests, no static feature catalog.
+    payload['aircraft'] = _compact_aircraft(payload['aircraft'])
+    payload['components'] = [_slim_component(c) for c in payload['components']]
     payload['recent_logs'] = [_slim_logbook_entry(e) for e in payload['recent_logs']]
+    payload.pop('feature_catalog', None)
     return payload
 
 

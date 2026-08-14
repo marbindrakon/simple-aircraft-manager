@@ -253,8 +253,27 @@ class TestSummaryRegression:
             aircraft=aircraft, date=dt.date.today(), tach_time=1)
         payload = tool_payload(owner_mcp_client, 'get_aircraft_summary',
                                {'aircraft_id': str(aircraft.id)})
-        # Reverse relations on the aircraft object are compact ID lists
-        assert isinstance(payload['aircraft']['squawks'][0], str)
-        assert isinstance(payload['aircraft']['flight_logs'][0], str)
+        # Reverse relations on the aircraft object are compacted to counts
+        assert payload['aircraft']['squawks_count'] == 1
+        assert payload['aircraft']['flight_logs_count'] == 1
         # The hydrated squawk list is still served at the top level
         assert payload['active_squawks'][0]['issue_reported'] == 'Seat rail wear'
+
+    def test_summary_is_context_friendly(self, owner_mcp_client, aircraft, component):
+        payload = tool_payload(owner_mcp_client, 'get_aircraft_summary',
+                               {'aircraft_id': str(aircraft.id)})
+        # No bare UUID lists or URLs on the aircraft object
+        assert 'url' not in payload['aircraft']
+        assert not any(isinstance(v, list) for v in payload['aircraft'].values())
+        assert payload['aircraft']['components_count'] == 1
+        # Airworthiness detail survives compaction
+        assert 'issues' in payload['aircraft']['airworthiness']
+        # Components keep scalars/hours/criticality, lose hyperlink relations
+        comp = payload['components'][0]
+        assert comp['component_type_name'] == 'Engine'
+        assert 'hours_in_service' in comp and 'tbo_critical' in comp
+        for dropped in ('aircraft', 'component_type', 'documents', 'ads', 'inspections'):
+            assert dropped not in comp
+        # Static catalog omitted; live feature map kept
+        assert 'feature_catalog' not in payload
+        assert 'features' in payload

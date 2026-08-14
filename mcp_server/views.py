@@ -38,9 +38,12 @@ class McpAuthentication(OAuth2ProtectedResourceAuthentication):
 
 
 def _tool_success(payload):
+    # Compact JSON, and no structuredContent duplicate: the client feeds
+    # content.text to the model, so pretty-printing plus a second serialized
+    # copy of the payload roughly doubled every response for no benefit
+    # (structuredContent is optional when no outputSchema is declared).
     return {
-        'content': [{'type': 'text', 'text': json.dumps(payload, indent=2, default=str)}],
-        'structuredContent': payload,
+        'content': [{'type': 'text', 'text': json.dumps(payload, separators=(',', ':'), default=str)}],
         'isError': False,
     }
 
