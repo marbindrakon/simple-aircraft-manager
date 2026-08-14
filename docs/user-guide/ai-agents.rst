@@ -42,11 +42,25 @@ aircraft rejects hour updates and flight logs.
 Connecting from claude.ai
 -------------------------
 
-1. In claude.ai, go to **Settings → Connectors → Add custom connector**.
+By default, an administrator first registers the connector as an OAuth client
+(this instance does not allow anonymous client registration). In the Django
+admin, under **Applications → Add**, create a *confidential* application with
+the *authorization-code* grant and redirect URI
+``https://claude.ai/api/mcp/auth_callback``, and note the generated client ID
+and secret.
+
+Then in claude.ai:
+
+1. Go to **Settings → Connectors → Add custom connector**.
 2. Enter your instance's MCP URL: ``https://your-instance.example.com/mcp``.
-3. Claude registers itself automatically and opens your instance's login page.
-   Sign in (your normal account, including single sign-on if your instance
-   uses it) and approve the requested access.
+3. Under **Advanced settings**, enter the client ID and secret from the step
+   above.
+4. Claude opens your instance's login page. Sign in (your normal account,
+   including single sign-on if your instance uses it) and approve the requested
+   access.
+
+(If your administrator has enabled ``MCP_DCR_ENABLED``, claude.ai registers
+itself automatically and the client ID/secret step is skipped.)
 
 Tokens expire and refresh automatically. To revoke an agent's access, an
 administrator can delete its application/tokens in the Django admin.

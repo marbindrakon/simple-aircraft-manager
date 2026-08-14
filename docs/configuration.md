@@ -82,9 +82,11 @@ Serves a Model Context Protocol endpoint at `/mcp` so AI assistants (claude.ai c
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MCP_ENABLED` | `false` | Mount `/mcp`, the OAuth authorization server (`/o/`), and the `.well-known` OAuth metadata endpoints |
-| `MCP_DCR_ENABLED` | `true` | Allow anonymous RFC 7591 dynamic client registration (required for claude.ai's automatic connector flow; disable to require pre-created clients via the Django admin) |
+| `MCP_DCR_ENABLED` | `false` | Allow **anonymous** RFC 7591 dynamic client registration. Off by default because it lets any unauthenticated caller create OAuth clients (registration flooding, consent-phishing via imposter clients). Enable only when claude.ai's automatic connector flow is required **and** `/o/register/` is rate-limited at the proxy. |
 
-Auth is OAuth 2.1 (authorization code + PKCE) issued by the instance itself via django-oauth-toolkit; tokens are scoped `read`/`write` and bound to the logging-in user's account and roles. Works with both local accounts and OIDC login. See the user guide's *AI Agents (MCP)* page.
+Auth is OAuth 2.1 (authorization code + PKCE) issued by the instance itself via django-oauth-toolkit; tokens are scoped `read`/`write` and bound to the logging-in user's account and roles. Only the `authorization_code` and `refresh_token` grants are enabled. Works with both local accounts and OIDC login.
+
+With DCR off (the default), register one OAuth client for the connector in the Django admin (**Applications → Add**): client type *confidential*, grant type *authorization code*, redirect URI `https://claude.ai/api/mcp/auth_callback`, then give the connector the generated client ID and secret. See the user guide's *AI Agents (MCP)* page.
 
 ## AI Logbook Import (Optional)
 

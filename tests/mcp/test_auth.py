@@ -2,6 +2,8 @@
 import json
 
 import pytest
+from django.conf import settings
+from django.test import override_settings
 from rest_framework.test import APIClient
 
 from .conftest import MCP_URL, rpc, tool_payload
@@ -127,22 +129,30 @@ def test_authorization_server_metadata(client, db):
     assert data['issuer'] == issuer
     assert data['authorization_endpoint'].endswith('/o/authorize/')
     assert data['token_endpoint'].endswith('/o/token/')
-    assert 'registration_endpoint' in data  # DCR advertised
+    # DCR is off by default, so registration must NOT be advertised.
+    assert 'registration_endpoint' not in data
     assert 'S256' in data['code_challenge_methods_supported']
     assert set(data['scopes_supported']) >= {'read', 'write'}
 
 
-def test_dynamic_client_registration(client, db):
-    response = client.post(
-        '/o/register/',
-        data=json.dumps({
-            'client_name': 'Claude',
-            'redirect_uris': ['https://claude.ai/api/mcp/auth_callback'],
-            'grant_types': ['authorization_code', 'refresh_token'],
-            'token_endpoint_auth_method': 'client_secret_basic',
-        }),
-        content_type='application/json',
-    )
+def _dcr_body():
+    return json.dumps({
+        'client_name': 'Claude',
+        'redirect_uris': ['https://claude.ai/api/mcp/auth_callback'],
+        'grant_types': ['authorization_code', 'refresh_token'],
+        'token_endpoint_auth_method': 'client_secret_basic',
+    })
+
+
+def test_dcr_disabled_by_default(client, db):
+    # MCP_DCR_ENABLED defaults off; the registration endpoint 404s.
+    response = client.post('/o/register/', data=_dcr_body(), content_type='application/json')
+    assert response.status_code == 404
+
+
+@override_settings(OAUTH2_PROVIDER={**settings.OAUTH2_PROVIDER, 'DCR_ENABLED': True})
+def test_dynamic_client_registration_when_enabled(client, db):
+    response = client.post('/o/register/', data=_dcr_body(), content_type='application/json')
     assert response.status_code == 201, response.content
     data = response.json()
     assert data['client_id']

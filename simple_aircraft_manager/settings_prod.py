@@ -89,10 +89,14 @@ for _plugin in _discover_sam_plugins():
 
 # MCP server (Model Context Protocol) for AI agents
 # MCP_ENABLED gates the /mcp endpoint and the OAuth AS routes (/o/, .well-known).
-# MCP_DCR_ENABLED gates RFC 7591 dynamic client registration (needed for
-# claude.ai's automatic connector flow; disable to require pre-created clients).
+# MCP_DCR_ENABLED gates anonymous RFC 7591 dynamic client registration. Off by
+# default: enabling it lets any unauthenticated caller create OAuth clients,
+# which is what claude.ai's automatic connector flow uses but also enables
+# client-registration flooding and consent-phishing via imposter clients.
+# Prefer pre-registering a client in the Django admin; set MCP_DCR_ENABLED=true
+# only when automatic registration is required and /o/register/ is rate-limited.
 MCP_ENABLED = os.environ.get('MCP_ENABLED', 'False').lower() in ('true', '1', 'yes')
-MCP_DCR_ENABLED = os.environ.get('MCP_DCR_ENABLED', 'True').lower() in ('true', '1', 'yes')
+MCP_DCR_ENABLED = os.environ.get('MCP_DCR_ENABLED', 'False').lower() in ('true', '1', 'yes')
 
 OAUTH2_PROVIDER = {
     'SCOPES': {
