@@ -17,7 +17,8 @@ see, with the same role rules as the web interface.
 
 **Read (any role):**
 
-- List your aircraft with hours and airworthiness status
+- List your aircraft with hours and an airworthiness rollup
+- Refer to an aircraft by tail number or UUID in any tool
 - Get a full aircraft summary (components, recent logbook entries, active
   squawks, notes, feature flags)
 - Check airworthiness and AD/inspection compliance status

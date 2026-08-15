@@ -12,12 +12,17 @@ pytestmark = pytest.mark.urls('tests.mcp.urls')
 
 
 class TestListAircraft:
-    def test_owner_sees_own_aircraft(self, owner_mcp_client, aircraft):
+    def test_owner_sees_compact_roster(self, owner_mcp_client, aircraft):
         payload = tool_payload(owner_mcp_client, 'list_aircraft')
         assert payload['count'] == 1
         entry = payload['aircraft'][0]
         assert entry['tail_number'] == 'N12345'
-        assert entry['airworthiness']['status'] in ('RED', 'ORANGE', 'GREEN')
+        assert entry['id'] == str(aircraft.id)
+        # Airworthiness rollup only — no full issue list in the roster
+        aw = entry['airworthiness']
+        assert set(aw) == {'status', 'can_fly', 'issue_count', 'red_count', 'orange_count'}
+        assert 'issues' not in aw
+        assert aw['status'] in ('RED', 'ORANGE', 'GREEN')
 
     def test_other_user_sees_nothing(self, other_mcp_client, aircraft):
         payload = tool_payload(other_mcp_client, 'list_aircraft')
@@ -26,6 +31,40 @@ class TestListAircraft:
     def test_admin_sees_all(self, mcp_client_factory, admin_user, aircraft):
         client = mcp_client_factory(admin_user)
         assert tool_payload(client, 'list_aircraft')['count'] == 1
+
+
+class TestTailNumberResolution:
+    def test_summary_by_tail_number(self, owner_mcp_client, aircraft):
+        payload = tool_payload(owner_mcp_client, 'get_aircraft_summary',
+                               {'aircraft_id': 'N12345'})
+        assert payload['aircraft']['tail_number'] == 'N12345'
+
+    def test_tail_number_case_insensitive(self, owner_mcp_client, aircraft):
+        payload = tool_payload(owner_mcp_client, 'get_airworthiness',
+                               {'aircraft_id': 'n12345'})
+        assert payload['status'] in ('RED', 'ORANGE', 'GREEN')
+
+    def test_write_tool_accepts_tail_number(self, owner_mcp_client, aircraft):
+        payload = tool_payload(owner_mcp_client, 'update_aircraft_hours',
+                               {'aircraft_id': 'N12345', 'new_tach_time': 101.0})
+        assert payload['success'] is True
+
+    def test_unknown_tail_number_not_found(self, owner_mcp_client, aircraft):
+        assert tool_error(owner_mcp_client, 'get_aircraft_summary',
+                          {'aircraft_id': 'N99999'}) == 'Aircraft not found'
+
+    def test_tail_number_of_inaccessible_aircraft_not_found(self, other_mcp_client, aircraft):
+        # other_user has no role on N12345 → tail lookup finds nothing for them
+        assert tool_error(other_mcp_client, 'get_aircraft_summary',
+                          {'aircraft_id': 'N12345'}) == 'Aircraft not found'
+
+    def test_ambiguous_tail_number_errors(self, mcp_client_factory, admin_user, aircraft_factory):
+        admin = admin_user
+        aircraft_factory(tail_number='N-DUPE')
+        aircraft_factory(tail_number='N-DUPE')
+        client = mcp_client_factory(admin)  # admin can access both
+        msg = tool_error(client, 'get_aircraft_summary', {'aircraft_id': 'N-DUPE'})
+        assert 'Multiple accessible aircraft' in msg and 'UUID' in msg
 
 
 class TestAircraftSummary:
@@ -277,3 +316,44 @@ class TestSummaryRegression:
         # Static catalog omitted; live feature map kept
         assert 'feature_catalog' not in payload
         assert 'features' in payload
+
+
+class TestSummaryLogTruncationAndFetch:
+    def test_long_summary_log_is_truncated_and_flagged(self, owner_mcp_client, aircraft):
+        import datetime as dt
+        from health.models import LogbookEntry
+        long_text = 'X' * 500
+        LogbookEntry.objects.create(
+            aircraft=aircraft, date=dt.date.today(), log_type='ENG',
+            entry_type='MAINTENANCE', text=long_text)
+        payload = tool_payload(owner_mcp_client, 'get_aircraft_summary',
+                               {'aircraft_id': str(aircraft.id)})
+        entry = payload['recent_logs'][0]
+        assert entry['text_truncated'] is True
+        assert entry['text_full_length'] == 500
+        assert len(entry['text']) < 500
+        assert entry['text'].endswith('…')
+
+    def test_short_summary_log_not_flagged(self, owner_mcp_client, aircraft, logbook_entry):
+        payload = tool_payload(owner_mcp_client, 'get_aircraft_summary',
+                               {'aircraft_id': str(aircraft.id)})
+        entry = payload['recent_logs'][0]
+        assert 'text_truncated' not in entry
+
+    def test_search_by_entry_id_returns_full_text(self, owner_mcp_client, aircraft):
+        import datetime as dt
+        from health.models import LogbookEntry
+        long_text = 'Y' * 500
+        e = LogbookEntry.objects.create(
+            aircraft=aircraft, date=dt.date.today(), log_type='ENG',
+            entry_type='MAINTENANCE', text=long_text)
+        payload = tool_payload(owner_mcp_client, 'search_logbook',
+                               {'aircraft_id': str(aircraft.id), 'entry_id': str(e.id)})
+        assert payload['total'] == 1
+        got = payload['entries'][0]
+        assert got['text'] == long_text  # full, untruncated
+        assert 'text_truncated' not in got
+
+    def test_search_entry_id_bad_uuid(self, owner_mcp_client, aircraft):
+        assert tool_error(owner_mcp_client, 'search_logbook',
+                          {'aircraft_id': str(aircraft.id), 'entry_id': 'nope'}) == 'entry_id must be a UUID'

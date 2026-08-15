@@ -4,7 +4,7 @@ Read tools (scope: read). Any role on the aircraft (pilot and above).
 from datetime import date
 
 from core.models import AircraftRole, EVENT_CATEGORIES
-from core.serializers import AircraftListSerializer, AircraftEventNestedSerializer
+from core.serializers import AircraftEventNestedSerializer
 from health.models import ConsumableRecord
 from health.services import (
     ad_status_list, aircraft_summary_payload, calculate_airworthiness,
@@ -15,8 +15,12 @@ from mcp_server.registry import SCOPE_READ, tool
 
 _AIRCRAFT_ID = {
     'type': 'string',
-    'description': 'Aircraft UUID (from list_aircraft)',
+    'description': "Aircraft UUID or tail number (e.g. 'N12345', case-insensitive)",
 }
+
+# Summary logbook text is truncated at this length; search_logbook returns
+# full text (fetch one entry precisely via its entry_id parameter).
+SUMMARY_LOG_TEXT_LIMIT = 300
 
 _EVENT_CATEGORY_NAMES = [c[0] for c in EVENT_CATEGORIES]
 
@@ -59,7 +63,7 @@ def _compact_aircraft(aircraft_dict):
     return out
 
 
-def _slim_logbook_entry(entry):
+def _slim_logbook_entry(entry, truncate_text=None):
     """
     Compact a serialized logbook entry for MCP responses.
 
@@ -68,6 +72,10 @@ def _slim_logbook_entry(entry):
     page-image manifest — repeated per entry, this dominated measured responses
     (a limit=100 search was 1.39 MB, ~68% repeated manifests). Agents only
     need a reference: {id, name} plus the entry's own page_number.
+
+    When truncate_text is set, entry text longer than that many characters is
+    cut and flagged with text_truncated/text_full_length so the agent knows to
+    fetch the full entry (search_logbook with entry_id).
     """
     slim = {
         k: v for k, v in entry.items()
@@ -82,25 +90,48 @@ def _slim_logbook_entry(entry):
         {'id': d.get('id'), 'name': d.get('name')}
         for d in entry.get('related_documents_detail') or []
     ]
+    text = slim.get('text')
+    if truncate_text and isinstance(text, str) and len(text) > truncate_text:
+        slim['text'] = text[:truncate_text] + '…'
+        slim['text_truncated'] = True
+        slim['text_full_length'] = len(text)
     return slim
 
 
 @tool(
     'list_aircraft',
-    "List all aircraft the user has access to, with current hours, status, and "
-    "airworthiness (status RED/ORANGE/GREEN, can_fly, and the list of issues).",
+    "Compact roster of all aircraft the user has access to: id, tail number, "
+    "make/model, status, hours, and an airworthiness rollup (status "
+    "RED/ORANGE/GREEN, can_fly, issue counts). For the issue details use "
+    "get_airworthiness; for a full snapshot use get_aircraft_summary. Other "
+    "tools accept the tail number directly — you rarely need the id.",
     {'type': 'object', 'properties': {}, 'required': []},
     required_scope=SCOPE_READ,
 )
 def list_aircraft(request, args):
     from core.models import Aircraft
     user = request.user
-    qs = Aircraft.objects.prefetch_related('roles')
+    qs = Aircraft.objects.all()
     if not (user.is_staff or user.is_superuser):
         accessible = AircraftRole.objects.filter(user=user).values_list('aircraft_id', flat=True)
         qs = qs.filter(id__in=accessible)
-    data = AircraftListSerializer(qs, many=True, context={'request': request}).data
-    return {'aircraft': data, 'count': len(data)}
+    items = []
+    for ac in qs:
+        aw = calculate_airworthiness(ac).to_dict()
+        items.append({
+            'id': str(ac.id),
+            'tail_number': ac.tail_number,
+            'make': ac.make,
+            'model': ac.model,
+            'status': ac.status,
+            'tach_time': float(ac.tach_time),
+            'hobbs_time': float(ac.hobbs_time),
+            'airworthiness': {
+                k: aw[k]
+                for k in ('status', 'can_fly', 'issue_count', 'red_count', 'orange_count')
+            },
+        })
+    return {'aircraft': items, 'count': len(items)}
 
 
 @tool(
@@ -110,6 +141,8 @@ def list_aircraft(request, args):
     "squawks, notes, and the per-aircraft feature flags. Related records "
     "appear as <name>_count integers — fetch detail with the dedicated tools "
     "(get_compliance_status, search_logbook, list_flight_logs, get_events). "
+    "Recent logbook text is truncated (text_truncated=true when cut) — fetch "
+    "an interesting entry's full text with search_logbook and its entry_id. "
     "Check the features map before using feature-gated tools (flight logs, "
     "oil/fuel records).",
     {'type': 'object', 'properties': {'aircraft_id': _AIRCRAFT_ID}, 'required': ['aircraft_id']},
@@ -123,7 +156,10 @@ def get_aircraft_summary(request, args):
     # without inlined document page manifests, no static feature catalog.
     payload['aircraft'] = _compact_aircraft(payload['aircraft'])
     payload['components'] = [_slim_component(c) for c in payload['components']]
-    payload['recent_logs'] = [_slim_logbook_entry(e) for e in payload['recent_logs']]
+    payload['recent_logs'] = [
+        _slim_logbook_entry(e, truncate_text=SUMMARY_LOG_TEXT_LIMIT)
+        for e in payload['recent_logs']
+    ]
     payload.pop('feature_catalog', None)
     return payload
 
@@ -237,14 +273,16 @@ def get_events(request, args):
 @tool(
     'search_logbook',
     "Search an aircraft's maintenance logbook entries (inspections, parts "
-    "replaced, mechanic signoffs — not per-flight records), newest first. "
-    "Page through large result sets with offset; total reflects the active "
-    "filters. Source documents are returned as {id, name} references plus the "
-    "entry's page_number.",
+    "replaced, mechanic signoffs — not per-flight records), newest first, "
+    "with full entry text. Page through large result sets with offset; total "
+    "reflects the active filters. Pass entry_id to fetch exactly one entry "
+    "(e.g. to expand a truncated summary entry). Source documents are "
+    "returned as {id, name} references plus the entry's page_number.",
     {
         'type': 'object',
         'properties': {
             'aircraft_id': _AIRCRAFT_ID,
+            'entry_id': {'type': 'string', 'description': 'Fetch a single entry by its UUID (other filters ignored)'},
             'query': {'type': 'string', 'description': 'Text to match in entry text or signoff person'},
             'log_type': {'type': 'string', 'enum': ['AC', 'ENG', 'PROP', 'OTHER'],
                          'description': 'Logbook: AC=airframe, ENG=engine, PROP=propeller'},
@@ -265,6 +303,14 @@ def search_logbook(request, args):
 
     aircraft = resolve_aircraft(request.user, args['aircraft_id'])
     qs = aircraft.logbook_entries.all()
+
+    entry_id = args.get('entry_id')
+    if entry_id:
+        from django.core.exceptions import ValidationError
+        try:
+            qs = qs.filter(id=entry_id)
+        except (ValidationError, ValueError):
+            raise ToolError('entry_id must be a UUID')
 
     query = args.get('query')
     if query:
