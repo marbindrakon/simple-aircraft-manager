@@ -172,7 +172,7 @@ Local Ollama
   12 GB+.
 
 OpenAI-compatible endpoint (vLLM, OpenRouter, LiteLLM)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For routing through a hosted aggregator (OpenRouter), a self-hosted
 inference server (vLLM, LiteLLM proxy), or any other server that speaks
