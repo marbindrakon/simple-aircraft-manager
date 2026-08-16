@@ -1,0 +1,295 @@
+name: Release
+
+# Release flow (tag push):
+#   prep      — resolve version, verify the tag matches the VERSION file
+#   test      — full pytest suite, once, gating every build job
+#   container / macos-dmg / windows-installer / linux-flatpak — parallel builds;
+#               the container image is pushed BY DIGEST ONLY (untagged)
+#   release   — runs only if everything above passed: tags the image
+#               (:<version> + :latest), drafts the GitHub release with all
+#               assets + SHA256SUMS, then publishes it. Nothing user-visible
+#               exists until this job succeeds.
+#
+# workflow_dispatch is a dry run: same builds with a "<VERSION>-dev" version,
+# artifacts uploaded for inspection, nothing pushed or released.
+
+permissions:
+  contents: read
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  prep:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      image: ${{ steps.version.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve and validate version
+        id: version
+        run: |
+          file_version="$(tr -d '[:space:]' < VERSION)"
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            tag_version="${GITHUB_REF_NAME#v}"
+            if [ "$tag_version" != "$file_version" ]; then
+              echo "::error::Tag ${GITHUB_REF_NAME} does not match VERSION file (${file_version}) — bump VERSION, commit, and re-tag."
+              exit 1
+            fi
+            version="$tag_version"
+          else
+            version="${file_version}-dev"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          # GHCR requires a lowercase image path
+          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          echo "Release version: ${version}"
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-test.txt
+            requirements-desktop.txt
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-test.txt -r requirements-desktop.txt
+
+      - name: Run test suite
+        run: python -m pytest
+        env:
+          DJANGO_SETTINGS_MODULE: simple_aircraft_manager.settings
+
+  container:
+    needs: [prep, test]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU (for linux/arm64)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build multi-arch image (push by digest only on tag)
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Containerfile
+          platforms: linux/amd64,linux/arm64
+          # Untagged digest push — the release job applies :<version> and
+          # :latest only after every platform build has succeeded. On
+          # workflow_dispatch this is push=false (build validation only).
+          outputs: type=image,name=${{ needs.prep.outputs.image }},name-canonical=true,push-by-digest=true,push=${{ github.event_name == 'push' }}
+          labels: |
+            org.opencontainers.image.version=${{ needs.prep.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  macos-dmg:
+    needs: [prep, test]
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-desktop.txt
+            requirements-build.txt
+            requirements-desktop-build.txt
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Create venv (build-macos.sh reuses an existing .venv)
+        run: python -m venv .venv
+
+      - name: Build DMG
+        run: bash desktop/build-macos.sh
+        env:
+          SAM_BUILD_VERSION: ${{ needs.prep.outputs.version }}
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: dist/SimpleAircraftManager-*.dmg
+          retention-days: 7
+
+  windows-installer:
+    needs: [prep, test]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-desktop.txt
+            requirements-build.txt
+            requirements-desktop-build.txt
+
+      - name: Install Inno Setup 6
+        run: choco install -y --no-progress innosetup
+
+      - name: Create venv (build-windows.ps1 reuses an existing venv)
+        run: python -m venv venv
+
+      - name: Build installer
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File desktop\build-windows.ps1
+        env:
+          SAM_BUILD_VERSION: ${{ needs.prep.outputs.version }}
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: desktop/Output/SimpleAircraftManagerSetup*.exe
+          retention-days: 7
+
+  linux-flatpak:
+    needs: [prep, test]
+    runs-on: ubuntu-latest
+    env:
+      XDG_RUNTIME_DIR: /tmp/xdg-runtime
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install flatpak tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder imagemagick
+          mkdir -p "$XDG_RUNTIME_DIR"
+
+      - name: Add Flathub remote
+        run: flatpak remote-add --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Build bundle (pulls GNOME Platform/SDK 47, ~1 GB)
+        run: bash desktop/flatpak/build-flatpak.sh
+        env:
+          SAM_BUILD_VERSION: ${{ needs.prep.outputs.version }}
+
+      - name: Upload bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-flatpak
+          path: SimpleAircraftManager-*.flatpak
+          retention-days: 7
+
+  release:
+    if: github.event_name == 'push'
+    needs: [prep, container, macos-dmg, windows-installer, linux-flatpak]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    env:
+      VERSION: ${{ needs.prep.outputs.version }}
+      IMAGE: ${{ needs.prep.outputs.image }}
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum ./*.dmg ./*.exe ./*.flatpak > SHA256SUMS
+          ls -lh
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag container image
+        run: |
+          docker buildx imagetools create \
+            -t "${IMAGE}:${VERSION}" \
+            -t "${IMAGE}:latest" \
+            "${IMAGE}@${{ needs.container.outputs.digest }}"
+
+      - name: Write release notes
+        run: |
+          cat > release-body.md <<EOF
+          Version: \`${VERSION}\`
+
+          ## Desktop
+
+          - **macOS**: \`SimpleAircraftManager-${VERSION}.dmg\` (unsigned — on first launch right-click the app and choose *Open* to clear Gatekeeper)
+          - **Windows**: \`SimpleAircraftManagerSetup-${VERSION}.exe\`
+          - **Linux (Flatpak)**: \`SimpleAircraftManager-${VERSION}.flatpak\` — install with \`flatpak install --user SimpleAircraftManager-${VERSION}.flatpak\`
+
+          \`SHA256SUMS\` contains checksums for all of the above.
+
+          ## Docker container
+
+          \`\`\`
+          docker pull ${IMAGE}:${VERSION}
+          \`\`\`
+
+          (multi-arch: linux/amd64 + linux/arm64)
+          EOF
+
+      - name: Create draft release with assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ env.VERSION }}
+          body_path: release-body.md
+          draft: true
+          files: dist/*
+          fail_on_unmatched_files: true
+          generate_release_notes: false
+
+      - name: Publish release
+        run: gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
+        env:
+          GH_TOKEN: ${{ github.token }}
