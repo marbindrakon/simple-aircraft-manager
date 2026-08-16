@@ -145,6 +145,20 @@ PROMETHEUS_METRICS_ENABLED = False
 INSTALLED_APPS = [app for app in INSTALLED_APPS if app != "django_prometheus"]  # noqa: F405
 MIDDLEWARE = [m for m in MIDDLEWARE if "prometheus" not in m.lower()]  # noqa: F405
 
+# Strip the MCP server and its OAuth authorization server. An OAuth AS on a
+# loopback single-user app protects nothing (the REST API is already open in
+# no-auth mode), the launcher's port can drift between runs (breaking issuer/
+# redirect URLs), and django-oauth-toolkit pulls in jwcrypto (LGPL) — which we
+# keep out of the PyInstaller bundle so the desktop distributable stays free
+# of copyleft code. Neither package is collected by the desktop specs.
+# A future desktop MCP mode should mount mcp_server's tool registry behind
+# loopback token auth instead of OAuth.
+MCP_ENABLED = False
+MCP_DCR_ENABLED = False
+INSTALLED_APPS = [  # noqa: F405
+    app for app in INSTALLED_APPS if app not in ("oauth2_provider", "mcp_server")  # noqa: F405
+]
+
 # Register the desktop package as a Django app — only in desktop mode.
 # Activates: app-directories template discovery for desktop/templates/,
 # WhiteNoise static discovery for desktop/static/, and (via the SAM plugin
