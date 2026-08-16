@@ -150,6 +150,14 @@ class SquawkViewSet(AircraftScopedMixin, EventLoggingMixin, viewsets.ModelViewSe
             return SquawkCreateUpdateSerializer
         return SquawkSerializer
 
+    def perform_create(self, serializer):
+        # reported_by is not a serializer field (clients must not set it).
+        # Inject it into validated_data and delegate so the AircraftScopedMixin
+        # RBAC check and EventLoggingMixin event still run.
+        user = self.request.user
+        serializer.validated_data['reported_by'] = user if user.is_authenticated else None
+        super().perform_create(serializer)
+
     @action(detail=True, methods=['post'], url_path='link_logbook')
     def link_logbook(self, request, pk=None):
         from django.shortcuts import get_object_or_404

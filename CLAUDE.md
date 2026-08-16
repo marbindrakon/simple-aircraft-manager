@@ -166,6 +166,18 @@ Add to `PILOT_CREATABLE_MODELS` if pilots should be able to create it (they will
 
 Backfill ownership: `python manage.py assign_owners --user <username> --all`
 
+### MCP Server (AI Agents)
+
+Feature flag: `MCP_ENABLED` env var (default `false`) gates URL mounting only — `oauth2_provider` and `mcp_server` stay in `INSTALLED_APPS` in dev/prod so migrations stay applied. **Exception: `settings_desktop` strips both apps** (OAuth is pointless on loopback, and django-oauth-toolkit's jwcrypto dep is LGPL — kept out of the PyInstaller bundle; the CI license gate ignores jwcrypto for the same reason). App: `mcp_server/` (`protocol.py` JSON-RPC helpers, `registry.py` `@tool` decorator + catalog, `views.py` stateless streamable-HTTP endpoint at `/mcp`, `access.py` `resolve_aircraft()`, `tools/read.py` + `tools/write.py`).
+
+- **Auth**: OAuth 2.1 via django-oauth-toolkit ≥3.4 — Django is its own AS (`/o/`), with RFC 8414/9728 `.well-known` docs at the server root (`mcp_server/urls.py`). Only `authorization_code`+`refresh_token` grants are enabled (`OAUTH2_GRANT_TYPES_SUPPORTED` + RFC 9700 BCP gates kill the password/implicit grants — DOT's defaults are unsafe on the internet). Anonymous RFC 7591 DCR is **off by default** (`MCP_DCR_ENABLED`); pre-register the claude.ai client in the admin, or enable DCR only behind a rate limit. Scopes: `read`, `write`. The endpoint uses `OAuth2ProtectedResourceAuthentication`; 401s advertise `resource_metadata`.
+- **Transport gotcha**: the view must read `request.data`, never `request.body` — DOT's auth layer touches `request.POST`, which runs DRF's parsers and consumes the stream. Malformed JSON surfaces as DRF `ParseError`, mapped to JSON-RPC `-32700` in `handle_exception`.
+- **Tools call shared services, never HTTP.** Aircraft action bodies live in `health/services.py` (`apply_hours_update`, `create_flight_log`, `ad_status_list`, `inspection_status_list`, `aircraft_summary_payload`, `consumption_stats`); the viewset actions are thin wrappers. Keep tool behavior and web behavior identical by editing the service, not the callers.
+- **v1 scope**: reads + pilot-tier writes (`PILOT_WRITE_ACTIONS` parity), plus owner-gated `resolve_squawk` (`resolve_aircraft(..., require_owner=True)`). `resolve_aircraft` returns identical "Aircraft not found" for unknown ID vs no role (enumeration-safe).
+- **Payload slimming**: MCP responses reshape the web serializers for context-friendliness — `_slim_logbook_entry` strips inlined document page manifests (a 100-entry search was 1.39 MB otherwise), `_compact_aircraft` turns the aircraft object's UUID lists into `<name>_count` ints, `_slim_component` drops hyperlink-list relations. Tool results are a single compact-JSON `content.text` (no `structuredContent`, no indent — those doubled every response). Keep MCP responses slim; the web payloads are never changed by this layer.
+- **Airworthiness enforcement is server-side**: `enforce_airworthiness()` in `health/services.py` raises `AircraftGroundedError` on RED aircraft (when the `airworthiness_enforcement` feature is on) for hours updates and flight logs — web API returns 409, MCP returns an isError tool result.
+- Tests: `tests/mcp/` (`pytestmark = pytest.mark.urls('tests.mcp.urls')` because the project URLconf gates MCP routes at import time; bearer fixtures create DOT `Application`+`AccessToken` rows directly).
+
 ### OIDC Authentication
 
 Feature flag: `OIDC_ENABLED` env var (default `false`). Library: `mozilla-django-oidc`.
@@ -221,7 +233,7 @@ Documents have `collection` FK set or `collection=null` (uncollected). Both retu
 
 ### 7. AircraftSerializer depth=1 and User FKs
 
-`AircraftSerializer` uses `depth = 1`. Any new reverse relation from Aircraft to a model with a `User` FK causes a 500 (DRF tries to generate `user-detail` URL; no endpoint exists). Fix: declare the relation as `PrimaryKeyRelatedField(many=True, read_only=True)` explicitly on `AircraftSerializer`.
+`AircraftSerializer` uses `depth = 1`. Any reverse relation from Aircraft left undeclared gets nested, and if the nested model has a `User` FK it 500s (DRF generates a `user-detail` URL; no endpoint exists) — this bit for real once `Squawk.reported_by` started being populated. **Every reverse relation is now declared as `PrimaryKeyRelatedField(many=True, read_only=True)` on `AircraftSerializer` — declare any new one the same way.** The frontend never reads nested `aircraft.<relation>` objects; it uses the dedicated summary keys and per-tab endpoints.
 
 ### 8. `apiRequest` Signature — Options Object, Not Positional Args
 

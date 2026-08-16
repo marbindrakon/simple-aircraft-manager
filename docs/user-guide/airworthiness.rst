@@ -110,3 +110,20 @@ To return an aircraft to green status, address each flagged issue:
   :doc:`components` tab, or replace/remove the component.
 
 The airworthiness status recalculates automatically whenever you make changes.
+
+Airworthiness Enforcement
+-------------------------
+
+The **Airworthiness Enforcement** feature (enabled by default, toggleable
+per-aircraft on the Features panel by owners) blocks flight activity from being
+recorded while an aircraft is grounded (red):
+
+- **Update Hours** and **flight log** submissions are rejected by the server
+  with an error explaining which grounding issues exist. This applies to the
+  web interface, the API, and AI agents connected via MCP.
+- Only red status blocks writes — orange (caution) never does.
+- Maintenance actions that can clear a grounding (recording bulletin
+  compliance, inspections, resolving squawks) are never blocked.
+
+Disable the feature for an aircraft if you need to record hours regardless of
+status (for example, when back-filling historical data).

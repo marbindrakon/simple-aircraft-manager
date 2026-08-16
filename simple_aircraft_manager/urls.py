@@ -88,6 +88,12 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls')),
     # Conditionally include OIDC URLs if OIDC is enabled
     *([path('oidc/', include('mozilla_django_oidc.urls'))] if getattr(settings, 'OIDC_ENABLED', False) else []),
+    # MCP server for AI agents: /mcp endpoint, OAuth AS under /o/, and root
+    # .well-known metadata (via mcp_server.urls)
+    *([
+        path('o/', include('oauth2_provider.urls', namespace='oauth2_provider')),
+        path('', include('mcp_server.urls')),
+    ] if getattr(settings, 'MCP_ENABLED', False) else []),
 ]
 
 # Auto-include page URLs from SAM plugins that declare a url_prefix.
