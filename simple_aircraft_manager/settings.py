@@ -91,6 +91,7 @@ TEMPLATES = [
                 'core.context_processors.user_role_context',
                 'core.context_processors.theme_context',
                 'core.context_processors.plugin_registry_context',
+                'core.context_processors.vendor_assets_context',
             ],
         },
     },
@@ -156,6 +157,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Aircraft creation permission: 'any', 'owners', or 'admin'
 AIRCRAFT_CREATE_PERMISSION = os.environ.get('AIRCRAFT_CREATE_PERMISSION', 'any')
 
+# Serve vendor assets (PatternFly, Chart.js, Alpine.js) from local static files
+# instead of CDN. Set to true for air-gapped deployments; always true in desktop mode.
+SAM_USE_VENDOR_ASSETS = os.environ.get('SAM_USE_VENDOR_ASSETS', 'false').lower() == 'true'
+
 # Per-aircraft feature flags — list feature names to disable globally
 DISABLED_FEATURES = []  # e.g. ['flight_tracking', 'oil_analysis']
 
@@ -198,7 +203,17 @@ LOGBOOK_IMPORT_MODELS = [
     # },
 ]
 
-LOGBOOK_IMPORT_DEFAULT_MODEL = 'claude-sonnet-4-6'
+# Add extra models (e.g. Ollama or LiteLLM) via JSON env var without rebuilding/reinstalling:
+#   LOGBOOK_IMPORT_EXTRA_MODELS='[{"id":"llama3.2-vision","name":"Llama 3.2 Vision (local)","provider":"ollama"}]'
+#   LOGBOOK_IMPORT_EXTRA_MODELS='[{"id":"claude-sonnet-4-6-proxy","name":"Sonnet 4.6 (via proxy)","provider":"litellm"}]'
+_extra_models_json = os.environ.get('LOGBOOK_IMPORT_EXTRA_MODELS')
+if _extra_models_json:
+    import json as _json
+    LOGBOOK_IMPORT_MODELS += _json.loads(_extra_models_json)
+
+LOGBOOK_IMPORT_DEFAULT_MODEL = os.environ.get(
+    'LOGBOOK_IMPORT_DEFAULT_MODEL', 'claude-sonnet-4-6'
+)
 
 # Oil analysis PDF import reuses LOGBOOK_IMPORT_MODELS for the model list.
 # No separate OIL_ANALYSIS_IMPORT_MODELS setting is needed — the same registry

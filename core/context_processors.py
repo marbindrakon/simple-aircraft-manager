@@ -57,3 +57,7 @@ def plugin_registry_context(request):
     """Make the plugin registry available in all templates."""
     from core.plugins import registry
     return {'plugin_registry': registry}
+
+
+def vendor_assets_context(request):
+    return {'sam_use_vendor_assets': getattr(settings, 'SAM_USE_VENDOR_ASSETS', False)}

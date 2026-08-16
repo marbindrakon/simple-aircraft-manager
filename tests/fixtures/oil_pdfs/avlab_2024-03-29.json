@@ -1,0 +1,51 @@
+{
+  "lab": "AVLab",
+  "lab_number": null,
+  "oil_type": null,
+  "report_date": "2024-04-05",
+  "samples": [
+    {
+      "analysis_date": "2024-04-03",
+      "elements_ppm": {
+        "aluminum": 3.8,
+        "chromium": 3.7,
+        "copper": 12.1,
+        "iron": 15.3,
+        "lead": 854.0,
+        "nickel": 0.4,
+        "silicon": 3.9,
+        "tin": 0.0
+      },
+      "engine_hours": null,
+      "lab_comments": "ALL METALLIC DEBRIS REMOVED FROM THE FILTER SEEMS TO BE NORMAL ENGINE WEAR. ALL OIL VALUES SEEM FINE. WE WILL CONTINUE TO MONITOR THIS ENGINE WITH YOUR NEXT SAMPLE.",
+      "oil_added_quarts": null,
+      "oil_hours": null,
+      "oil_properties": null,
+      "sample_date": "2024-03-29",
+      "sample_number": "P89",
+      "status": "normal"
+    },
+    {
+      "analysis_date": "2024-01-30",
+      "elements_ppm": {
+        "aluminum": 6.8,
+        "chromium": 4.1,
+        "copper": 13.0,
+        "iron": 30.2,
+        "lead": 1510.0,
+        "nickel": 0.5,
+        "silicon": 3.7,
+        "tin": 0.0
+      },
+      "engine_hours": 518.1,
+      "lab_comments": "THE CHIPS SENT AS WELL AS A TRACE AMOUNT OF DEBRIS REMOVED FROM THE FILTER CONSISTS OF ALLOY STEEL, CLOSEST MATCH AMS# 6274, WITH THE LARGEST PIECE MEASURING 2342 X 2052 MICRONS. ALL OIL VALUES SEEM FINE. WE WILL CONTINUE TO MONITOR THIS ENGINE WITH YOUR NEXT SAMPLE. PLEASE CONTACT THE ENGINE MANUFACTURER'S SERVICE REP IF FURTHER ASSISTANCE IS NEEDED.",
+      "oil_added_quarts": 5.0,
+      "oil_hours": 43.0,
+      "oil_properties": null,
+      "sample_date": "2024-01-25",
+      "sample_number": "P90",
+      "status": "monitor"
+    }
+  ],
+  "tail_number": "N0000X"
+}

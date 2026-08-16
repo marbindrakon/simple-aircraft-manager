@@ -85,12 +85,14 @@ def parse(pdf_path: Path) -> dict:
 def _extract_text(pdf_path: Path) -> str:
     """Extract plain text from all PDF pages."""
     try:
-        import fitz
+        import pypdfium2 as pdfium
     except ImportError:
-        raise ValueError("The 'pymupdf' package is not installed (pip install pymupdf)")
-    doc = fitz.open(str(pdf_path))
-    parts = [page.get_text() for page in doc]
-    doc.close()
+        raise ValueError("The 'pypdfium2' package is not installed (pip install pypdfium2)")
+    pdf = pdfium.PdfDocument(str(pdf_path))
+    parts = []
+    for page in pdf:
+        parts.append(page.get_textpage().get_text_bounded())
+    pdf.close()
     return '\n'.join(parts)
 
 
@@ -131,17 +133,87 @@ def _parse_number(s: str) -> float | None:
 
 
 def _get_words(pdf_path: Path):
-    """Return all words as (x0, y0, text) from all pages."""
+    """Return all words as (x0, y0, text) from all pages, sorted by (y, x).
+
+    Coordinate system matches PyMuPDF's: top-left origin, y0 = top of word's
+    bounding box. Words on the same visual line are forced to share y so that
+    `_make_by_y` bucketing groups them together (pypdfium2 reports per-character
+    tops, which differ within a row when characters have different ascender
+    heights).
+    """
     try:
-        import fitz
+        import pypdfium2 as pdfium
     except ImportError:
-        raise ValueError("pymupdf not installed")
-    doc = fitz.open(str(pdf_path))
-    words = []
-    for page in doc:
-        for w in page.get_text('words', sort=True):
-            words.append((float(w[0]), float(w[1]), str(w[4])))
-    doc.close()
+        raise ValueError("pypdfium2 not installed")
+    pdf = pdfium.PdfDocument(str(pdf_path))
+    words: list[tuple[float, float, str]] = []
+    for page in pdf:
+        ph = page.get_size()[1]
+        tp = page.get_textpage()
+        n = tp.count_chars()
+
+        # Pass 1: trust pdfium's whitespace as word delimiters. Track each
+        # character's bottom (baseline) and top; use max(bottom) as the row
+        # baseline so descenders ('g','y','p') don't pull the value down.
+        records: list[tuple[float, float, float, str]] = []
+        cur_chars: list[str] = []
+        cur_x0: float | None = None
+        cur_top: float | None = None
+        cur_bots: list[float] = []
+
+        def flush():
+            nonlocal cur_chars, cur_x0, cur_top, cur_bots
+            if cur_chars and cur_x0 is not None and cur_top is not None and cur_bots:
+                t = ''.join(cur_chars).strip()
+                if t:
+                    records.append((cur_x0, cur_top, max(cur_bots), t))
+            cur_chars = []
+            cur_x0 = None
+            cur_top = None
+            cur_bots = []
+
+        for i in range(n):
+            ch = tp.get_text_range(i, 1)
+            if not ch:
+                continue
+            left, bottom, right, top = tp.get_charbox(i)
+            if ch in ' \t\r\n':
+                flush()
+                continue
+            if not cur_chars:
+                cur_x0 = left
+                cur_top = top
+            elif top > cur_top:
+                cur_top = top
+            cur_chars.append(ch)
+            cur_bots.append(bottom)
+        flush()
+
+        # Pass 2: cluster records into rows by baseline (within ±2 PDF units).
+        # All words in a row get the same y so the parser's _make_by_y bucketing
+        # groups them. y output uses the row's max top (PyMuPDF-equivalent).
+        records.sort(key=lambda r: (-r[2], r[0]))
+        rows: list[list] = []  # [bot_min, bot_max, top_max, words]
+        for x, top, bot, txt in records:
+            placed = False
+            for row in rows:
+                if abs(bot - row[0]) <= 2 or abs(bot - row[1]) <= 2:
+                    row[0] = min(row[0], bot)
+                    row[1] = max(row[1], bot)
+                    row[2] = max(row[2], top)
+                    row[3].append((x, txt))
+                    placed = True
+                    break
+            if not placed:
+                rows.append([bot, bot, top, [(x, txt)]])
+
+        for _bot_min, _bot_max, top_max, row_words in rows:
+            y_tl = ph - top_max
+            for x, txt in row_words:
+                words.append((x, y_tl, txt))
+        page.close()
+    pdf.close()
+    words.sort(key=lambda w: (w[1], w[0]))
     return words
 
 

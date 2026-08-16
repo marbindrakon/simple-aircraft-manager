@@ -8,5 +8,5 @@ Pillow==12.2.0
 mozilla-django-oidc==5.0.2
 anthropic==0.80.0
 openai==2.32.0
-pymupdf==1.27.1
+pypdfium2==5.7.1
 django-prometheus==2.3.1

@@ -74,3 +74,13 @@ celerybeat.pid
 
 # Local notes
 TODO.md
+
+# Generated at build time — do not commit
+THIRD-PARTY-NOTICES.txt
+licenses/
+
+# Git worktrees
+.worktrees/
+
+# Private originals for oil-analysis fixture anonymization (never commit raw PDFs)
+test-pdfs/

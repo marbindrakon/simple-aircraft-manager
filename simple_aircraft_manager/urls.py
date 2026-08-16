@@ -65,6 +65,7 @@ urlpatterns = [
     path('dashboard/', core_views.DashboardView.as_view(), name='dashboard'),
     path('aircraft/<uuid:pk>/', core_views.AircraftDetailView.as_view(), name='aircraft-detail'),
     path('aircraft/<uuid:pk>/squawks/history/', core_views.SquawkHistoryView.as_view(), name='squawk-history'),
+    path('about/', core_views.AboutView.as_view(), name='about'),
     path('shared/<uuid:share_token>/', core_views.PublicAircraftView.as_view(), name='public-aircraft'),
     path('api/shared/<uuid:share_token>/', PublicAircraftSummaryAPI.as_view(), name='public-aircraft-api'),
     path('api/shared/<uuid:share_token>/logbook-entries/', PublicLogbookEntriesAPI.as_view(), name='public-logbook-entries'),
@@ -99,4 +100,9 @@ for _app_config in _django_apps.get_app_configs():
         except Exception:
             pass  # Don't crash startup if a plugin's page URLs fail to load
 
+# Dev media route: Django's static() helper is a no-op when DEBUG=False,
+# so this is automatically inert in production AND in desktop mode (which
+# both run with DEBUG=False). In desktop mode the authenticated media
+# route at /desktop/media/<path> is registered via the SAM plugin URL
+# discovery loop above — see DesktopConfig in desktop/apps.py.
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}About — Simple Aircraft Manager{% endblock %}
+
+{% block content %}
+<div class="pf-v5-c-page__main-section pf-m-light">
+    <div class="pf-v5-c-content">
+        <h1>About Simple Aircraft Manager</h1>
+        <p>
+            Simple Aircraft Manager is open source and dedicated to the
+            <a href="https://unlicense.org" target="_blank" rel="noopener noreferrer">public domain</a>.
+            Source code is available at
+            <a href="https://github.com/marbindrakon/simple-aircraft-manager"
+               target="_blank" rel="noopener noreferrer">github.com/marbindrakon/simple-aircraft-manager</a>.
+        </p>
+        <p>
+            Icons by <a href="https://fontawesome.com" target="_blank" rel="noopener noreferrer">Font Awesome</a>
+            (CC BY 4.0). Fonts by <a href="https://github.com/RedHatOfficial/RedHatFont" target="_blank" rel="noopener noreferrer">Red Hat</a>
+            (SIL OFL 1.1).
+        </p>
+    </div>
+</div>
+
+<div class="pf-v5-c-page__main-section">
+    <div class="pf-v5-c-card">
+        <div class="pf-v5-c-card__title">
+            <h2 class="pf-v5-c-title pf-m-lg">Third-party notices</h2>
+        </div>
+        <div class="pf-v5-c-card__body">
+            <p style="margin-bottom: 1rem;">
+                The bundled distribution of Simple Aircraft Manager aggregates
+                the third-party software listed below. Each component retains
+                its original license.
+            </p>
+            {% if notices_missing %}
+            <p>
+                <em>THIRD-PARTY-NOTICES.txt is not available in this
+                installation. The file is generated at build time for the
+                desktop bundles.</em>
+            </p>
+            {% else %}
+            <pre style="white-space: pre-wrap; word-break: break-word; max-height: 70vh; overflow-y: auto; padding: 1rem; background: var(--pf-v5-global--BackgroundColor--200); border: 1px solid var(--pf-v5-global--BorderColor--100); border-radius: 4px; font-size: 0.875rem;">{{ notices_text }}</pre>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

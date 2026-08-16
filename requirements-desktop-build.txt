@@ -1,0 +1,14 @@
+# Desktop packaging tools — NOT bundled into the desktop runtime.
+#
+# Install only in local packaging environments after runtime notices have been
+# generated. Flatpak does not use PyInstaller and should not install this file.
+pyinstaller==6.15.0
+pyinstaller-hooks-contrib==2026.4
+altgraph==0.17.5
+packaging==26.2
+setuptools==82.0.1
+
+# PyInstaller platform-specific build helpers.
+macholib==1.16.4; sys_platform == "darwin"
+pefile==2023.2.7; sys_platform == "win32"
+pywin32-ctypes==0.2.3; sys_platform == "win32"
