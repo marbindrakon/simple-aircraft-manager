@@ -10,14 +10,16 @@
 # Output:
 #   SimpleAircraftManager-<version>.flatpak  (in repo root)
 #
-# Mirrors build-macos.sh / build-windows.ps1 — manual build, no CI yet.
+# Mirrors build-macos.sh / build-windows.ps1. Run by .github/workflows/release.yml.
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT"
 
-VERSION="${SAM_BUILD_VERSION:-0.1.0-poc}"
+# CI (release workflow) sets SAM_BUILD_VERSION; local builds read the VERSION
+# file and mark themselves -local.
+VERSION="${SAM_BUILD_VERSION:-$(tr -d '[:space:]' < VERSION)-local}"
 APP_ID="app.simpleaircraft.Manager"
 MANIFEST="desktop/flatpak/${APP_ID}.yml"
 BUILD_DIR="build/flatpak"

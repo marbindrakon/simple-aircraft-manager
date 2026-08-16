@@ -22,6 +22,14 @@ function Invoke-Native {
 $RepoRoot = Resolve-Path "$PSScriptRoot\.."
 Set-Location $RepoRoot
 
+# Release version: CI (release workflow) sets SAM_BUILD_VERSION; local builds
+# read the VERSION file and mark themselves -local.
+$AppVersion = $env:SAM_BUILD_VERSION
+if (-not $AppVersion) {
+    $AppVersion = (Get-Content (Join-Path $RepoRoot "VERSION") -Raw).Trim() + "-local"
+}
+Write-Host "Build version: $AppVersion"
+
 Write-Host "=== Step 0/5: Clean previous build artifacts ==="
 foreach ($dir in @(".\build\sam-windows", ".\dist\SimpleAircraftManager", ".\desktop\Output")) {
     if (Test-Path $dir) {
@@ -77,7 +85,7 @@ Write-Host "=== Step 5/5: Run Inno Setup ==="
 if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) {
     throw "iscc.exe (Inno Setup 6) not on PATH. Install from https://jrsoftware.org/isinfo.php and add to PATH."
 }
-Invoke-Native "Inno Setup" { iscc desktop\installer.iss }
+Invoke-Native "Inno Setup" { iscc "/DAppVersion=$AppVersion" desktop\installer.iss }
 
 $Installer = Get-ChildItem -Path .\desktop\Output\SimpleAircraftManagerSetup*.exe | Select-Object -First 1
 Write-Host "=== Build complete ==="
