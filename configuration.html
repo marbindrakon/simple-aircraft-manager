@@ -208,6 +208,7 @@
 <li class="toctree-l1"><a class="reference internal" href="user-guide/sharing-and-access.html">Settings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="user-guide/logbook-import.html">Logbook Import</a></li>
 <li class="toctree-l1"><a class="reference internal" href="user-guide/airworthiness.html">Airworthiness Status</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user-guide/ai-agents.html">AI Agents (MCP)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="user-guide/management.html">Management Portal</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Developer Reference</span></p>
@@ -474,6 +475,32 @@
 </div>
 <p>When enabled, OIDC and local Django accounts coexist. Users are auto-created on first OIDC login using <code class="docutils literal notranslate"><span class="pre">preferred_username</span></code> → email local part → <code class="docutils literal notranslate"><span class="pre">sub</span></code> as the username.</p>
 </section>
+<section id="mcp-server-for-ai-agents-optional">
+<h2>MCP Server for AI Agents (Optional)<a class="headerlink" href="#mcp-server-for-ai-agents-optional" title="Link to this heading">¶</a></h2>
+<p>Serves a Model Context Protocol endpoint at <code class="docutils literal notranslate"><span class="pre">/mcp</span></code> so AI assistants (claude.ai custom connectors, Claude Code, other MCP clients) can read aircraft status and record pilot-tier data. Disabled by default.</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Variable</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MCP_ENABLED</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">false</span></code></p></td>
+<td><p>Mount <code class="docutils literal notranslate"><span class="pre">/mcp</span></code>, the OAuth authorization server (<code class="docutils literal notranslate"><span class="pre">/o/</span></code>), and the <code class="docutils literal notranslate"><span class="pre">.well-known</span></code> OAuth metadata endpoints</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">MCP_DCR_ENABLED</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">false</span></code></p></td>
+<td><p>Allow <strong>anonymous</strong> RFC 7591 dynamic client registration. Off by default because it lets any unauthenticated caller create OAuth clients (registration flooding, consent-phishing via imposter clients). Enable only when claude.ai’s automatic connector flow is required <strong>and</strong> <code class="docutils literal notranslate"><span class="pre">/o/register/</span></code> is rate-limited at the proxy.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Auth is OAuth 2.1 (authorization code + PKCE) issued by the instance itself via django-oauth-toolkit; tokens are scoped <code class="docutils literal notranslate"><span class="pre">read</span></code>/<code class="docutils literal notranslate"><span class="pre">write</span></code> and bound to the logging-in user’s account and roles. Only the <code class="docutils literal notranslate"><span class="pre">authorization_code</span></code> and <code class="docutils literal notranslate"><span class="pre">refresh_token</span></code> grants are enabled. Works with both local accounts and OIDC login.</p>
+<p>With DCR off (the default), register one OAuth client for the connector in the Django admin (<strong>Applications → Add</strong>): client type <em>confidential</em>, grant type <em>authorization code</em>, redirect URI <code class="docutils literal notranslate"><span class="pre">https://claude.ai/api/mcp/auth_callback</span></code>, then give the connector the generated client ID and secret. See the user guide’s <em>AI Agents (MCP)</em> page.</p>
+</section>
 <section id="ai-logbook-import-optional">
 <h2>AI Logbook Import (Optional)<a class="headerlink" href="#ai-logbook-import-optional" title="Link to this heading">¶</a></h2>
 <p>Enables AI-assisted transcription of scanned maintenance logbook pages.</p>
@@ -639,6 +666,7 @@
 <li><a class="reference internal" href="#superuser-auto-creation">Superuser Auto-Creation</a></li>
 <li><a class="reference internal" href="#aircraft-import-export-optional">Aircraft Import / Export (Optional)</a></li>
 <li><a class="reference internal" href="#oidc-authentication-optional">OIDC Authentication (Optional)</a></li>
+<li><a class="reference internal" href="#mcp-server-for-ai-agents-optional">MCP Server for AI Agents (Optional)</a></li>
 <li><a class="reference internal" href="#ai-logbook-import-optional">AI Logbook Import (Optional)</a></li>
 <li><a class="reference internal" href="#plugin-system-optional">Plugin System (Optional)</a></li>
 <li><a class="reference internal" href="#per-aircraft-feature-flags">Per-Aircraft Feature Flags</a></li>

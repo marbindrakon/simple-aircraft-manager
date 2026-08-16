@@ -208,6 +208,7 @@
 <li class="toctree-l1"><a class="reference internal" href="sharing-and-access.html">Settings</a></li>
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Logbook Import</a></li>
 <li class="toctree-l1"><a class="reference internal" href="airworthiness.html">Airworthiness Status</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ai-agents.html">AI Agents (MCP)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="management.html">Management Portal</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Developer Reference</span></p>
@@ -369,6 +370,123 @@ correct any errors.</p></li>
 engine logbook). This improves accuracy by removing ambiguity.</p></li>
 </ul>
 </section>
+<section id="local-custom-ai-providers-desktop-app">
+<span id="local-ai-desktop"></span><h2>Local &amp; Custom AI Providers (Desktop App)<a class="headerlink" href="#local-custom-ai-providers-desktop-app" title="Link to this heading">¶</a></h2>
+<p>The desktop build can run logbook transcription against a <strong>local Ollama
+model</strong> or <strong>any OpenAI-compatible endpoint</strong> (vLLM, LiteLLM proxy,
+OpenRouter, etc.) in addition to or instead of the Anthropic API. You can
+configure any combination of the three; if more than one is configured,
+you pick which becomes the default in the import-page model selector.</p>
+<p>On Apple Silicon Macs, Ollama uses the GPU via Metal – but the same setup
+works on Windows and Linux desktop builds (Ollama uses CUDA or ROCm where
+available, otherwise CPU).</p>
+<p>This is a power-user feature: you choose and size models yourself, and
+quality varies between providers and models.</p>
+<section id="local-ollama">
+<h3>Local Ollama<a class="headerlink" href="#local-ollama" title="Link to this heading">¶</a></h3>
+<ol class="arabic">
+<li><p>Install Ollama from <a class="reference external" href="https://ollama.com">https://ollama.com</a> (or <code class="docutils literal notranslate"><span class="pre">brew</span> <span class="pre">install</span> <span class="pre">ollama</span></code> on
+macOS) and start it – the menu-bar app, or <code class="docutils literal notranslate"><span class="pre">ollama</span> <span class="pre">serve</span></code> in a
+terminal.</p></li>
+<li><p>Pull a <strong>vision-capable</strong> model. Text-only models will not work here:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>ollama<span class="w"> </span>pull<span class="w"> </span>llama3.2-vision
+<span class="gp"># </span>or,<span class="w"> </span><span class="k">for</span><span class="w"> </span>a<span class="w"> </span>smaller<span class="w"> </span>/<span class="w"> </span>faster<span class="w"> </span>option:
+<span class="gp">$ </span>ollama<span class="w"> </span>pull<span class="w"> </span>qwen2.5vl:7b
+</pre></div>
+</div>
+</li>
+<li><p><strong>First-run setup screen</strong> (when you launch the desktop app for the
+first time): in the <em>AI features</em> section, fill in <strong>Ollama model</strong>
+with the tag you pulled (e.g. <code class="docutils literal notranslate"><span class="pre">llama3.2-vision</span></code>). Leave the
+<strong>Ollama base URL</strong> on its default unless you run Ollama on a
+non-default port. The Anthropic API key field can be blank if you
+only want local AI.</p></li>
+<li><p>Restart the app. The Ollama model will appear in the <strong>AI model</strong>
+dropdown on the import page.</p></li>
+</ol>
+<p><strong>Choosing a model</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">llama3.2-vision</span></code> (11B parameters) is a reasonable starting point on
+Apple Silicon Macs or recent NVIDIA GPUs with 16 GB+ of system or VRAM.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">qwen2.5vl:7b</span></code> is faster and uses less memory but with somewhat
+lower extraction quality on dense logbook pages.</p></li>
+<li><p>A 7B-class model needs roughly 6 GB of free RAM; 11B-class models want
+12 GB+.</p></li>
+</ul>
+</section>
+<section id="openai-compatible-endpoint-vllm-openrouter-litellm">
+<h3>OpenAI-compatible endpoint (vLLM, OpenRouter, LiteLLM)<a class="headerlink" href="#openai-compatible-endpoint-vllm-openrouter-litellm" title="Link to this heading">¶</a></h3>
+<p>For routing through a hosted aggregator (OpenRouter), a self-hosted
+inference server (vLLM, LiteLLM proxy), or any other server that speaks
+the OpenAI Chat Completions API, fill in the <strong>OpenAI-compatible
+endpoint</strong> subsection of the setup form:</p>
+<ul class="simple">
+<li><p><strong>Model ID</strong> – whatever string the endpoint expects, e.g.
+<code class="docutils literal notranslate"><span class="pre">gpt-4o-mini</span></code>, <code class="docutils literal notranslate"><span class="pre">anthropic/claude-sonnet-4-6</span></code> (OpenRouter-style),
+or your vLLM-served model name.</p></li>
+<li><p><strong>Endpoint base URL</strong> – the OpenAI-compatible base, e.g.
+<code class="docutils literal notranslate"><span class="pre">https://openrouter.ai/api/v1</span></code>, <code class="docutils literal notranslate"><span class="pre">http://localhost:8000/v1</span></code> (vLLM),
+or your LiteLLM proxy URL.</p></li>
+<li><p><strong>API key</strong> – stored in your OS credential store (Keychain on macOS,
+Credential Manager on Windows, Secret Service on Linux). Leave blank
+for endpoints with no authentication, such as a local vLLM server on
+your own machine.</p></li>
+</ul>
+<p>The model needs to be vision-capable for logbook transcription to work.
+Text-only models will fail at the first batch.</p>
+</section>
+<section id="choosing-a-default">
+<h3>Choosing a default<a class="headerlink" href="#choosing-a-default" title="Link to this heading">¶</a></h3>
+<p>When more than one provider is configured, the <strong>Default model</strong> radio
+group at the bottom of the AI section decides which provider’s model is
+preselected on the logbook import page. You can still pick any of the
+configured models per import; the radio just sets the initial value.</p>
+<p>To flip the default later, edit the desktop config file (path varies by
+OS, see below) and change the <code class="docutils literal notranslate"><span class="pre">default_provider</span></code> line in the <code class="docutils literal notranslate"><span class="pre">[ai]</span></code>
+section to one of <code class="docutils literal notranslate"><span class="pre">anthropic</span></code>, <code class="docutils literal notranslate"><span class="pre">ollama</span></code>, or <code class="docutils literal notranslate"><span class="pre">litellm</span></code>. Then restart
+the app.</p>
+</section>
+<section id="editing-config-ini-after-first-run-setup">
+<h3>Editing config.ini after first-run setup<a class="headerlink" href="#editing-config-ini-after-first-run-setup" title="Link to this heading">¶</a></h3>
+<p>Already past first-run setup? You can edit the desktop config file
+directly. Its location depends on your OS:</p>
+<ul class="simple">
+<li><p><strong>macOS</strong>: <code class="docutils literal notranslate"><span class="pre">~/Library/Application</span> <span class="pre">Support/SimpleAircraftManager/config.ini</span></code></p></li>
+<li><p><strong>Windows</strong>: <code class="docutils literal notranslate"><span class="pre">%LOCALAPPDATA%\SimpleAircraftManager\config.ini</span></code></p></li>
+<li><p><strong>Linux</strong>: <code class="docutils literal notranslate"><span class="pre">~/.local/share/SimpleAircraftManager/config.ini</span></code></p></li>
+</ul>
+<p>Add an <code class="docutils literal notranslate"><span class="pre">[ai]</span></code> section like this:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[ai]</span>
+<span class="na">default_provider</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">ollama</span>
+<span class="na">ollama_model</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">llama3.2-vision</span>
+<span class="na">ollama_base_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">http://localhost:11434</span>
+<span class="na">litellm_model</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">gpt-4o-mini</span>
+<span class="na">litellm_base_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">https://openrouter.ai/api/v1</span>
+</pre></div>
+</div>
+<p>API keys are <em>not</em> stored in this file – they live in the OS credential
+store. To set or change them outside the first-run flow, use the Keychain
+Access app (macOS), Credential Manager (Windows), or <code class="docutils literal notranslate"><span class="pre">secret-tool</span></code>
+(Linux), under service <code class="docutils literal notranslate"><span class="pre">SimpleAircraftManager</span></code> with usernames
+<code class="docutils literal notranslate"><span class="pre">anthropic_api_key</span></code> or <code class="docutils literal notranslate"><span class="pre">litellm_api_key</span></code>.</p>
+<p>Restart the app for changes to <code class="docutils literal notranslate"><span class="pre">config.ini</span></code> to take effect.</p>
+</section>
+<section id="tradeoffs">
+<h3>Tradeoffs<a class="headerlink" href="#tradeoffs" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Local models are slower per page than the Anthropic API on most
+hardware, and JSON-schema compliance is weaker – expect occasional
+truncation or malformed entries that you have to clean up by hand.</p></li>
+<li><p>OpenAI-compatible endpoints vary widely. Hosted aggregators
+(OpenRouter, etc.) typically work well. Self-hosted vLLM with a
+capable vision model is fast but requires GPU resources.</p></li>
+<li><p>Image quality matters even more than with the Anthropic API. Crisp
+scans make a noticeable difference.</p></li>
+<li><p>With Ollama or a self-hosted endpoint, all processing stays on your
+machine; nothing leaves it.</p></li>
+</ul>
+</section>
+</section>
 </section>
 
         </article>
@@ -433,6 +551,14 @@ engine logbook). This improves accuracy by removing ambiguity.</p></li>
 <li><a class="reference internal" href="#import-options">Import Options</a></li>
 <li><a class="reference internal" href="#running-the-import">Running the Import</a></li>
 <li><a class="reference internal" href="#tips-for-best-results">Tips for Best Results</a></li>
+<li><a class="reference internal" href="#local-custom-ai-providers-desktop-app">Local &amp; Custom AI Providers (Desktop App)</a><ul>
+<li><a class="reference internal" href="#local-ollama">Local Ollama</a></li>
+<li><a class="reference internal" href="#openai-compatible-endpoint-vllm-openrouter-litellm">OpenAI-compatible endpoint (vLLM, OpenRouter, LiteLLM)</a></li>
+<li><a class="reference internal" href="#choosing-a-default">Choosing a default</a></li>
+<li><a class="reference internal" href="#editing-config-ini-after-first-run-setup">Editing config.ini after first-run setup</a></li>
+<li><a class="reference internal" href="#tradeoffs">Tradeoffs</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
