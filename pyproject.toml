@@ -1,8 +1,8 @@
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "simple_aircraft_manager.settings"
+DJANGO_SETTINGS_MODULE = "simple_aircraft_manager.settings_test"
 pythonpath = ["."]
 testpaths = ["tests"]
-addopts = "--cov=core --cov=health --cov=desktop --cov=mcp_server --cov-report=term-missing --cov-report=html:htmlcov"
+addopts = "--cov=core --cov=health --cov=desktop --cov=mcp_server --cov-report=term-missing --cov-report=html:htmlcov --durations=20 --durations-min=0.1"
 
 [tool.coverage.run]
 omit = [
