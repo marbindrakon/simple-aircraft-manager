@@ -6,7 +6,7 @@ pyinstaller==6.15.0
 pyinstaller-hooks-contrib==2026.4
 altgraph==0.17.5
 packaging==26.2
-setuptools==82.0.1
+setuptools==83.0.0
 
 # PyInstaller platform-specific build helpers.
 macholib==1.16.4; sys_platform == "darwin"
