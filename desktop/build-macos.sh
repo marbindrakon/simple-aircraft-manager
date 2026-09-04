@@ -9,7 +9,7 @@
 #
 # The build is unsigned and un-notarized — first launch from a downloaded
 # DMG will trip Gatekeeper. Right-click the app -> Open -> Open to clear
-# the quarantine bit. Code signing + notarization are Day-2.
+# the quarantine bit. Published artifacts are explicitly marked as previews.
 
 set -euo pipefail
 

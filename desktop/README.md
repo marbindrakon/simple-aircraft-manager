@@ -46,7 +46,7 @@ If any step fails, fix the error and rerun — the script is idempotent.
 
 ## Building the macOS app + DMG
 
-Run on macOS 12+ (Apple Silicon). The build is unsigned and un-notarized in this POC.
+Run on macOS 12+ (Apple Silicon). The build is unsigned and un-notarized.
 
 ### Prerequisites
 
@@ -82,7 +82,15 @@ A `.dmg` from a downloaded build hasn't been code-signed or notarized, so first-
 
 > "Simple Aircraft Manager" cannot be opened because the developer cannot be verified.
 
-**To run anyway:** right-click `Simple Aircraft Manager.app` in the Applications folder, choose **Open**, then click **Open** on the warning dialog. macOS records the per-user override; subsequent double-clicks work normally. (Code signing + notarization is on the Day-2 list.)
+**To run anyway:** right-click `Simple Aircraft Manager.app` in the Applications folder, choose **Open**, then click **Open** on the warning dialog. macOS records the per-user override; subsequent double-clicks work normally.
+
+## Experimental release artifacts
+
+Until platform-native signing is added, GitHub release desktop assets are
+explicitly named with a `-preview` suffix and documented as experimental and
+unsigned. The release workflow produces a GitHub build-provenance attestation
+for each preview asset so its repository and workflow identity can still be
+verified with `gh attestation verify`.
 
 ### macOS smoke-test checklist
 
@@ -140,9 +148,10 @@ Cross-mode reinstall (no-auth ↔ require-login) is **unsupported** — the prev
 - [ ] Launch with no internet (offline) and no Anthropic key: app starts, AI features silently absent.
 - [ ] Launch with no internet and an Anthropic key: app starts; AI features show network errors when invoked, no crash.
 
-### SmartScreen (informational)
+### SmartScreen (experimental preview)
 
-- [ ] Confirm SmartScreen "Don't run / More info → Run anyway" UX is acceptable for unsigned binaries (Day-2: code signing).
+- [ ] Confirm SmartScreen "Don't run / More info → Run anyway" UX is acceptable
+  for the explicitly unsigned preview binaries.
 
 ## Manual recovery
 
