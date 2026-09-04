@@ -28,15 +28,16 @@ From the repo root:
 
 ```sh
 desktop/flatpak/build-flatpak.sh
-# → SimpleAircraftManager-0.1.0-poc.flatpak
+# → SimpleAircraftManager-<version>-local.flatpak   (version read from the VERSION file)
 ```
 
-Override the version with `SAM_BUILD_VERSION=0.2.0 desktop/flatpak/build-flatpak.sh`.
+Override the version with `SAM_BUILD_VERSION=1.2.0 desktop/flatpak/build-flatpak.sh` —
+the CI release workflow does exactly that.
 
 ## Install + run
 
 ```sh
-flatpak install --user SimpleAircraftManager-0.1.0-poc.flatpak
+flatpak install --user SimpleAircraftManager-<version>-local.flatpak
 flatpak run app.simpleaircraft.Manager
 ```
 

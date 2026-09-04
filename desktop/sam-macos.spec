@@ -12,12 +12,19 @@ contains the assets that get copied via `datas` below. The build-macos.sh
 script does that for you.
 """
 
+import os
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 REPO_ROOT = Path(SPECPATH).parent  # SPECPATH is provided by PyInstaller
 STATIC_BUILD_DIR = REPO_ROOT / "build" / "staticfiles"
+
+# CI (release workflow) sets SAM_BUILD_VERSION; local builds read the VERSION
+# file and mark themselves -local. Same convention as build-macos.sh.
+APP_VERSION = os.environ.get("SAM_BUILD_VERSION") or (
+    (REPO_ROOT / "VERSION").read_text().strip() + "-local"
+)
 
 
 # Resource files copied into Contents/Resources/.
@@ -171,8 +178,8 @@ app = BUNDLE(
     name="Simple Aircraft Manager.app",
     bundle_identifier="app.simpleaircraftmanager.desktop",
     info_plist={
-        "CFBundleShortVersionString": "0.1.0-poc",
-        "CFBundleVersion": "0.1.0-poc",
+        "CFBundleShortVersionString": APP_VERSION,
+        "CFBundleVersion": APP_VERSION,
         "LSMinimumSystemVersion": "12.0",
         "NSHighResolutionCapable": True,
         # Allow the app to talk to its own loopback Django server. Without

@@ -1,5 +1,7 @@
 ; Inno Setup script for Simple Aircraft Manager
-; Compile with: iscc desktop\installer.iss
+; Compile with: iscc "/DAppVersion=<version>" desktop\installer.iss
+; (build-windows.ps1 passes /DAppVersion; a bare `iscc desktop\installer.iss`
+; falls back to the 0.0.0-local placeholder below)
 ; Produces: Output\SimpleAircraftManagerSetup-<version>.exe
 ;
 ; The installer is intentionally minimal: it only checks for the WebView2
@@ -10,7 +12,9 @@
 ; same setup form is the golden path on macOS and Linux too.
 
 #define AppName "Simple Aircraft Manager"
-#define AppVersion "0.1.0-poc"
+#ifndef AppVersion
+  #define AppVersion "0.0.0-local"
+#endif
 #define AppPublisher "Simple Aircraft Manager"
 #define AppExeName "sam.exe"
 

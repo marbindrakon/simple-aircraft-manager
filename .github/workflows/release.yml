@@ -1,0 +1,453 @@
+name: Release
+
+# Release flow (tag push):
+#   prep      — resolve version; verify strict SemVer, VERSION, and main ancestry
+#   test      — full pytest suite, once, gating every build job
+#   container / macos-dmg / windows-installer / linux-flatpak — parallel builds;
+#               the container image is pushed BY DIGEST ONLY (untagged), and
+#               release artifacts receive GitHub/Sigstore provenance attestations
+#   release   — stages the assets, creates the immutable :<version> image tag,
+#               publishes the GitHub release, then moves :latest only when this
+#               is the highest published stable version. Cross-service publish
+#               is deliberately idempotent rather than described as atomic.
+#
+# workflow_dispatch is a dry run: same builds with a "<VERSION>-dev" version,
+# artifacts uploaded for inspection, nothing pushed or released.
+
+permissions:
+  contents: read
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  prep:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      image: ${{ steps.version.outputs.image }}
+      publish_latest: ${{ steps.version.outputs.publish_latest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Resolve and validate version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          file_version="$(tr -d '[:space:]' < VERSION)"
+          if [[ ! "$file_version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::VERSION must be a stable SemVer value (MAJOR.MINOR.PATCH); got '${file_version}'."
+            exit 1
+          fi
+
+          publish_latest=false
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            if [[ ! "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+              echo "::error::Release tags must be stable SemVer tags such as v1.2.3."
+              exit 1
+            fi
+            tag_version="${GITHUB_REF_NAME#v}"
+            if [ "$tag_version" != "$file_version" ]; then
+              echo "::error::Tag ${GITHUB_REF_NAME} does not match VERSION file (${file_version}) — bump VERSION, commit, and re-tag."
+              exit 1
+            fi
+
+            git fetch --no-tags origin main:refs/remotes/origin/main
+            release_commit="$(git rev-parse "${GITHUB_REF_NAME}^{commit}")"
+            if ! git merge-base --is-ancestor "$release_commit" origin/main; then
+              echo "::error::Release tag ${GITHUB_REF_NAME} is not reachable from the protected main branch."
+              exit 1
+            fi
+
+            version="$tag_version"
+
+            version_is_greater() {
+              local candidate_major candidate_minor candidate_patch
+              local reference_major reference_minor reference_patch
+              IFS=. read -r candidate_major candidate_minor candidate_patch <<< "$1"
+              IFS=. read -r reference_major reference_minor reference_patch <<< "$2"
+              (( candidate_major > reference_major ||
+                 (candidate_major == reference_major && candidate_minor > reference_minor) ||
+                 (candidate_major == reference_major && candidate_minor == reference_minor && candidate_patch > reference_patch) ))
+            }
+
+            highest_published=""
+            while IFS= read -r published_tag; do
+              if [[ "$published_tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+                published_version="${published_tag#v}"
+                if [ -z "$highest_published" ] || version_is_greater "$published_version" "$highest_published"; then
+                  highest_published="$published_version"
+                fi
+              fi
+            done < <(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+              --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name')
+
+            if [ -z "$highest_published" ]; then
+              publish_latest=true
+            elif version_is_greater "$version" "$highest_published"; then
+              publish_latest=true
+            fi
+          else
+            version="${file_version}-dev"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "publish_latest=${publish_latest}" >> "$GITHUB_OUTPUT"
+          # GHCR requires a lowercase image path
+          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          echo "Release version: ${version}"
+
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-test.txt
+            requirements-desktop.txt
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-test.txt -r requirements-desktop.txt
+
+      - name: Run test suite
+        run: python -m pytest
+        env:
+          DJANGO_SETTINGS_MODULE: simple_aircraft_manager.settings
+
+  container:
+    needs: [prep, test]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up QEMU (for linux/arm64)
+        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build multi-arch image (push by digest only on tag)
+        id: build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: Containerfile
+          platforms: linux/amd64,linux/arm64
+          # Untagged digest push — the release job applies :<version> and
+          # :latest only after every platform build has succeeded. On
+          # workflow_dispatch this is push=false (build validation only).
+          outputs: type=image,name=${{ needs.prep.outputs.image }},name-canonical=true,push-by-digest=true,push=${{ github.event_name == 'push' }}
+          labels: |
+            org.opencontainers.image.version=${{ needs.prep.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Attest container provenance
+        if: github.event_name == 'push'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ needs.prep.outputs.image }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+  macos-dmg:
+    needs: [prep, test]
+    runs-on: macos-15
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-desktop.txt
+            requirements-build.txt
+            requirements-desktop-build.txt
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Create venv (build-macos.sh reuses an existing .venv)
+        run: python -m venv .venv
+
+      - name: Build DMG
+        run: bash desktop/build-macos.sh
+        env:
+          SAM_BUILD_VERSION: ${{ needs.prep.outputs.version }}
+
+      - name: Mark DMG as an unsigned preview
+        run: |
+          mv "dist/SimpleAircraftManager-${{ needs.prep.outputs.version }}.dmg" \
+             "dist/SimpleAircraftManager-${{ needs.prep.outputs.version }}-preview.dmg"
+
+      - name: Attest DMG provenance
+        if: github.event_name == 'push'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/SimpleAircraftManager-*.dmg
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-macos
+          path: dist/SimpleAircraftManager-*.dmg
+          if-no-files-found: error
+          retention-days: 7
+
+  windows-installer:
+    needs: [prep, test]
+    runs-on: windows-2025
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-desktop.txt
+            requirements-build.txt
+            requirements-desktop-build.txt
+
+      - name: Install Inno Setup 6
+        run: choco install -y --no-progress innosetup
+
+      - name: Create venv (build-windows.ps1 reuses an existing venv)
+        run: python -m venv venv
+
+      - name: Build installer
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File desktop\build-windows.ps1
+        env:
+          SAM_BUILD_VERSION: ${{ needs.prep.outputs.version }}
+
+      - name: Mark installer as an unsigned preview
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem -Path desktop\Output\SimpleAircraftManagerSetup*.exe)
+          if ($installers.Count -ne 1) { throw "Expected exactly one installer; found $($installers.Count)." }
+          $previewName = "SimpleAircraftManagerSetup-${{ needs.prep.outputs.version }}-preview.exe"
+          Move-Item -Path $installers[0].FullName -Destination (Join-Path $installers[0].DirectoryName $previewName)
+
+      - name: Attest installer provenance
+        if: github.event_name == 'push'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: desktop/Output/SimpleAircraftManagerSetup*.exe
+
+      - name: Upload installer
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-windows
+          path: desktop/Output/SimpleAircraftManagerSetup*.exe
+          if-no-files-found: error
+          retention-days: 7
+
+  linux-flatpak:
+    needs: [prep, test]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    env:
+      XDG_RUNTIME_DIR: /tmp/xdg-runtime
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install flatpak tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder imagemagick
+          mkdir -p "$XDG_RUNTIME_DIR"
+
+      - name: Add Flathub remote
+        run: flatpak remote-add --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Build bundle (pulls GNOME Platform/SDK 47, ~1 GB)
+        run: bash desktop/flatpak/build-flatpak.sh
+        env:
+          SAM_BUILD_VERSION: ${{ needs.prep.outputs.version }}
+
+      - name: Mark Flatpak as an unsigned preview
+        run: |
+          mv "SimpleAircraftManager-${{ needs.prep.outputs.version }}.flatpak" \
+             "SimpleAircraftManager-${{ needs.prep.outputs.version }}-preview.flatpak"
+
+      - name: Attest Flatpak provenance
+        if: github.event_name == 'push'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: SimpleAircraftManager-*.flatpak
+
+      - name: Upload bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-flatpak
+          path: SimpleAircraftManager-*.flatpak
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    if: github.event_name == 'push'
+    needs: [prep, container, macos-dmg, windows-installer, linux-flatpak]
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+      packages: write
+    env:
+      VERSION: ${{ needs.prep.outputs.version }}
+      IMAGE: ${{ needs.prep.outputs.image }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+
+      - name: Validate assets and generate checksums
+        run: |
+          cd dist
+          test "$(find . -maxdepth 1 -type f -name '*.dmg' | wc -l)" -eq 1
+          test "$(find . -maxdepth 1 -type f -name '*.exe' | wc -l)" -eq 1
+          test "$(find . -maxdepth 1 -type f -name '*.flatpak' | wc -l)" -eq 1
+          sha256sum ./*.dmg ./*.exe ./*.flatpak > SHA256SUMS
+          sha256sum --check SHA256SUMS
+          ls -lh
+
+      - name: Refuse to replace a published release
+        run: |
+          release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" 2>/dev/null || true)"
+          if [ -n "$release_json" ] && [ "$(jq -r .draft <<< "$release_json")" != "true" ]; then
+            echo "::error::Release ${GITHUB_REF_NAME} is already published and is immutable."
+            exit 1
+          fi
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Write release notes
+        run: |
+          cat > release-body.md <<EOF
+          Version: \`${VERSION}\`
+
+          ## Experimental desktop previews (unsigned)
+
+          These preview builds are not Apple-notarized or Authenticode-signed.
+          Expect operating-system trust warnings. Verify GitHub provenance before
+          running them.
+
+          - **macOS**: \`SimpleAircraftManager-${VERSION}-preview.dmg\`
+          - **Windows**: \`SimpleAircraftManagerSetup-${VERSION}-preview.exe\`
+          - **Linux (Flatpak)**: \`SimpleAircraftManager-${VERSION}-preview.flatpak\` — install with \`flatpak install --user SimpleAircraftManager-${VERSION}-preview.flatpak\`
+
+          \`SHA256SUMS\` contains checksums for all of the above.
+
+          Publisher provenance can be verified with:
+
+          \`\`\`
+          gh attestation verify <downloaded-file> --repo ${GITHUB_REPOSITORY}
+          \`\`\`
+
+          ## Docker container
+
+          \`\`\`
+          docker pull ${IMAGE}:${VERSION}
+          \`\`\`
+
+          (multi-arch: linux/amd64 + linux/arm64)
+          EOF
+
+      - name: Create draft release with assets
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ env.VERSION }}
+          body_path: release-body.md
+          draft: true
+          files: dist/*
+          fail_on_unmatched_files: true
+          generate_release_notes: false
+
+      - name: Create immutable version container tag
+        run: |
+          existing_digest="$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" 2>/dev/null | awk '$1 == "Digest:" { print $2; exit }' || true)"
+          built_digest="${{ needs.container.outputs.digest }}"
+          if [ -n "$existing_digest" ] && [ "$existing_digest" != "$built_digest" ]; then
+            echo "::error::Refusing to overwrite immutable ${IMAGE}:${VERSION}: existing ${existing_digest}, built ${built_digest}."
+            exit 1
+          fi
+          if [ -z "$existing_digest" ]; then
+            docker buildx imagetools create -t "${IMAGE}:${VERSION}" "${IMAGE}@${built_digest}"
+          fi
+
+      - name: Publish release
+        env:
+          PUBLISH_LATEST: ${{ needs.prep.outputs.publish_latest }}
+        run: |
+          release_id="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" --jq .id)"
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
+            -F draft=false \
+            -f "make_latest=${PUBLISH_LATEST}" >/dev/null
+
+      - name: Move stable latest container tag
+        if: needs.prep.outputs.publish_latest == 'true'
+        run: |
+          docker buildx imagetools create \
+            -t "${IMAGE}:latest" \
+            "${IMAGE}@${{ needs.container.outputs.digest }}"

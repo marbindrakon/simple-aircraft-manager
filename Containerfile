@@ -1,6 +1,6 @@
 # Simple Aircraft Manager - OpenShift Container
 # Based on Red Hat UBI 9 Python 3.11
-FROM registry.access.redhat.com/ubi9/python-311:latest
+FROM registry.access.redhat.com/ubi9/python-311:latest@sha256:a0bdb55576fc5b8d6704279307817828ef027e1065533ceba133fe9516003a6c
 
 # Labels for OpenShift
 LABEL name="simple-aircraft-manager" \
