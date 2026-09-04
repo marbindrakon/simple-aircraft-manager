@@ -3,7 +3,7 @@
 # Run from the repo root on a Linux host (or Linux VM) with:
 #   - flatpak
 #   - flatpak-builder
-#   - org.gnome.Platform//47 + org.gnome.Sdk//47 installed from Flathub
+#   - org.gnome.Platform//50 + org.gnome.Sdk//50 installed from Flathub
 #   - ImageMagick `convert` (only on first build, to extract icon-256.png
 #     from the existing desktop/icon.ico — once committed, this step is a no-op)
 #
@@ -57,10 +57,10 @@ fi
 
 # --- Runtime check ---------------------------------------------------------
 
-if ! flatpak info org.gnome.Platform//47 >/dev/null 2>&1; then
-    log "Installing GNOME Platform 47 + SDK from Flathub"
+if ! flatpak info org.gnome.Platform//50 >/dev/null 2>&1; then
+    log "Installing GNOME Platform 50 + SDK from Flathub"
     flatpak install --user --noninteractive flathub \
-        org.gnome.Platform//47 org.gnome.Sdk//47
+        org.gnome.Platform//50 org.gnome.Sdk//50
 fi
 
 # --- Build -----------------------------------------------------------------
