@@ -19,7 +19,7 @@ flatpak remote-add --user --if-not-exists flathub \
     https://flathub.org/repo/flathub.flatpakrepo
 
 # Runtime + SDK (auto-installed by build-flatpak.sh on first run)
-flatpak install --user flathub org.gnome.Platform//47 org.gnome.Sdk//47
+flatpak install --user flathub org.gnome.Platform//50 org.gnome.Sdk//50
 ```
 
 ## Build
@@ -104,7 +104,7 @@ webview go through the FileChooser portal automatically.
   auto-updates. Flathub submission tracked separately.
 - **No screenshots in metainfo.xml yet.** Required for Flathub. Add
   `<screenshots>` with publicly-hosted PNG URLs before submitting.
-- **`gnome-platform//47` pinned.** Bump the runtime version periodically;
+- **`gnome-platform//50` pinned.** Bump the runtime version periodically;
   Flathub policy expects current-or-previous GNOME runtime.
 
 ## Files in this directory

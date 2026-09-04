@@ -312,7 +312,7 @@ jobs:
       - name: Add Flathub remote
         run: flatpak remote-add --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
-      - name: Build bundle (pulls GNOME Platform/SDK 47, ~1 GB)
+      - name: Build bundle (pulls GNOME Platform/SDK 50, ~1 GB)
         run: bash desktop/flatpak/build-flatpak.sh
         env:
           SAM_BUILD_VERSION: ${{ needs.prep.outputs.version }}
