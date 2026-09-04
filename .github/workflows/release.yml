@@ -129,7 +129,7 @@ jobs:
       - name: Run test suite
         run: python -m pytest
         env:
-          DJANGO_SETTINGS_MODULE: simple_aircraft_manager.settings
+          DJANGO_SETTINGS_MODULE: simple_aircraft_manager.settings_test
 
   container:
     needs: [prep, test]
