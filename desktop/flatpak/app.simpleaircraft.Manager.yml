@@ -34,8 +34,11 @@ modules:
     build-commands:
       # 1. Install runtime Python deps into /app. PyObjC entries in
       #    requirements-desktop.txt are gated on sys_platform=="darwin"
-      #    and skip automatically on Linux.
-      - python3 -m pip install --prefix=/app -r requirements.txt -r requirements-desktop.txt
+      #    and skip automatically on Linux. --ignore-installed: the SDK ships
+      #    some of these (e.g. Markdown) in read-only /usr, which pip would
+      #    otherwise try to uninstall. /app site-packages precedes /usr on
+      #    sys.path, so the pinned versions win at runtime.
+      - python3 -m pip install --prefix=/app --ignore-installed -r requirements.txt -r requirements-desktop.txt
 
       # 1b. Install build-time notice tooling outside /app and generate notices.
       #     Compact attribution table + per-package verbatim license files.
