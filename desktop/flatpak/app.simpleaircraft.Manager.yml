@@ -42,11 +42,12 @@ modules:
 
       # 1b. Install build-time notice tooling outside /app and generate notices.
       #     Compact attribution table + per-package verbatim license files.
-      #     See scripts/generate_third_party_notices.py.
-      - python3 -m pip install --target=/tmp/sam-build-tools -r requirements-build.txt
-      - PYTHONPATH=/tmp/sam-build-tools
+      #     See scripts/generate_third_party_notices.py. Each build command
+      #     gets a fresh /tmp, so the tools live in the module build dir.
+      - python3 -m pip install --target=.sam-build-tools -r requirements-build.txt
+      - PYTHONPATH=.sam-build-tools
         python3 scripts/generate_third_party_notices.py --output THIRD-PARTY-NOTICES.txt
-      - PYTHONPATH=/tmp/sam-build-tools
+      - PYTHONPATH=.sam-build-tools
         python3 scripts/generate_third_party_notices.py --save-licenses licenses/
 
       # 2. Copy the application source tree into the app prefix.
