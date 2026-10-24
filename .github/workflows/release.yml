@@ -368,9 +368,15 @@ jobs:
 
       - name: Refuse to replace a published release
         run: |
-          release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" 2>/dev/null || true)"
-          if [ -n "$release_json" ] && [ "$(jq -r .draft <<< "$release_json")" != "true" ]; then
+          # releases/tags/{tag} only returns published releases, so success
+          # means published and a 404 means none (or only a draft). gh api
+          # prints the error body to stdout on 404, so branch on exit status.
+          if response="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" 2>/dev/null)"; then
             echo "::error::Release ${GITHUB_REF_NAME} is already published and is immutable."
+            exit 1
+          fi
+          if ! jq -e '.message == "Not Found"' <<< "$response" >/dev/null 2>&1; then
+            echo "::error::Could not check for an existing ${GITHUB_REF_NAME} release: ${response}"
             exit 1
           fi
 
@@ -414,6 +420,7 @@ jobs:
           EOF
 
       - name: Create draft release with assets
+        id: draft_release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ github.ref_name }}
@@ -439,9 +446,12 @@ jobs:
       - name: Publish release
         env:
           PUBLISH_LATEST: ${{ needs.prep.outputs.publish_latest }}
+          # releases/tags/{tag} can't see drafts, so use the id from the step
+          # that created the draft.
+          RELEASE_ID: ${{ steps.draft_release.outputs.id }}
         run: |
-          release_id="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" --jq .id)"
-          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
+          test -n "$RELEASE_ID"
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
             -F draft=false \
             -f "make_latest=${PUBLISH_LATEST}" >/dev/null
 
