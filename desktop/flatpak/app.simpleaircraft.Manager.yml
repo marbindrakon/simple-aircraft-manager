@@ -34,16 +34,20 @@ modules:
     build-commands:
       # 1. Install runtime Python deps into /app. PyObjC entries in
       #    requirements-desktop.txt are gated on sys_platform=="darwin"
-      #    and skip automatically on Linux.
-      - python3 -m pip install --prefix=/app -r requirements.txt -r requirements-desktop.txt
+      #    and skip automatically on Linux. --ignore-installed: the SDK ships
+      #    some of these (e.g. Markdown) in read-only /usr, which pip would
+      #    otherwise try to uninstall. /app site-packages precedes /usr on
+      #    sys.path, so the pinned versions win at runtime.
+      - python3 -m pip install --prefix=/app --ignore-installed -r requirements.txt -r requirements-desktop.txt
 
       # 1b. Install build-time notice tooling outside /app and generate notices.
       #     Compact attribution table + per-package verbatim license files.
-      #     See scripts/generate_third_party_notices.py.
-      - python3 -m pip install --target=/tmp/sam-build-tools -r requirements-build.txt
-      - PYTHONPATH=/tmp/sam-build-tools
+      #     See scripts/generate_third_party_notices.py. Each build command
+      #     gets a fresh /tmp, so the tools live in the module build dir.
+      - python3 -m pip install --target=.sam-build-tools -r requirements-build.txt
+      - PYTHONPATH=.sam-build-tools
         python3 scripts/generate_third_party_notices.py --output THIRD-PARTY-NOTICES.txt
-      - PYTHONPATH=/tmp/sam-build-tools
+      - PYTHONPATH=.sam-build-tools
         python3 scripts/generate_third_party_notices.py --save-licenses licenses/
 
       # 2. Copy the application source tree into the app prefix.
@@ -70,10 +74,12 @@ modules:
       - install -Dm644 desktop/flatpak/icon-256.png
           /app/share/icons/hicolor/256x256/apps/app.simpleaircraft.Manager.png
     sources:
+      # Relative to this manifest (desktop/flatpak/), so ../.. is the repo root.
       - type: dir
-        path: ..
+        path: ../..
         skip:
           - .git
+          - .flatpak-builder
           - .venv
           - venv
           - build

@@ -30,9 +30,9 @@ def test_flatpak_installs_only_runtime_requirements_into_app_prefix():
     ).read_text(encoding="utf-8")
 
     assert (
-        "python3 -m pip install --prefix=/app -r requirements.txt "
-        "-r requirements-desktop.txt"
+        "python3 -m pip install --prefix=/app --ignore-installed "
+        "-r requirements.txt -r requirements-desktop.txt"
     ) in manifest
     assert "--prefix=/app -r requirements-build.txt" not in manifest
     assert "requirements-desktop-build.txt" not in manifest
-    assert "python3 -m pip install --target=/tmp/sam-build-tools" in manifest
+    assert "python3 -m pip install --target=.sam-build-tools" in manifest
