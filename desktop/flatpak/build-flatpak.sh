@@ -52,7 +52,9 @@ EOF
         exit 1
     fi
     # icon.ico contains multiple sizes; pick the largest (typically 256).
-    convert "desktop/icon.ico" -resize 256x256 "$ICON_PNG"
+    # Without a frame index, convert writes one icon-256-N.png per frame.
+    largest="$(identify -format '%w %p\n' "desktop/icon.ico" | sort -n | tail -1 | cut -d' ' -f2)"
+    convert "desktop/icon.ico[${largest}]" -resize 256x256 "$ICON_PNG"
 fi
 
 # --- Runtime check ---------------------------------------------------------
